@@ -1,0 +1,35 @@
+name: Subtree Update Bot
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # daily at 3am
+  workflow_dispatch:
+
+jobs:
+  update-subtrees:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "tradovate-bot"
+          git config user.email "bot@tradovatefutures.com"
+
+      - name: Update admin subtree
+        run: |
+          git subtree pull --prefix=admin admin-upstream main --squash || true
+
+      - name: Update frontend subtree
+        run: |
+          git subtree pull --prefix=frontend frontend-upstream main --squash || true
+
+      - name: Create PR if changes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/subtree-updates
+          title: "chore: update admin & frontend subtrees"
+          body: "Automated subtree update from upstream forks."
