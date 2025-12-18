@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  TRANSFER
+  BUY
+  SELL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum OrderType {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  PENDING
+  FILLED
+  CANCELLED
+}
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String?
+  isVerified Boolean  @default(false)
+  role       Role     @default(USER)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  wallets      Wallet[]
+  orders       Order[]
+  transactions Transaction[]
+}
+
+
+model Otp {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model BlacklistedToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Coin {
+  id       String  @id @default(uuid())
+  symbol   String  @unique
+  name     String
+  iconUrl  String?
+  isActive Boolean @default(true)
+
+  networks CoinNetwork[]
+  wallets  Wallet[]
+  orders   Order[]
+}
+
+model Network {
+  id   String  @id @default(uuid())
+  name String
+  type String?
+
+  coins CoinNetwork[]
+}
+
+model CoinNetwork {
+  id              String  @id @default(uuid())
+  coinId          String
+  networkId       String
+  contractAddress String?
+
+  coin    Coin    @relation(fields: [coinId], references: [id])
+  network Network @relation(fields: [networkId], references: [id])
+
+  @@unique([coinId, networkId])
+}
+
+model Wallet {
+  id      String  @id @default(uuid())
+  userId  String
+  coinId  String
+  balance Float   @default(0.0)
+  address String?
+
+  user User @relation(fields: [userId], references: [id])
+  coin Coin @relation(fields: [coinId], references: [id])
+
+  transactions Transaction[]
+
+  @@unique([userId, coinId])
+}
+
+model Transaction {
+  id        String            @id @default(uuid())
+  userId    String
+  walletId  String?
+  type      TransactionType
+  amount    Float
+  status    TransactionStatus @default(PENDING)
+  txHash    String?
+  toAddress String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id])
+  wallet Wallet? @relation(fields: [walletId], references: [id])
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  coinId    String
+  type      OrderType
+  amount    Float
+  price     Float
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  coin Coin @relation(fields: [coinId], references: [id])
+}

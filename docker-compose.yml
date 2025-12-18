@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: tradovate_db
+    environment:
+      POSTGRES_USER: tradovate
+      POSTGRES_PASSWORD: super-strong-password-here
+      POSTGRES_DB: tradovate
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432" # optional local access
+    restart: unless-stopped
+
+  admin_server:
+    build: ./server
+    container_name: tradovate_admin_server
+    env_file:
+      - ./server/.env.server
+    depends_on:
+      - db
+    ports:
+      - "127.0.0.1:4100:4000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: tradovate_frontend
+    ports:
+      - "127.0.0.1:4001:80"
+    restart: unless-stopped
+
+  admin_frontend:
+    build: ./admin
+    container_name: tradovate_admin_frontend
+    ports:
+      - "127.0.0.1:4002:80"
+    restart: unless-stopped
+
+volumes:
+  db_data:
