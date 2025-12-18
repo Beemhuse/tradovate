@@ -1,37 +1,17 @@
-# ===============================
-# Build stage
-# ===============================
-FROM node:20.11-alpine AS build
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies first (better caching)
-COPY package*.json ./
-RUN npm install --production=false
+RUN apk add --no-cache python3 make g++ libc6-compat
 
-# Copy source code
+COPY package*.json ./
+
+RUN npm install --legacy-peer-deps
+
 COPY . .
 
-# Build admin app
 RUN npm run build
 
-# ===============================
-# Production stage (nginx)
-# ===============================
-FROM nginx:1.27.2-alpine
-
-# Remove default nginx static files
-RUN rm -rf /usr/share/nginx/html/*
-
-# Copy built files
-# Vite output
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# If CRA, use instead:
-# COPY --from=build /app/build /usr/share/nginx/html
-
-# Expose nginx port
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
