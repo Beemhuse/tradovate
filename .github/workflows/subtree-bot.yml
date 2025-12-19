@@ -1,8 +1,8 @@
-name: Subtree Update Bot
+name: Subtree Update Bot (SSH)
 
 on:
   schedule:
-    - cron: "0 3 * * *"  # daily at 3am
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 jobs:
@@ -10,14 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.GITHUB_SSH_KEY }}
 
-      - name: Setup Git
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Configure Git
         run: |
           git config user.name "tradovate-bot"
           git config user.email "bot@tradovatefutures.com"
+
+      - name: Add upstream remotes (SSH)
+        run: |
+          git remote add admin-upstream git@github.com:D-Inspire/admin_tradovatefutures.git || true
+          git remote add frontend-upstream git@github.com:OWNER/frontend_tradovatefutures.git || true
 
       - name: Update admin subtree
         run: |
@@ -32,4 +44,4 @@ jobs:
         with:
           branch: bot/subtree-updates
           title: "chore: update admin & frontend subtrees"
-          body: "Automated subtree update from upstream forks."
+          body: "Automated subtree update via SSH."
