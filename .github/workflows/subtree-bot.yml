@@ -14,9 +14,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ssh-key: ${{ secrets.GITHUB_SSH_KEY }}
 
-      - name: Setup SSH
+      # 🔑 THIS IS THE MISSING PIECE
+      - name: Load SSH key into ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.TRADOVATE_SUBTREE_BOT }}
+
+      - name: Trust GitHub host
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
@@ -29,15 +35,17 @@ jobs:
       - name: Add upstream remotes (SSH)
         run: |
           git remote add admin-upstream git@github.com:D-Inspire/admin_tradovatefutures.git || true
-          git remote add frontend-upstream git@github.com:OWNER/frontend_tradovatefutures.git || true
+          git remote add frontend-upstream git@github.com:D-Inspire/crypto-nexus-hubs.git || true
+
+      # ✅ OPTIONAL BUT HIGHLY RECOMMENDED (DEBUG ONCE)
+      - name: Verify SSH authentication
+        run: ssh -T git@github.com || true
 
       - name: Update admin subtree
-        run: |
-          git subtree pull --prefix=admin admin-upstream main --squash || true
+        run: git subtree pull --prefix=admin admin-upstream main --squash
 
       - name: Update frontend subtree
-        run: |
-          git subtree pull --prefix=frontend frontend-upstream main --squash || true
+        run: git subtree pull --prefix=frontend frontend-upstream main --squash
 
       - name: Create PR if changes
         uses: peter-evans/create-pull-request@v6
