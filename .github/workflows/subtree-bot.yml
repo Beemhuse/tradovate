@@ -15,17 +15,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 🔑 THIS IS THE MISSING PIECE
-      - name: Load SSH key into ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.VPS_SSH_KEY }}
-
-      - name: Trust GitHub host
+      - name: Setup SSH (manual, safe)
         run: |
           mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Verify SSH access to GitHub
+        run: ssh -i ~/.ssh/id_ed25519 -T git@github.com || true
 
       - name: Configure Git
         run: |
@@ -35,11 +33,7 @@ jobs:
       - name: Add upstream remotes (SSH)
         run: |
           git remote add admin-upstream git@github.com:D-Inspire/admin_tradovatefutures.git || true
-          git remote add frontend-upstream git@github.com:D-Inspire/crypto-nexus-hubs.git || true
-
-      # ✅ OPTIONAL BUT HIGHLY RECOMMENDED (DEBUG ONCE)
-      - name: Verify SSH authentication
-        run: ssh -T git@github.com || true
+          git remote add frontend-upstream git@github.com:D-Inspire/crypto-nexus-hub.git || true
 
       - name: Update admin subtree
         run: git subtree pull --prefix=admin admin-upstream main --squash
