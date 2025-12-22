@@ -15,12 +15,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup SSH (manual, safe)
+      - name: Setup SSH for GitHub
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.TRADOVATE_SUBTREE_BOT }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SUBTREE_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
+      
+      - name: Test GitHub SSH
+        run: ssh -i ~/.ssh/id_ed25519 -T git@github.com || true
 
       - name: Verify SSH access to GitHub
         run: ssh -i ~/.ssh/id_ed25519 -T git@github.com || true
