@@ -17,7 +17,6 @@ const AdminDashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
@@ -28,7 +27,6 @@ const AdminDashboard = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <p className="text-destructive">Failed to load dashboard</p>
         </div>
@@ -71,8 +69,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminNav />
-
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Header */}
         <div>

@@ -2,6 +2,8 @@ export const AUTH = {
     LOGIN: '/auth/login',
     SIGNUP: '/auth/signup',
     VERIFY_EMAIL: '/auth/verify-email',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
 }
 
 export const KYC = {
@@ -12,4 +14,10 @@ export const COINS = {
     ASSETS: '/market/assets',
     CREATE: '/market/wallet',
     DEPOSIT: '/market/deposit',
+    WITHDRAW: '/market/withdraw',
+}
+
+export const MARKET_PAIR = {
+    LIST: '/market/pairs',
+    GET_PAIR: (id: string) => `/market/pairs/${id}`,
 }

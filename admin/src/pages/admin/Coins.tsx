@@ -123,14 +123,12 @@ const AdminCoinsPage: React.FC = () => {
   if (isLoading)
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">Loading...</div>
       </div>
     );
   if (isError)
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">
           Error loading coins <button onClick={() => refetch()}>Retry</button>
         </div>
@@ -139,7 +137,6 @@ const AdminCoinsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminNav />
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>

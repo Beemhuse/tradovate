@@ -8,15 +8,28 @@ interface CryptoPrice {
   positive: boolean;
 }
 
-const BINANCE_WS_URL = "wss://stream.binance.com:9443/ws";
+const BINANCE_WS_BASE_URL = "wss://nameless-leaf-1705.brightawah94.workers.dev/stream";
 
-export const useCryptoPrice = (symbols: string[]) => {
+export const useCryptoPrice = (symbols: string[] = []) => {
   const [prices, setPrices] = useState<Record<string, CryptoPrice>>({});
 
   useEffect(() => {
-    // Initialize with loading state
+    // If no symbols provided, do nothing
+    if (!symbols || symbols.length === 0) return;
+
+    // Filter out invalid symbols (like raw 'USDT' which has no pair against itself on this stream)
+    // and remove duplicates
+    const activeSymbols = [...new Set(
+      symbols
+        .filter((s) => s && typeof s === 'string' && s.toUpperCase() !== "USDT")
+        .map((s) => s.toUpperCase())
+    )];
+
+    if (activeSymbols.length === 0) return;
+
+    // Initialize with default values
     const initialPrices: Record<string, CryptoPrice> = {};
-    symbols.forEach((symbol) => {
+    activeSymbols.forEach((symbol) => {
       initialPrices[symbol] = {
         symbol,
         price: "0.00",
@@ -27,7 +40,7 @@ export const useCryptoPrice = (symbols: string[]) => {
     });
     setPrices(initialPrices);
 
-    // Fetch initial prices from Binance API
+    // Fetch initial prices from Binance API (REST)
     const fetchInitialPrices = async () => {
       try {
         const response = await fetch(
@@ -36,7 +49,8 @@ export const useCryptoPrice = (symbols: string[]) => {
         const data = await response.json();
 
         const updatedPrices: Record<string, CryptoPrice> = {};
-        symbols.forEach((symbol) => {
+        activeSymbols.forEach((symbol) => {
+          // Look for SYMBOL + USDT (e.g. BTCUSDT)
           const ticker = data.find(
             (t: any) => t.symbol === `${symbol}USDT`
           );
@@ -59,21 +73,32 @@ export const useCryptoPrice = (symbols: string[]) => {
     fetchInitialPrices();
 
     // WebSocket connection for real-time updates
-    const streams = symbols.map((s) => `${s.toLowerCase()}usdt@ticker`).join("/");
-    const ws = new WebSocket(`${BINANCE_WS_URL}/${streams}`);
+    const streamNames = activeSymbols.map((s) => `${s.toLowerCase()}usdt@ticker`).join("/");
+    const wsUrl = `${BINANCE_WS_BASE_URL}?streams=${streamNames}`;
+
+    // console.log("Connecting to Binance WS:", wsUrl);
+    const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        const symbol = data.s?.replace("USDT", "") || "";
+        const message = JSON.parse(event.data);
+        // Combined stream payload structure: { stream: "...", data: { ... } }
+        const data = message.data || message;
 
-        if (symbols.includes(symbol)) {
+        // data.s is the symbol coming back, e.g. "BTCUSDT"
+        if (!data || !data.s) return;
+
+        const incomingSymbol = data.s.replace("USDT", ""); // "BTC"
+        // console.log("incomingSymbol", data);
+        
+
+        if (activeSymbols.includes(incomingSymbol)) {
           setPrices((prev) => ({
             ...prev,
-            [symbol]: {
-              symbol,
+            [incomingSymbol]: {
+              symbol: incomingSymbol,
               price: parseFloat(data.c).toFixed(2),
-              change24h: parseFloat(data.p).toFixed(2),
+              change24h: parseFloat(data.q).toFixed(2),
               changePercent24h: parseFloat(data.P).toFixed(2),
               positive: parseFloat(data.P) >= 0,
             },
@@ -89,9 +114,11 @@ export const useCryptoPrice = (symbols: string[]) => {
     };
 
     return () => {
-      ws.close();
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
     };
-  }, [symbols.join(",")]);
+  }, [JSON.stringify(symbols)]); // Dependency on stringified symbols so array ref changes don't re-trigger unnecessarily if content is same
 
   return prices;
 };

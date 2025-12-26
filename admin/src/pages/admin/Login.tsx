@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ const AdminLogin = () => {
 
   useEffect(() => {
     if (user && isAdmin) {
-      navigate("/dashboard");
+      navigate("/admin/dashboard");
     }
   }, [user, isAdmin, navigate]);
 
@@ -60,7 +60,7 @@ const AdminLogin = () => {
         title: "Admin Login Successful",
         description: "Welcome to the admin dashboard",
       });
-      navigate("/dashboard");
+      navigate("/admin/dashboard");
     } catch (error: any) {
       // Error toast is already shown by the AuthContext
       console.error("Login error:", error);
@@ -146,6 +146,14 @@ const AdminLogin = () => {
               {loading ? "Authenticating..." : "Access Admin Panel"}
             </Button>
           </CardFooter>
+          <div className="flex py-4 items-center justify-center">
+            <Link
+              to="/signup"
+              className="ml-2 text-sm  text-primary hover:underline"
+            >
+              Create Account
+            </Link>
+          </div>
         </form>
       </Card>
     </div>

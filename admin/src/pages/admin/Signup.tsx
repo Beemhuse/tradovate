@@ -68,7 +68,7 @@ const AdminSignup = () => {
     try {
       await signup(email, password);
       // Navigate to verification page
-      navigate("/admin/verify-email", { state: { email } });
+      navigate("/verify", { state: { email } });
     } catch (error: any) {
       // Error toast is already shown by the AuthContext
       console.error("Signup error:", error);
@@ -172,7 +172,7 @@ const AdminSignup = () => {
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
               <Link
-                to="/admin/login"
+                to="/"
                 className="text-primary hover:underline font-medium"
               >
                 Sign in

@@ -6,25 +6,25 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger 
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue 
+  SelectValue,
 } from "@/components/ui/select";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
   AlertCircle,
   Edit,
   Wallet,
@@ -33,7 +33,7 @@ import {
   UserCheck,
   Mail,
   Calendar,
-  Key
+  Key,
 } from "lucide-react";
 
 const UserDetail: React.FC = () => {
@@ -42,15 +42,15 @@ const UserDetail: React.FC = () => {
   const [isEditingWallet, setIsEditingWallet] = useState<string | null>(null);
   const [walletEditData, setWalletEditData] = useState({
     address: "",
-    balance: ""
+    balance: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { 
-    data: user, 
-    isLoading, 
+  const {
+    data: user,
+    isLoading,
     error,
-    refetch 
+    refetch,
   } = useFetchData<any>(`/admin/users/${id}`, `adminUser-${id}`);
 
   const getStatusColor = (status: string) => {
@@ -178,39 +178,44 @@ const UserDetail: React.FC = () => {
     }
   };
 
-  if (isLoading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
-        <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-        <p>Loading user details...</p>
+  if (isLoading)
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading user details...</p>
+        </div>
       </div>
-    </div>
-  );
-  
-  if (error) return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
-        <h2 className="font-semibold mb-2">Failed to load user</h2>
-        <p>{error.message}</p>
-        <Button variant="outline" className="mt-4" onClick={() => refetch()}>
-          Retry
-        </Button>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
+          <h2 className="font-semibold mb-2">Failed to load user</h2>
+          <p>{error.message}</p>
+          <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
       </div>
-    </div>
-  );
-  
-  if (!user) return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="text-center py-12">
-        <UserCheck className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-        <h2 className="text-2xl font-bold mb-2">User not found</h2>
-        <p className="text-muted-foreground mb-4">The requested user does not exist</p>
-        <Link to="/users">
-          <Button>Back to Users</Button>
-        </Link>
+    );
+
+  if (!user)
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="text-center py-12">
+          <UserCheck className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">User not found</h2>
+          <p className="text-muted-foreground mb-4">
+            The requested user does not exist
+          </p>
+          <Link to="/users">
+            <Button>Back to Users</Button>
+          </Link>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   const startEditWallet = (wallet: any) => {
     setIsEditingWallet(wallet.id);
@@ -222,23 +227,28 @@ const UserDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminNav />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link to="/users" className="inline-flex items-center text-sm text-primary hover:underline mb-4">
+          <Link
+            to="/users"
+            className="inline-flex items-center text-sm text-primary hover:underline mb-4"
+          >
             ← Back to users
           </Link>
-          
+
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{(user as any).name || user.email}</h1>
-                <Badge 
+                <h1 className="text-3xl font-bold">
+                  {(user as any).name || user.email}
+                </h1>
+                <Badge
                   variant={user.isVerified ? "default" : "secondary"}
-                  className={user.isVerified 
-                    ? "bg-green-100 text-green-800 hover:bg-green-100" 
-                    : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                  className={
+                    user.isVerified
+                      ? "bg-green-100 text-green-800 hover:bg-green-100"
+                      : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
                   }
                 >
                   {user.isVerified ? "Verified" : "Unverified"}
@@ -277,7 +287,10 @@ const UserDetail: React.FC = () => {
                   <DialogHeader>
                     <DialogTitle>Update User Role</DialogTitle>
                   </DialogHeader>
-                  <Select onValueChange={handleUpdateRole} defaultValue={user.role}>
+                  <Select
+                    onValueChange={handleUpdateRole}
+                    defaultValue={user.role}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -290,8 +303,8 @@ const UserDetail: React.FC = () => {
                 </DialogContent>
               </Dialog>
 
-              <Button 
-                variant={user.isVerified ? "outline" : "default"} 
+              <Button
+                variant={user.isVerified ? "outline" : "default"}
                 size="sm"
                 onClick={handleVerifyUser}
               >
@@ -323,7 +336,9 @@ const UserDetail: React.FC = () => {
               </div>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm text-muted-foreground mb-1">Email Address</dt>
+                  <dt className="text-sm text-muted-foreground mb-1">
+                    Email Address
+                  </dt>
                   <dd className="font-medium">{user.email}</dd>
                 </div>
                 <div>
@@ -331,24 +346,36 @@ const UserDetail: React.FC = () => {
                   <dd className="font-medium capitalize">{user.role}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted-foreground mb-1">Verification Status</dt>
+                  <dt className="text-sm text-muted-foreground mb-1">
+                    Verification Status
+                  </dt>
                   <dd>
-                    <Badge 
-                      variant="outline" 
-                      className={`flex items-center w-fit ${getStatusColor(user.isVerified ? "verified" : "pending")}`}
+                    <Badge
+                      variant="outline"
+                      className={`flex items-center w-fit ${getStatusColor(
+                        user.isVerified ? "verified" : "pending"
+                      )}`}
                     >
-                      {user.isVerified ? <CheckCircle className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                      {user.isVerified ? (
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                      ) : (
+                        <Clock className="w-3 h-3 mr-1" />
+                      )}
                       {user.isVerified ? "Verified" : "Pending"}
                     </Badge>
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted-foreground mb-1">Account Created</dt>
+                  <dt className="text-sm text-muted-foreground mb-1">
+                    Account Created
+                  </dt>
                   <dd>{new Date(user.createdAt).toLocaleString()}</dd>
                 </div>
                 {user.lastLogin && (
                   <div>
-                    <dt className="text-sm text-muted-foreground mb-1">Last Login</dt>
+                    <dt className="text-sm text-muted-foreground mb-1">
+                      Last Login
+                    </dt>
                     <dd>{new Date(user.lastLogin).toLocaleString()}</dd>
                   </div>
                 )}
@@ -363,49 +390,64 @@ const UserDetail: React.FC = () => {
                   <h2 className="text-lg font-semibold">KYC Verification</h2>
                 </div>
                 {user.kyc && (
-                  <Badge 
+                  <Badge
                     variant="outline"
-                    className={`flex items-center ${getStatusColor((user.kyc as any).status)}`}
+                    className={`flex items-center ${getStatusColor(
+                      (user.kyc as any).status
+                    )}`}
                   >
                     {getStatusIcon((user.kyc as any).status)}
                     {(user.kyc as any).status}
                   </Badge>
                 )}
               </div>
-              
+
               {user.kyc ? (
                 <div className="space-y-4">
                   <div>
-                    <dt className="text-sm text-muted-foreground mb-1">Full Name</dt>
+                    <dt className="text-sm text-muted-foreground mb-1">
+                      Full Name
+                    </dt>
                     <dd>{(user.kyc as any).fullName}</dd>
                   </div>
                   {(user.kyc as any).idNumber && (
                     <div>
-                      <dt className="text-sm text-muted-foreground mb-1">ID Number</dt>
-                      <dd className="font-mono">{(user.kyc as any).idNumber}</dd>
+                      <dt className="text-sm text-muted-foreground mb-1">
+                        ID Number
+                      </dt>
+                      <dd className="font-mono">
+                        {(user.kyc as any).idNumber}
+                      </dd>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">Front Image</p>
-                      <img 
-                        src={(user.kyc as any).frontImage} 
-                        alt="ID Front" 
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Front Image
+                      </p>
+                      <img
+                        src={(user.kyc as any).frontImage}
+                        alt="ID Front"
                         className="w-full h-40 object-cover rounded border"
                       />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">Back Image</p>
-                      <img 
-                        src={(user.kyc as any).backImage} 
-                        alt="ID Back" 
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Back Image
+                      </p>
+                      <img
+                        src={(user.kyc as any).backImage}
+                        alt="ID Back"
                         className="w-full h-40 object-cover rounded border"
                       />
                     </div>
                   </div>
                   {(user.kyc as any).verifiedAt && (
                     <div className="text-sm text-muted-foreground">
-                      Verified on {new Date((user.kyc as any).verifiedAt).toLocaleDateString()}
+                      Verified on{" "}
+                      {new Date(
+                        (user.kyc as any).verifiedAt
+                      ).toLocaleDateString()}
                     </div>
                   )}
                 </div>
@@ -413,7 +455,9 @@ const UserDetail: React.FC = () => {
                 <div className="text-center py-8">
                   <UserCheck className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-muted-foreground">No KYC submitted</p>
-                  <p className="text-sm text-muted-foreground mt-1">User hasn't completed KYC verification</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    User hasn't completed KYC verification
+                  </p>
                 </div>
               )}
             </div>
@@ -438,8 +482,14 @@ const UserDetail: React.FC = () => {
                   <div key={wallet.id} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${wallet.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span className="font-semibold">{wallet.coin?.name || wallet.coin?.symbol}</span>
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            wallet.isActive ? "bg-green-500" : "bg-gray-300"
+                          }`}
+                        />
+                        <span className="font-semibold">
+                          {wallet.coin?.name || wallet.coin?.symbol}
+                        </span>
                         <Badge variant="secondary" className="text-xs">
                           {wallet.coin?.symbol}
                         </Badge>
@@ -461,7 +511,12 @@ const UserDetail: React.FC = () => {
                           </label>
                           <Input
                             value={walletEditData.address}
-                            onChange={(e) => setWalletEditData({...walletEditData, address: e.target.value})}
+                            onChange={(e) =>
+                              setWalletEditData({
+                                ...walletEditData,
+                                address: e.target.value,
+                              })
+                            }
                             placeholder="Enter wallet address"
                           />
                         </div>
@@ -472,7 +527,12 @@ const UserDetail: React.FC = () => {
                           <Input
                             type="number"
                             value={walletEditData.balance}
-                            onChange={(e) => setWalletEditData({...walletEditData, balance: e.target.value})}
+                            onChange={(e) =>
+                              setWalletEditData({
+                                ...walletEditData,
+                                balance: e.target.value,
+                              })
+                            }
                             placeholder="Enter balance"
                           />
                         </div>
@@ -496,11 +556,17 @@ const UserDetail: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Address</p>
-                          <p className="font-mono text-sm break-all">{wallet.address || "-"}</p>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Address
+                          </p>
+                          <p className="font-mono text-sm break-all">
+                            {wallet.address || "-"}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Balance</p>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Balance
+                          </p>
                           <p className="font-semibold">
                             {wallet.balance} {wallet.coin?.symbol}
                           </p>
@@ -509,7 +575,7 @@ const UserDetail: React.FC = () => {
                     )}
                   </div>
                 ))}
-                
+
                 {!user.wallets?.length && (
                   <div className="text-center py-8">
                     <Wallet className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
@@ -526,7 +592,10 @@ const UserDetail: React.FC = () => {
                   <RefreshCw className="w-5 h-5 text-primary" />
                   <h2 className="text-lg font-semibold">Recent Transactions</h2>
                 </div>
-                <Link to={`/transactions?userId=${id}`} className="text-sm text-primary hover:underline">
+                <Link
+                  to={`/transactions?userId=${id}`}
+                  className="text-sm text-primary hover:underline"
+                >
                   View all
                 </Link>
               </div>
@@ -535,10 +604,18 @@ const UserDetail: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Type</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Amount</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Type
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Amount
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Date
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -553,9 +630,11 @@ const UserDetail: React.FC = () => {
                           {t.amount} {t.currency}
                         </td>
                         <td className="py-3 px-4">
-                          <Badge 
+                          <Badge
                             variant="outline"
-                            className={`flex items-center w-fit ${getStatusColor(t.status)}`}
+                            className={`flex items-center w-fit ${getStatusColor(
+                              t.status
+                            )}`}
                           >
                             {getStatusIcon(t.status)}
                             {t.status}
@@ -568,11 +647,13 @@ const UserDetail: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
-                
+
                 {!user.transactions?.length && (
                   <div className="text-center py-8">
                     <RefreshCw className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                    <p className="text-muted-foreground">No transactions found</p>
+                    <p className="text-muted-foreground">
+                      No transactions found
+                    </p>
                   </div>
                 )}
               </div>

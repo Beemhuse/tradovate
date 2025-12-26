@@ -1,38 +1,3 @@
-// import { Server as HttpServer } from 'http';
-// import { Server } from 'socket.io';
-// import { fetchMarketPrices } from '../services/marketPriceService';
-
-// export function initWebsocket(server: HttpServer) {
-//   const io = new Server(server, {
-//     cors: {
-//       origin: '*', // tighten for production
-//     },
-//   });
-
-//   io.on('connection', async (socket) => {
-//     console.log('Client connected:', socket.id);
-
-//     // Send current prices immediately
-//     try {
-//       const prices = await fetchMarketPrices();
-//       socket.emit('prices:init', prices);
-//     } catch (e) {
-//       console.error('Failed to send initial prices', e);
-//     }
-
-//     // Allow client to subscribe to specific symbols later if needed
-//     socket.on('subscribe:pair', (symbol: string) => {
-//       socket.join(`pair:${symbol}`);
-//     });
-
-//     socket.on('disconnect', () => {
-//       console.log('Client disconnected:', socket.id);
-//     });
-//   });
-
-//   return io;
-// }
-
 import { fetchPrices, priceEvents } from "../services/marketPriceService";
 import { Server } from "socket.io";
 import { Server as HttpServer } from "http";

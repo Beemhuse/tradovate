@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { CookieManager } from "@/utils/cookie-utils";
+import { setAuthToken } from "@/config/config";
 
 export const useAuth = () => {
   const [user, updateUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = CookieManager.get("tradovate-user");
     if (storedUser) {
       updateUser(JSON.parse(storedUser) || null);
     }
@@ -14,23 +15,23 @@ export const useAuth = () => {
   }, []);
 
   const setUser = (user: any) => {
-    localStorage.setItem("user", JSON.stringify(user))
-    updateUser(user)
-  }
-  const removeUser = () => {
-    localStorage.removeItem("user")
-    updateUser(null)
-  };
-  const setLoading = (loading: boolean) => setIsLoading(loading);
-
-  const setCookies = (accessToken: string, refreshToken: string) => {
-    CookieManager.set("travodate-token", accessToken, {
+    CookieManager.set("tradovate-user", JSON.stringify(user), {
       expires: 7,
       path: "/",
       secure: true,
       sameSite: "Strict",
       httpOnly: true,
     });
+    updateUser(user)
+  }
+  const removeUser = () => {
+    CookieManager.delete("tradovate-user");
+    updateUser(null)
+  };
+  const setLoading = (loading: boolean) => setIsLoading(loading);
+
+  const setCookies = (accessToken: string, refreshToken: string) => {
+    setAuthToken(accessToken);
     CookieManager.set("travodate-refresh-token", refreshToken, {
       expires: 7,
       path: "/",
@@ -40,9 +41,9 @@ export const useAuth = () => {
     });
   }
 
-  return { 
-    user, 
-    setUser, 
+  return {
+    user,
+    setUser,
     removeUser,
     isLoading,
     setLoading,

@@ -150,4 +150,17 @@ All colors MUST be HSL.
   .danger-glow {
     box-shadow: 0 0 20px hsl(var(--danger) / 0.3);
   }
+                                  
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
 }

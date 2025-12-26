@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 export const getCoins = async (req: Request, res: Response) => {
   try {
     const coins = await prisma.coin.findMany({
-      where: { isActive: true },
+      // where: { isActive: true },
       include: {
         networks: {
           include: { network: true },
@@ -15,9 +15,9 @@ export const getCoins = async (req: Request, res: Response) => {
 
     // Generate QR codes for contract addresses
     const coinsWithQr = await Promise.all(
-      coins.map(async (coin) => {
+      coins.map(async (coin: any) => {
         const networksWithQr = await Promise.all(
-          coin.networks.map(async (cn) => {
+          coin.networks.map(async (cn: any) => {
             let qrCode = "";
             if (cn.contractAddress) {
               try {
@@ -36,5 +36,39 @@ export const getCoins = async (req: Request, res: Response) => {
     res.json(coinsWithQr);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch coins" });
+  }
+};
+
+export const getCoin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const coin = await prisma.coin.findUnique({
+      where: { id },
+      include: {
+        networks: {
+          include: { network: true },
+        },
+      },
+    });
+
+    if (!coin) return res.status(404).json({ error: "Coin not found" });
+
+    const networksWithQr = await Promise.all(
+      coin.networks.map(async (cn: any) => {
+        let qrCode = "";
+        if (cn.contractAddress) {
+          try {
+            qrCode = await QRCode.toDataURL(cn.contractAddress);
+          } catch (e) {
+            console.error("QR Gen Error", e);
+          }
+        }
+        return { ...cn, qrCode };
+      })
+    );
+
+    res.json({ ...coin, networks: networksWithQr });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch coin" });
   }
 };

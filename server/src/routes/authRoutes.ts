@@ -1,5 +1,16 @@
-import { Router } from 'express';
-import { signup, verifyEmail, login, forgotPassword, resetPassword, resendOtp, logout } from '../controllers/authController';
+import { Router } from "express";
+import {
+  signup,
+  adminSignup,
+  verifyEmail,
+  login,
+  forgotPassword,
+  resetPassword,
+  resendOtp,
+  logout,
+  getMe,
+} from "../controllers/authController";
+import { authenticateToken } from "../middlewares/authMiddleware";
 
 const router = Router();
 
@@ -25,7 +36,33 @@ const router = Router();
  *       200:
  *         description: Signup successful, OTP sent
  */
-router.post('/signup', signup);
+router.post("/signup", signup);
+
+/**
+ * @swagger
+ * /auth/admin/signup:
+ *   post:
+ *     summary: Register a new admin user (requires whitelisted email)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Admin signup successful, OTP sent
+ *       403:
+ *         description: Email not authorized for admin registration
+ */
+router.post("/admin/signup", adminSignup);
 
 /**
  * @swagger
@@ -49,7 +86,7 @@ router.post('/signup', signup);
  *       200:
  *         description: Email verified
  */
-router.post('/verify-email', verifyEmail);
+router.post("/verify-email", verifyEmail);
 
 /**
  * @swagger
@@ -73,7 +110,7 @@ router.post('/verify-email', verifyEmail);
  *       200:
  *         description: Login successful
  */
-router.post('/login', login);
+router.post("/login", login);
 
 /**
  * @swagger
@@ -97,7 +134,7 @@ router.post('/login', login);
  *       404:
  *         description: User not found
  */
-router.post('/forgot-password', forgotPassword);
+router.post("/forgot-password", forgotPassword);
 
 /**
  * @swagger
@@ -125,7 +162,7 @@ router.post('/forgot-password', forgotPassword);
  *       400:
  *         description: Invalid OTP
  */
-router.post('/reset-password', resetPassword);
+router.post("/reset-password", resetPassword);
 
 /**
  * @swagger
@@ -149,7 +186,7 @@ router.post('/reset-password', resetPassword);
  *       404:
  *         description: User not found
  */
-router.post('/resend-otp', resendOtp);
+router.post("/resend-otp", resendOtp);
 
 /**
  * @swagger
@@ -163,6 +200,64 @@ router.post('/resend-otp', resendOtp);
  *       200:
  *         description: Logged out successfully
  */
-router.post('/logout', logout);
+router.post("/logout", logout);
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 wallets:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       coin:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                 transactions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       amount:
+ *                         type: number
+ *                       type:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 kyc:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ */
+router.get("/me", authenticateToken, getMe);
 
 export default router;

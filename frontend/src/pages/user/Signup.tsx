@@ -12,6 +12,7 @@ import { isPasswordValid } from "@/components/PasswordValidator";
 import { useCreateData } from "@/hooks/use-api";
 import { AUTH } from "@/hooks/apiEndpoint";
 import { set } from "date-fns";
+import TradovateLogo from "@/components/TradovateLogo";
 
 const UserSignup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -148,14 +149,15 @@ const UserSignup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
+      <Card className="w-full max-w-md flex flex-col max-h-[90vh]">
+        <TradovateLogo />
+        <CardHeader className="space-y-1 pt-0 h-fit">
+          <CardTitle className="text-2xl font-bold text-center pt-0">Create Account</CardTitle>
           <CardDescription className="text-center">
-            Join us and start trading today
+            Join Tradovate future and start trading today
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleVerifyMail}>
+        <form onSubmit={handleVerifyMail} className="flex-1 overflow-auto no-scrollbar">
           {/* <form onSubmit={handleSignup}> */}
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -255,7 +257,7 @@ const UserSignup = () => {
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to="/" className="text-primary hover:underline">
                 Login
               </Link>
             </p>

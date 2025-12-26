@@ -145,7 +145,7 @@ export async function fetchPrices() {
       include_24hr_change: true,
     },
   });
-
+console.log("Fetched market prices from CoinGecko", data);
   const formatted: any = {};
   Object.entries(COIN_MAP).forEach(([symbol, cgId]) => {
     if (data[cgId]) {

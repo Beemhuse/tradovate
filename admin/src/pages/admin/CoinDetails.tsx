@@ -33,15 +33,15 @@ const CoinDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: coin, isLoading, isError } = useFetchData<Coin>(
-    `/market/coins/${id}`,
-    ["coin", id]
-  );
+  const {
+    data: coin,
+    isLoading,
+    isError,
+  } = useFetchData<Coin>(`/market/coins/${id}`, ["coin", id]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <div className="space-y-4">
             <Skeleton className="h-10 w-48" />
@@ -55,7 +55,6 @@ const CoinDetailsPage = () => {
   if (isError || !coin) {
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-destructive">
             Coin not found or error loading coin details
@@ -75,8 +74,6 @@ const CoinDetailsPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminNav />
-
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -118,13 +115,20 @@ const CoinDetailsPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate(`/admin/coins/${id}/edit`)}>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/admin/coins/${id}/edit`)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               Edit Coin
             </Button>
             {coin.website && (
               <Button variant="outline" asChild>
-                <a href={coin.website} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={coin.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <Globe className="h-4 w-4 mr-2" />
                   Website
                 </a>

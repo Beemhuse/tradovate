@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCreateData } from "@/hooks/use-api";
 import { AUTH } from "@/hooks/apiEndpoint";
 import { useAuth } from "@/contexts/AuthContext";
+import TradovateLogo from "@/components/TradovateLogo";
 
 const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,11 +19,11 @@ const UserLogin = () => {
   const { toast } = useToast();
   const { setUser, user, setLoading, setCookies } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
+  // useEffect(() => {
+  //   if (user) {
+  //     navigate("/dashboard");
+  //   }
+  // }, [user, navigate]);
 
   const { mutate, isPending } = useCreateData(AUTH.LOGIN, ["login"])
 
@@ -59,8 +60,9 @@ const UserLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+      <Card className="w-full max-w-md flex flex-col">
+        <TradovateLogo />
+        <CardHeader className="space-y-1 pt-0">
           <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account

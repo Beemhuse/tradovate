@@ -3,6 +3,9 @@ import { useEffect, useRef } from "react";
 interface TradingViewChartProps {
   symbol?: string;
   height?: number;
+  studies?: string[];
+  hideSideToolbar?: boolean;
+  hideVolume?: boolean;
 }
 
 declare global {
@@ -11,7 +14,13 @@ declare global {
   }
 }
 
-const TradingViewChart = ({ symbol = "BTCUSDT", height = 500 }: TradingViewChartProps) => {
+const TradingViewChart = ({
+  symbol = "BTCUSDT",
+  height = 500,
+  studies = ["STD;SMA"],
+  hideSideToolbar = false,
+  hideVolume = false
+}: TradingViewChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,11 +41,12 @@ const TradingViewChart = ({ symbol = "BTCUSDT", height = 500 }: TradingViewChart
           locale: "en",
           toolbar_bg: "#0a0a0a",
           enable_publishing: false,
-          hide_side_toolbar: false,
+          hide_side_toolbar: hideSideToolbar,
           allow_symbol_change: true,
           container_id: containerRef.current?.id || "tradingview_chart",
-          studies: ["STD;SMA"],
-          height: height,
+          studies: studies,
+          hide_volume: hideVolume,
+          height: height ? height : "100%",
         });
       }
     };
@@ -54,11 +64,12 @@ const TradingViewChart = ({ symbol = "BTCUSDT", height = 500 }: TradingViewChart
         locale: "en",
         toolbar_bg: "#0a0a0a",
         enable_publishing: false,
-        hide_side_toolbar: false,
+        hide_side_toolbar: hideSideToolbar,
         allow_symbol_change: true,
         container_id: containerRef.current?.id || "tradingview_chart",
-        studies: ["STD;SMA"],
-        height: height,
+        studies: studies,
+        hide_volume: hideVolume,
+        height: height ? height : "100%",
       });
     }
 
@@ -73,7 +84,7 @@ const TradingViewChart = ({ symbol = "BTCUSDT", height = 500 }: TradingViewChart
     <div
       ref={containerRef}
       id={`tradingview_${symbol}_${Date.now()}`}
-      style={{ height: `${height}px` }}
+      style={{ height: height ? `${height}px` : "100%" }}
       className="w-full"
     />
   );

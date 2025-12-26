@@ -19,18 +19,18 @@ const AdminNav = () => {
   const { logout } = useAuth();
 
   const navItems = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/coins", icon: Coins, label: "Coins" },
-    { to: "/users", icon: Users, label: "Users" },
-    { to: "/kyc", icon: FileCheck, label: "KYC" },
-    { to: "/transactions", icon: Receipt, label: "Transactions" },
-    { to: "/trading-pairs", icon: ArrowLeftRight, label: "Pairs" },
-    { to: "/support", icon: MessageSquare, label: "Support" },
+    { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/admin/coins", icon: Coins, label: "Coins" },
+    { to: "/admin/users", icon: Users, label: "Users" },
+    { to: "/admin/kyc", icon: FileCheck, label: "KYC" },
+    { to: "/admin/transactions", icon: Receipt, label: "Transactions" },
+    { to: "/admin/trading-pairs", icon: ArrowLeftRight, label: "Pairs" },
+    // { to: "/support", icon: MessageSquare, label: "Support" },
   ];
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate("/");
   };
 
   return (

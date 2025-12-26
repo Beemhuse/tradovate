@@ -5,7 +5,7 @@ export const API_URL =
 
 // Helper function to get auth headers
 export const getAuthHeaders = (): HeadersInit => {
-  const token = CookieManager.get("agro-token");
+  const token = CookieManager.get("tradovate-token");
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
@@ -22,8 +22,8 @@ export const handleFetchResponse = async (response: Response) => {
   // Handle 401 unauthorized
   if (response.status === 401) {
     if (typeof window !== "undefined") {
-      CookieManager.delete("agro-token");
-      CookieManager.delete("agro-user");
+      CookieManager.delete("tradovate-token");
+      CookieManager.delete("tradovate-user");
       // Optionally redirect to login
       // window.location.href = "/auth";
     }
@@ -43,7 +43,7 @@ export const handleFetchResponse = async (response: Response) => {
 
 // Helper functions for auth token management
 export const setAuthToken = (token: string) => {
-  CookieManager.set("agro-token", token, {
+  CookieManager.set("tradovate-token", token, {
     expires: 7,
     path: "/",
     secure: true,
@@ -53,7 +53,7 @@ export const setAuthToken = (token: string) => {
 
 export const setAuthUser = (user: any) => {
   const userStr = typeof user === "string" ? user : JSON.stringify(user);
-  CookieManager.set("agro-user", userStr, {
+  CookieManager.set("tradovate-user", userStr, {
     expires: 7,
     path: "/",
     secure: true,
@@ -62,23 +62,23 @@ export const setAuthUser = (user: any) => {
 };
 
 export const clearAuthToken = () => {
-  CookieManager.delete("agro-token", "/");
-  CookieManager.delete("agro-user", "/");
+  CookieManager.delete("tradovate-token", "/");
+  CookieManager.delete("tradovate-user", "/");
   if (typeof window !== "undefined") {
     window.location.reload();
   }
 };
 
 export const getAuthToken = (): string | null => {
-  return CookieManager.get("agro-token");
+  return CookieManager.get("tradovate-token");
 };
 
 export const getAuthUser = (): string | null => {
-  return CookieManager.get("agro-user");
+  return CookieManager.get("tradovate-user");
 };
 
 export const getStoredUser = (): any | null => {
-  const userStr = CookieManager.get("agro-user");
+  const userStr = CookieManager.get("tradovate-user");
   if (!userStr) return null;
 
   try {

@@ -33,6 +33,11 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
+const adminSignupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
 // Helper: Generate & Send OTP
 const generateAndSendOtp = async (email: string) => {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -53,7 +58,8 @@ export const signup = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const role = email === ADMIN_EMAIL ? "ADMIN" : "USER";
+    // Regular signup always creates USER role
+    const role = "USER";
 
     await prisma.user.create({
       data: {
@@ -74,7 +80,7 @@ export const signup = async (req: Request, res: Response) => {
       message: "User created. Please check email for OTP to verify.",
     });
   } catch (error: any) {
-    console.error("Signup error:", error); // 👈 add this
+    console.error("Signup error:", error);
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
@@ -83,6 +89,59 @@ export const signup = async (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ error: "Signup failed", detail: error?.message });
+  }
+};
+
+export const adminSignup = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = adminSignupSchema.parse(req.body);
+
+    // Check if email is in admin whitelist
+    const whitelisted = await prisma.adminWhitelist.findUnique({
+      where: { email },
+    });
+
+    if (!whitelisted) {
+      return res.status(403).json({
+        error:
+          "Unauthorized. This email is not authorized for admin registration.",
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser)
+      return res.status(400).json({ error: "User already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role: "ADMIN",
+        isVerified: false,
+      },
+    });
+
+    const sent = await generateAndSendOtp(email);
+    if (!sent)
+      return res
+        .status(500)
+        .json({ error: "Failed to send verification email" });
+
+    res.json({
+      message: "Admin user created. Please check email for OTP to verify.",
+    });
+  } catch (error: any) {
+    console.error("Admin signup error:", error);
+
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+
+    return res
+      .status(500)
+      .json({ error: "Admin signup failed", detail: error?.message });
   }
 };
 
@@ -127,13 +186,16 @@ export const login = async (req: Request, res: Response) => {
     if (!user.isVerified)
       return res.status(403).json({ error: "Email not verified" });
 
-    // Admin restriction: if trying to login as admin BUT email doesn't match env, force user role?
-    // Or schema handles role. The seed/signup logic ensures correct role.
-    // We can enforce stricter check here if needed.
-    if (user.role === "ADMIN" && email !== ADMIN_EMAIL) {
-      // This case theoretically shouldn't happen if we only grant ADMIN to that email on signup.
-      // But strict check:
-      return res.status(403).json({ error: "Unauthorized Admin Access" });
+    // Enhanced admin security: verify admin users are still whitelisted
+    if (user.role === "ADMIN") {
+      const whitelisted = await prisma.adminWhitelist.findUnique({
+        where: { email },
+      });
+      if (!whitelisted) {
+        return res.status(403).json({
+          error: "Unauthorized. Admin access has been revoked.",
+        });
+      }
     }
 
     const { accessToken, refreshToken } = generateTokens(user.id, user.role);
@@ -182,7 +244,6 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Reset failed" });
   }
 };
-
 // Keep requestOtp for backward compatibility if needed, or remove.
 export const resendOtp = async (req: Request, res: Response) => {
   try {
@@ -235,5 +296,43 @@ export const logout = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Logout error", error);
     res.status(500).json({ error: "Logout failed" });
+  }
+};
+
+// Local request type that includes user from your auth middleware
+type AuthRequest = Request & {
+  user?: { id: string; role?: string; email?: string };
+};
+
+export const getMe = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    // include related data you want to expose
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        wallets: {
+          include: { coin: true },
+        },
+        transactions: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+        kyc: true, // optional: include KYC if you added model
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Remove sensitive fields before sending
+    // (password is optional in your schema but remove if present)
+    const { password, ...sanitized } = user as any;
+
+    return res.json(sanitized);
+  } catch (error) {
+    console.error("getMe error:", error);
+    return res.status(500).json({ error: "Failed to fetch user" });
   }
 };

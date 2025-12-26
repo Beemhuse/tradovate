@@ -1,45 +1,63 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UserNav from "@/components/layout/UserNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowUpFromLine, DollarSign, Repeat } from "lucide-react";
-import { Link } from "react-router-dom";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  DollarSign,
+  Repeat,
+  ChartNoAxesCombined,
+} from "lucide-react";
 import { useCryptoPrice } from "@/hooks/useCryptoPrice";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCoins } from "@/hooks/useCoins";
+import { useFetchData } from "@/hooks/use-api";
+import { COINS, MARKET_PAIR } from "@/hooks/apiEndpoint";
+import CoinDeposit from "@/components/modals/CoinDeposit";
+import CoinWithdrawal from "@/components/modals/CoinWithdrawal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
-  const { data: coins } = useCoins();
-  
-  const featuredCoins = ["BTC", "ETH", "USDT"];
-  const marketCoins = coins?.map((c) => c.symbol).filter((s) => s !== "USDT") || ["BTC", "ETH", "BNB", "SOL"];
-  
-  const featuredPrices = useCryptoPrice(featuredCoins);
-  const marketPrices = useCryptoPrice(marketCoins);
+  const { user, isLoading: userLoading } = useAuth();
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  const {
+    data: assetData,
+    refetch,
+    isLoading,
+  } = useFetchData(COINS.ASSETS, "assets");
+
+  const assets = assetData?.assets;
+
+  const {
+    data: cryptoPairsData,
+    isLoading: cryptoPairsLoading,
+    error: cryptoPairsError,
+  } = useFetchData(MARKET_PAIR.LIST, "market-pairs");
+
+  const cryptoPairs = cryptoPairsData?.pairs || [];
+  const baseCoins =
+    cryptoPairs?.map((asset) => asset?.symbol?.split("/")[0]) || [];
+
+  const prices = useCryptoPrice(baseCoins);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!userLoading && !user) {
       navigate("/");
     }
-  }, [user, isLoading, navigate]);
+  }, [user, userLoading, navigate]);
 
-  const getCoinName = (symbol: string) => {
-    const coin = coins?.find((c) => c.symbol === symbol);
-    if (coin) return coin.name;
-    const names: Record<string, string> = {
-      BTC: "Bitcoin",
-      ETH: "Ethereum",
-      USDT: "Tether",
-      BNB: "BNB",
-      SOL: "Solana",
-    };
-    return names[symbol] || symbol;
-  };
+  if (isLoading || userLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        Loading...{" "}
+      </div>
+    );
+  }
 
-  if (isLoading) {
+  if (userLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p>Loading...</p>
@@ -47,10 +65,12 @@ const Dashboard = () => {
     );
   }
 
+  const sortAssets = assets?.sort((a, b) => b.balance - a.balance);
+
+  console.log("sortAssets", sortAssets);
+
   return (
     <div className="min-h-screen bg-background">
-      <UserNav />
-      
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Quick Actions */}
         <Card>
@@ -59,29 +79,29 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-24 flex-col gap-2" asChild>
-                <Link to="/wallet">
-                  <ArrowDownToLine className="h-6 w-6" />
-                  <span>Deposit</span>
-                </Link>
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-2"
+                onClick={() => setDepositOpen(true)}
+              >
+                <ArrowDownToLine className="h-6 w-6" />
+                <span>Deposit</span>
               </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2" asChild>
-                <Link to="/wallet">
-                  <ArrowUpFromLine className="h-6 w-6" />
-                  <span>Withdraw</span>
-                </Link>
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-2"
+                onClick={() => setWithdrawOpen(true)}
+              >
+                <ArrowUpFromLine className="h-6 w-6" />
+                <span>Withdraw</span>
               </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2" asChild>
-                <Link to="/market">
-                  <DollarSign className="h-6 w-6" />
-                  <span>Buy</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2" asChild>
-                <Link to="/market">
-                  <Repeat className="h-6 w-6" />
-                  <span>Convert</span>
-                </Link>
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-2"
+                onClick={() => navigate("/market")}
+              >
+                <Repeat className="h-6 w-6" />
+                <span>Convert</span>
               </Button>
             </div>
           </CardContent>
@@ -91,24 +111,31 @@ const Dashboard = () => {
         <div>
           <h2 className="text-2xl font-bold mb-4">Featured Markets</h2>
           <div className="grid md:grid-cols-3 gap-4">
-            {featuredCoins.map((symbol) => {
-              const priceData = featuredPrices[symbol];
+            {sortAssets?.slice(0, 3).map((coin) => {
+              // const priceData = featuredPrices[symbol];
               return (
-                <Card key={symbol} className="hover:border-primary transition-colors cursor-pointer">
+                <Card
+                  key={coin?.id}
+                  className="hover:border-primary transition-colors cursor-pointer"
+                >
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="font-semibold">{getCoinName(symbol)}</h3>
-                        <p className="text-sm text-muted-foreground">{symbol}</p>
+                        <h3 className="font-semibold">{coin?.coin?.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {coin?.coin?.symbol}
+                        </p>
                       </div>
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-primary font-bold">{symbol[0]}</span>
+                        <span className="text-primary font-bold">
+                          {coin?.coin?.name[0]}
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-2xl font-bold">${priceData?.price || "Loading..."}</p>
-                      <p className={priceData?.positive ? "text-success" : "text-danger"}>
-                        {priceData?.positive ? "+" : ""}{priceData?.changePercent24h}%
+                      <p className="text-2xl font-bold">${coin?.balance}</p>
+                      <p className={true ? "text-success" : "text-danger"}>
+                        +{2.01}%
                       </p>
                     </div>
                   </CardContent>
@@ -129,23 +156,41 @@ const Dashboard = () => {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4">Pair</th>
-                    <th className="text-right py-3 px-4">Price</th>
+                    <th className="text-left py-3 px-4">Trend</th>
+                    <th className="text-center py-3 px-4">Price</th>
                     <th className="text-right py-3 px-4">24h Change</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {marketCoins.map((symbol) => {
-                    const priceData = marketPrices[symbol];
+                  {cryptoPairs.map((pair) => {
+                    const priceData = prices[pair?.symbol?.split("/")[0]];
                     return (
                       <tr
-                        key={symbol}
+                        key={pair?.id}
                         className="border-b border-border hover:bg-secondary/50 transition-colors cursor-pointer"
-                        onClick={() => navigate("/contract")}
+                        // onClick={() => navigate("/contract")}
                       >
-                        <td className="py-3 px-4 font-medium">{symbol}/USDT</td>
-                        <td className="text-right py-3 px-4">${priceData?.price || "..."}</td>
-                        <td className={`text-right py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"}`}>
-                          {priceData?.positive ? "+" : ""}{priceData?.changePercent24h}%
+                        <td className="py-3 px-4 font-medium">
+                          {priceData?.symbol}/USDT
+                        </td>
+
+                        <td
+                          className={`text-left py-3 px-4 ${
+                            priceData?.positive ? "text-success" : "text-danger"
+                          }`}
+                        >
+                          <ChartNoAxesCombined />
+                        </td>
+                        <td className="text-center py-3 px-4">
+                          ${priceData?.price || "..."}
+                        </td>
+                        <td
+                          className={`text-right py-3 px-4 ${
+                            priceData?.positive ? "text-success" : "text-danger"
+                          }`}
+                        >
+                          {priceData?.positive ? "+" : ""}
+                          {priceData?.changePercent24h}%
                         </td>
                       </tr>
                     );
@@ -156,6 +201,24 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Deposit Dialog */}
+      <CoinDeposit
+        addCoinOpen={depositOpen}
+        setAddCoinOpen={setDepositOpen}
+        assets={assets}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
+
+      {/* Withdraw Dialog */}
+      <CoinWithdrawal
+        withdrawOpen={withdrawOpen}
+        setWithdrawOpen={setWithdrawOpen}
+        coins={assets}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

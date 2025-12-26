@@ -2,9 +2,21 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import UserNav from "@/components/layout/UserNav";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileCheck, Clock, XCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +45,10 @@ const UserKYC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!documentType) {
-      toast({ title: "Please select document type before selecting file", variant: "destructive" });
+      toast({
+        title: "Please select document type before selecting file",
+        variant: "destructive",
+      });
       return;
     }
     const selectedFile = e.target.files?.[0];
@@ -42,15 +57,22 @@ const UserKYC = () => {
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result as string);
       reader.readAsDataURL(selectedFile);
-      toast({ title: "File selected successfully click to change or select another file", variant: "default" });
+      toast({
+        title:
+          "File selected successfully click to change or select another file",
+        variant: "default",
+      });
     }
   };
 
-  const { mutate, isPending } = useCreateData(KYC.SUBMIT, ["submit-kyc"], true)
+  const { mutate, isPending } = useCreateData(KYC.SUBMIT, ["submit-kyc"], true);
 
   const handleSubmit = async () => {
     if (kycList?.length < 2) {
-      toast({ title: "Please upload both front and back of your ID", variant: "destructive" });
+      toast({
+        title: "Please upload both front and back of your ID",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -60,10 +82,9 @@ const UserKYC = () => {
     const payload = {
       front: front?.file,
       back: back?.file,
-    }
+    };
 
     console.log("payload", payload);
-    
 
     mutate(payload, {
       onSuccess: () => {
@@ -76,22 +97,41 @@ const UserKYC = () => {
       onError: (error) => {
         toast({
           title: "KYC Failed",
-          description: (error as any)?.response?.data?.message || (error as any)?.response?.data?.error || (error as any)?.response?.data || error?.message || "Something went wrong",
+          description:
+            (error as any)?.response?.data?.message ||
+            (error as any)?.response?.data?.error ||
+            (error as any)?.response?.data ||
+            error?.message ||
+            "Something went wrong",
           variant: "destructive",
         });
       },
-    }
-    );
+    });
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return <Badge className="bg-success"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+        return (
+          <Badge className="bg-success">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Approved
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Rejected
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return (
+          <Badge variant="secondary">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
     }
   };
 
@@ -105,12 +145,12 @@ const UserKYC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <UserNav />
-
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">KYC Verification</h1>
-          <p className="text-muted-foreground">Submit your identity documents for verification</p>
+          <p className="text-muted-foreground">
+            Submit your identity documents for verification
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
@@ -118,7 +158,9 @@ const UserKYC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Upload Document</CardTitle>
-              <CardDescription>Submit a clear photo of your ID document</CardDescription>
+              <CardDescription>
+                Submit a clear photo of your ID document
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -141,12 +183,18 @@ const UserKYC = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {preview ? (
-                    <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded" />
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      className="max-h-48 mx-auto rounded"
+                    />
                   ) : (
                     <div className="space-y-2">
                       <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
                       <p className="text-muted-foreground">Click to upload</p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG, WEBP or PDF up to 10MB</p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG, WEBP or PDF up to 10MB
+                      </p>
                     </div>
                   )}
                 </div>
@@ -173,7 +221,9 @@ const UserKYC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Submitted Documents</CardTitle>
-              <CardDescription>Track the status of your KYC submissions</CardDescription>
+              <CardDescription>
+                Track the status of your KYC submissions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {/* {kycDocs && kycDocs.length > 0 ? ( */}

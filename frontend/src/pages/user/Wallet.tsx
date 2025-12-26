@@ -14,36 +14,37 @@ import { useCoins } from "@/hooks/useCoins";
 import { useCryptoPrice } from "@/hooks/useCryptoPrice";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AddCoins from "@/components/modals/AddCoins";
+import AddCoins from "@/components/modals/CreateWalets";
 import { useFetchData } from "@/hooks/use-api";
 import { COINS } from "@/hooks/apiEndpoint";
+import CoinDeposit from "@/components/modals/CoinDeposit";
+import CoinWithdrawal from "@/components/modals/CoinWithdrawal";
 
 const Wallet = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [addCoinOpen, setAddCoinOpen] = useState(false);
-  const [selectedCoin, setSelectedCoin] = useState<string>("");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawAddress, setWithdrawAddress] = useState("");
   const { toast } = useToast();
-  const navigate = useNavigate();
   
   const { user, isLoading: authLoading } = useAuth();
-  const { data: wallets, isLoading: walletsLoading } = useWallet();
+  // const { data: wallets, isLoading: walletsLoading } = useWallet();
   const { data: coins } = useCoins();
   const initializeWallets = useInitializeWallets();
   
-  const { data: assets, refetch, isLoading } = useFetchData(COINS.ASSETS, "assets")
+  const { data: assetData, refetch, isLoading } = useFetchData(COINS.ASSETS, "assets")
 
-  const coinSymbols = coins?.map((c) => c.symbol) || [];
+  const assets = assetData?.assets
+
+
+  console.log("assets", assets);
+
+  // const assets = []
+
+  const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
   const prices = useCryptoPrice(coinSymbols);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [user, authLoading, navigate]);
+  // console.log("prices", prices);
 
   useEffect(() => {
     if (user && coins && coins.length > 0) {
@@ -57,46 +58,7 @@ const Wallet = () => {
     return balance * price;
   };
 
-  const totalBalance = wallets?.reduce((sum, wallet) => {
-    const symbol = wallet.coins?.symbol || "";
-    return sum + calculateUSDTValue(symbol, Number(wallet.available_balance));
-  }, 0) || 0;
-
-  const selectedCoinData = coins?.find((c) => c.id === selectedCoin);
-
-  const handleCopyAddress = () => {
-    if (selectedCoinData?.deposit_address) {
-      navigator.clipboard.writeText(selectedCoinData.deposit_address);
-      toast({ title: "Address copied!" });
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!selectedCoin || !withdrawAmount || !withdrawAddress) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
-      return;
-    }
-
-    const { error } = await supabase.from("transactions").insert({
-      user_id: user?.id,
-      coin_id: selectedCoin,
-      type: "withdrawal",
-      amount: parseFloat(withdrawAmount),
-      status: "pending",
-      tx_hash: withdrawAddress,
-    });
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Withdrawal request submitted", description: "Pending admin approval" });
-      setWithdrawOpen(false);
-      setWithdrawAmount("");
-      setWithdrawAddress("");
-    }
-  };
-
-  if (authLoading || walletsLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p>Loading...</p>
@@ -104,12 +66,15 @@ const Wallet = () => {
     );
   }
 
-      console.log("coin data", assets);
+  
+  const totalBalance = assets?.reduce((sum, coin) => {
+      const symbol = coin.symbol || "";
+      return sum + Number(coin.balance);
+  }, 0) || 0;
+
       
   return (
     <div className="min-h-screen bg-background">
-      <UserNav />
-      
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Wallet Summary */}
         <Card className="crypto-glow">
@@ -131,8 +96,8 @@ const Wallet = () => {
                   : "••••••"}
               </p>
               <div className="flex gap-3 flex-wrap">
-                <Button className="flex-1 min-w-[120px]" onClick={() => setDepositOpen(true)}>
-                  <ArrowDownToLine className="h-4 w-4 mr-2" />
+                <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setDepositOpen(true)}>
+                  <ArrowDownToLine className="h-4 w-4 mr-2"/>
                   Deposit
                 </Button>
                 <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setWithdrawOpen(true)}>
@@ -148,7 +113,7 @@ const Wallet = () => {
           </CardContent>
         </Card>
 
-        {/* Assets Table */}
+        {/* Assets Table */}  
         <Card>
           <CardHeader>
             <CardTitle>My Assets</CardTitle>
@@ -190,7 +155,7 @@ const Wallet = () => {
                         <td className="text-right py-4 px-4 font-mono text-muted-foreground">
                           {showBalance ? (Number(wallet.locked_balance) ? Number(wallet.locked_balance).toFixed(8) : "0.0") : "••••"}
                         </td>
-                        <td className="text-right py-4 px-4 font-semibold">
+                        <td className="text-right py-4 px-4 font-semibold text-success">
                           {/* {showBalance ? `$${usdtValue.toFixed(2)}` : "••••••"} */}
                           {showBalance ? `$${Number(wallet.balance)}` : "••••••"}
                         </td>
@@ -205,93 +170,22 @@ const Wallet = () => {
       </div>
 
       {/* Deposit Dialog */}
-      <Dialog open={depositOpen} onOpenChange={setDepositOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deposit</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Coin</Label>
-              <Select value={selectedCoin} onValueChange={setSelectedCoin}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select coin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {coins?.map((coin) => (
-                    <SelectItem key={coin.id} value={coin.id}>
-                      {coin.name} ({coin.symbol})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedCoinData?.deposit_address && (
-              <div className="space-y-2">
-                <Label>Deposit Address</Label>
-                <div className="flex gap-2">
-                  <Input value={selectedCoinData.deposit_address} readOnly className="font-mono text-sm" />
-                  <Button variant="outline" size="icon" onClick={handleCopyAddress}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Send only {selectedCoinData.symbol} to this address. Deposits will be credited after admin approval.
-                </p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CoinDeposit 
+        addCoinOpen={depositOpen}
+        setAddCoinOpen={setDepositOpen}
+        assets={assets}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
 
       {/* Withdraw Dialog */}
-      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdraw</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Coin</Label>
-              <Select value={selectedCoin} onValueChange={setSelectedCoin}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select coin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {coins?.map((coin) => (
-                    <SelectItem key={coin.id} value={coin.id}>
-                      {coin.name} ({coin.symbol})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Withdrawal Address</Label>
-              <Input
-                placeholder="Enter wallet address"
-                value={withdrawAddress}
-                onChange={(e) => setWithdrawAddress(e.target.value)}
-              />
-            </div>
-            <Button className="w-full" onClick={handleWithdraw}>
-              Submit Withdrawal Request
-            </Button>
-            <p className="text-sm text-muted-foreground text-center">
-              Withdrawals require admin approval
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CoinWithdrawal 
+        withdrawOpen={withdrawOpen}
+        setWithdrawOpen={setWithdrawOpen}
+        coins={assets}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
 
       {/* add coin Dialog */}
 

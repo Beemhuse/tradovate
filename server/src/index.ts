@@ -5,7 +5,7 @@ import { startSchedulers } from "./services/scheduler";
 import { startSocketServer } from "./websocket";
 import { startBinanceFeed } from "./services/wsPriceFeed";
 // import { startBybitFeed } from "./services/wsPriceFeed";
-
+// import 
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
@@ -16,7 +16,7 @@ const server = http.createServer(app);
 startSocketServer(server);
 
 // Start scheduled tasks
-startSchedulers();
+// startSchedulers();
 
 // Start realtime Binance feed
 startBinanceFeed();

@@ -1,43 +1,37 @@
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import { Resend } from "resend";
+import dotenv from "dotenv";
+
 dotenv.config();
 
-// const transporter = nodemailer.createTransport({
-//   host: process.env.SMTP_HOST,
-//   port: parseInt(process.env.SMTP_PORT || '587'),
-//   secure: false, // true for 465, false for other ports
-//   auth: {
-//     user: process.env.SMTP_USER,
-//     pass: process.env.SMTP_PASS,
-//   },
-// });
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_USER,  // your gmail address
-    pass: process.env.SMTP_PASS,  // your app password
-  },
-    tls: {
-    // ⚠️ DEV ONLY: accept self-signed certs
-    rejectUnauthorized: false,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY); // must be set in env
 
 export const sendOtpEmail = async (email: string, otp: string) => {
-  const mailOptions = {
-    from: '"Tradovate Admin" <' + process.env.SMTP_USER + '>',
-    to: email,
-    subject: 'Your Login OTP',
-    text: `Your OTP for login is: ${otp}. It expires in 10 minutes.`,
-    html: `<b>Your OTP for login is: ${otp}</b><br>It expires in 10 minutes.`,
-  };
-
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Message sent: %s', info.messageId);
+    const { data, error } = await resend.emails.send({
+      from: `${process.env.RESEND_FROM_NAME || "Tradovate"} <${process.env.RESEND_FROM_EMAIL}>`,
+      to: [email],
+      subject: "Your OTP Code",
+      html: `
+        <div style="font-family:Arial, sans-serif; line-height:1.5;">
+          <h2>Your OTP Code</h2>
+          <p>Use the OTP below to continue:</p>
+          <p style="font-size:22px; font-weight:bold; letter-spacing:2px;">
+            ${otp}
+          </p>
+          <p>This code expires in 10 minutes.</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Resend error:", error);
+      return false;
+    }
+
+    console.log("Email sent:", data?.id);
     return true;
-  } catch (error) {
-    console.error('Error sending email:', error);
+  } catch (err) {
+    console.error("Unexpected email error:", err);
     return false;
   }
 };

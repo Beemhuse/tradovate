@@ -2,7 +2,7 @@ import { CookieManager } from "@/utils/cookie-utils";
 import axios from "axios";
 // import { CookieManager } from "./cookie-utils"; // Import your CookieManager utility
 
-export const API_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:7000/api';
+export const API_URL = import.meta.env.VITE_BASE_UR || 'http://localhost:5000/api/v1';
 export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 // export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 
@@ -25,18 +25,25 @@ export default function initAxios() {
   axios.interceptors.response.use(
     (response) => response,
     async (error) => {
-      if (error?.response?.status === 401) {
-        // Handle unauthorized access
-        if (typeof window !== "undefined") {
-          // Clear the auth token cookie
-          // CookieManager.delete("travodate-token");
-          // Clear the axios auth header
-          delete axios.defaults.headers.common.Authorization;
-          // Redirect to login
-          //   window.location.href = "/auth";
-        }
-      }
-      return Promise.reject(error);
+      // if (error?.response?.status === 401 || error?.response?.status === 403) {
+      //   // Handle unauthorized access
+      //   if (typeof window !== "undefined") {
+      //     // Clear the auth token cookie
+      //     CookieManager.delete("travodate-token", "/");
+      //     CookieManager.delete("travodate-refresh-token", "/");
+      //     CookieManager.delete("travodate-user", "/");
+
+      //     // Clear local storage
+      //     localStorage.clear();
+
+      //     // Clear the axios auth header
+      //     delete axios.defaults.headers.common.Authorization;
+
+      //     // Redirect to home
+      //     window.location.href = "/";
+      //   }
+      // }
+      // return Promise.reject(error);
     }
   );
 }

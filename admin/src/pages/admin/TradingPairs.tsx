@@ -1,115 +1,282 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AdminNav from "@/components/layout/AdminNav";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
+
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Plus,
-  TrendingUp,
-  PauseCircle,
-  CheckCircle,
-  XCircle,
   RefreshCw,
-  LineChart,
-  Activity,
-  Coins,
-  Search,
+  Trash2,
+  AlertCircle,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import { useToast } from "@/hooks/use-toast";
 import {
   useFetchData,
   useCreateData,
   useUpdateData,
+  useDeleteData,
   usePatchData,
 } from "@/hooks/use-api";
-import { useToast } from "@/hooks/use-toast";
+import EditDialog from "@/components/admin/trading/EditDialog";
+import TradingMain from "@/components/admin/trading/TradingMain";
+
+interface Coin {
+  id: string;
+  coin: {
+    symbol: string;
+    name: string;
+  };
+  network: {
+    id: string;
+    name: string;
+  };
+}
+
+interface TradingPair {
+  id: string;
+  symbol: string;
+  wsSymbol: string;
+  baseCoin: Coin;
+  quoteCoin: Coin;
+  isActive: boolean;
+  lastPrice?: number;
+  priceChangePercent?: number;
+  volume24h?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const AdminTradingPairs = () => {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null);
   const [baseCoinId, setBaseCoinId] = useState("");
   const [quoteCoinId, setQuoteCoinId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-
-  /* 🔹 Fetch active coins */
-  const { data: coins, isLoading: loadingCoins } = useFetchData("/market/coins", ["admin-coins"]);
-
-  /* 🔹 Fetch trading pairs */
-  const { data: pairs, isLoading, refetch } = useFetchData(
-    "/market/admin-pairs",
-    "market-pairs"
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
+  const [networkFilter, setNetworkFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"name" | "volume" | "price" | "date">(
+    "name"
   );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [pricePrecision, setPricePrecision] = useState<number>(8);
+  const [quantityPrecision, setQuantityPrecision] = useState<number>(8);
+  const [minTradeAmount, setMinTradeAmount] = useState<string>("0.001");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  /* 🔹 Create pair */
+  // 🔹 Fetch coins
+  const {
+    data: coinsData,
+    isLoading: loadingCoins,
+    error: coinsError,
+  } = useFetchData("/market/coins", "admin-coins");
+
+  // 🔹 Fetch trading pairs with polling
+  const {
+    data: pairsData,
+    isLoading: loadingPairs,
+    refetch: refetchPairs,
+    error: pairsError,
+  } = useFetchData("/market/admin-pairs", "market-pairs");
+
+  // 🔹 Mutations
   const { mutate: createPair, isPending: creating } = useCreateData(
     "/market/pairs",
     ["market-pairs"]
   );
+console.log("pairsData", pairsData);
+  const { mutate: updatePair, isPending: updating } = useUpdateData(
+    "/market/pairs",
+    ["market-pairs"]
+  );
 
-  const { mutate: updatePair } = usePatchData(
+  const { mutate: patchPair, isPending: patching } = usePatchData(
     (payload) => `/market/pairs/${payload.id}`,
     ["market-pairs"]
   );
 
-  const handleCreate = () => {
-    createPair(
-      {
-        baseCoinId,
-        quoteCoinId,
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "✅ Trading Pair Created",
-            description: "New trading pair has been successfully created.",
-          });
-          setOpen(false);
-          setBaseCoinId("");
-          setQuoteCoinId("");
-        },
-        onError: (error) => {
-          toast({
-            title: "❌ Creation Failed",
-            description: error.message || "Failed to create trading pair.",
-            variant: "destructive",
-          });
-        },
+  const { mutate: deletePair, isPending: deleting } = useDeleteData(
+    "/market/pairs",
+    ["market-pairs"]
+  );
+
+  const coins = useMemo(() => coinsData?.coins || [], [coinsData]);
+  const pairs = useMemo(() => pairsData?.pairs || [], [pairsData]);
+
+  // Group coins by network
+  const groupedCoins = useMemo(() => {
+    return coins.reduce((acc: Record<string, Coin[]>, coin: Coin) => {
+      const networkName = coin.network.name;
+      if (!acc[networkName]) {
+        acc[networkName] = [];
       }
+      acc[networkName].push(coin);
+      return acc;
+    }, {});
+  }, [coins]);
+
+  // Get unique networks
+  const networks = useMemo(() => {
+    const uniqueNetworks = new Set(
+      coins.map((coin: Coin) => coin.network.name)
     );
+    return Array.from(uniqueNetworks);
+  }, [coins]);
+
+  // Filter and sort pairs
+  const filteredPairs = useMemo(() => {
+    if (!pairs.length) return [];
+
+    const filtered = pairs.filter((pair: TradingPair) => {
+      const matchesSearch =
+        pair.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pair.baseCoin?.coin?.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        pair.baseCoin?.coin?.symbol
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && pair.isActive) ||
+        (statusFilter === "inactive" && !pair.isActive);
+
+      const matchesNetwork =
+        networkFilter === "all" ||
+        pair.baseCoin?.network?.name === networkFilter;
+
+      return matchesSearch && matchesStatus && matchesNetwork;
+    });
+
+    // Sort
+    filtered.sort((a: TradingPair, b: TradingPair) => {
+      let aValue, bValue;
+
+      switch (sortBy) {
+        case "name":
+          aValue = a.symbol;
+          bValue = b.symbol;
+          break;
+        case "volume":
+          aValue = a.volume24h || 0;
+          bValue = b.volume24h || 0;
+          break;
+        case "price":
+          aValue = a.lastPrice || 0;
+          bValue = b.lastPrice || 0;
+          break;
+        case "date":
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        default:
+          aValue = a.symbol;
+          bValue = b.symbol;
+      }
+
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  }, [pairs, searchQuery, statusFilter, networkFilter, sortBy, sortOrder]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const activePairs = pairs.filter((p: TradingPair) => p.isActive);
+    const inactivePairs = pairs.filter((p: TradingPair) => !p.isActive);
+    const totalVolume = pairs.reduce(
+      (sum: number, p: TradingPair) => sum + (p.volume24h || 0),
+      0
+    );
+    const averagePrice =
+      pairs?.length > 0
+        ? pairs?.reduce(
+            (sum: number, p: TradingPair) => sum + (p.lastPrice || 0),
+            0
+          ) / pairs?.length
+        : 0;
+
+    return {
+      total: pairs?.length,
+      active: activePairs.length,
+      inactive: inactivePairs.length,
+      totalVolume,
+      averagePrice,
+      activePercentage:
+        pairs.length > 0 ? (activePairs?.length / pairs.length) * 100 : 0,
+    };
+  }, [pairs]);
+
+
+  const handleUpdatePair = () => {
+    if (!selectedPair) return;
+
+    const updateData = {
+      id: selectedPair.id,
+      pricePrecision,
+      quantityPrecision,
+      minTradeAmount: parseFloat(minTradeAmount),
+    };
+
+    updatePair(updateData, {
+      onSuccess: () => {
+        toast({
+          title: "✅ Pair Updated",
+          description: "Trading pair settings have been updated.",
+          variant: "default",
+        });
+        setIsEditDialogOpen(false);
+        resetForm();
+      },
+      onError: (error: any) => {
+        toast({
+          title: "❌ Update Failed",
+          description: error.message || "Failed to update trading pair.",
+          variant: "destructive",
+        });
+      },
+    });
   };
 
-  const handleTogglePair = (pair: any, checked: boolean) => {
-    updatePair(
+  const handleTogglePair = (pair: TradingPair, checked: boolean) => {
+    patchPair(
       { id: pair.id, isActive: checked },
       {
         onSuccess: () => {
           toast({
-            title: checked ? "✅ Pair Activated" : "⏸️ Pair Deactivated",
-            description: `${pair.symbol} is now ${checked ? "active for trading" : "paused"}`,
+            title: checked ? "✅ Pair Activated" : "⏸️ Pair Paused",
+            description: `${pair.symbol} is now ${
+              checked ? "active for trading" : "temporarily disabled"
+            }`,
           });
         },
-        onError: () => {
+        onError: (error: any) => {
           toast({
             title: "❌ Update Failed",
-            description: "Failed to update pair status.",
+            description: error.message || "Failed to update pair status.",
             variant: "destructive",
           });
         },
@@ -117,365 +284,184 @@ const AdminTradingPairs = () => {
     );
   };
 
-  // Filter pairs based on status and search
-  const filteredPairs = pairs?.pairs?.filter((pair: any) => {
-    const matchesSearch = pair.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         pair.baseCoin?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "active" && pair.isActive) ||
-                         (statusFilter === "inactive" && !pair.isActive);
-    return matchesSearch && matchesStatus;
-  });
+  const handleDeletePair = () => {
+    if (!selectedPair) return;
 
-  const activePairs = pairs?.pairs?.filter((p: any) => p.isActive) || [];
-  const inactivePairs = pairs?.pairs?.filter((p: any) => !p.isActive) || [];
+    deletePair(selectedPair.id, {
+      onSuccess: () => {
+        toast({
+          title: "🗑️ Pair Deleted",
+          description: `${selectedPair.symbol} has been removed from the exchange.`,
+        });
+        setIsDeleteDialogOpen(false);
+        setSelectedPair(null);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "❌ Deletion Failed",
+          description: error.message || "Failed to delete trading pair.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
 
-  // Get base coins (excluding USDT)
-  const baseCoins = coins?.coins?.filter((c: any) => c.symbol !== "USDT") || [];
-  
-  // Get quote coins (only USDT for now)
-  const quoteCoins = coins?.coins?.filter((c: any) => c.symbol === "USDT") || [];
+  const handleEditPair = (pair: TradingPair) => {
+    setSelectedPair(pair);
+    setPricePrecision(8); // Default or fetch from pair data
+    setQuantityPrecision(8);
+    setMinTradeAmount("0.001");
+    setIsEditDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setBaseCoinId("");
+    setQuoteCoinId("");
+    setPricePrecision(8);
+    setQuantityPrecision(8);
+    setMinTradeAmount("0.001");
+    setFormErrors({});
+  };
+
+  const handleSort = (field: "name" | "volume" | "price" | "date") => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
+
+
+  // Auto-refetch on mount
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchPairs();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [refetchPairs]);
+
+  if (pairsError || coinsError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <Card className="border-destructive/50">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-12">
+                <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  Failed to Load Data
+                </h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  {pairsError?.message ||
+                    coinsError?.message ||
+                    "An error occurred"}
+                </p>
+                <Button
+                  onClick={() => {
+                    refetchPairs();
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <AdminNav />
 
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <LineChart className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold">Trading Pairs</h1>
-            </div>
-            <p className="text-muted-foreground">
-              Manage and configure exchange trading pairs
-            </p>
-          </div>
+      <TradingMain
+        pairs={filteredPairs}
+        coins={coins}
+        baseCoinId={baseCoinId}
+        setBaseCoinId={setBaseCoinId}
+        quoteCoinId={quoteCoinId}
+        setQuoteCoinId={setQuoteCoinId}
+        sortBy={sortBy}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        networkFilter={networkFilter}
+        setNetworkFilter={setNetworkFilter}
+        formErrors={formErrors}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        loadingPairs={loadingPairs}
+        refetchPairs={refetchPairs}
+        groupedCoins={groupedCoins}
+        isCreateDialogOpen={isCreateDialogOpen}
+        setIsCreateDialogOpen={setIsCreateDialogOpen}
+        sortOrder={sortOrder}
+        handleSort={handleSort}
+        handleTogglePair={handleTogglePair}
+        patching={patching}
+        handleEditPair={handleEditPair}
+        setSelectedPair={setSelectedPair}
+        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+      />
 
-          {/* Stats */}
-          <div className="flex gap-3">
-            <div className="bg-card border rounded-lg px-4 py-3 min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <Activity className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-muted-foreground">Active</span>
-              </div>
-              <div className="text-2xl font-bold">{activePairs.length}</div>
-            </div>
-            <div className="bg-card border rounded-lg px-4 py-3 min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <PauseCircle className="h-4 w-4 text-amber-500" />
-                <span className="text-sm text-muted-foreground">Inactive</span>
-              </div>
-              <div className="text-2xl font-bold">{inactivePairs.length}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Tabs value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)} className="w-full sm:w-auto">
-              <TabsList className="grid grid-cols-3 w-full sm:w-auto">
-                <TabsTrigger value="all" className="flex items-center gap-2">
-                  <Coins className="h-4 w-4" />
-                  All ({pairs?.pairs?.length || 0})
-                </TabsTrigger>
-                <TabsTrigger value="active" className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Active ({activePairs.length})
-                </TabsTrigger>
-                <TabsTrigger value="inactive" className="flex items-center gap-2">
-                  <XCircle className="h-4 w-4" />
-                  Inactive ({inactivePairs.length})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Add Pair Dialog */}
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="whitespace-nowrap">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Pair
-                </Button>
-              </DialogTrigger>
-
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Create New Trading Pair
-                  </DialogTitle>
-                </DialogHeader>
-
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Base Coin</label>
-                    <Select value={baseCoinId} onValueChange={setBaseCoinId} disabled={creating}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select base coin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {loadingCoins ? (
-                          <div className="py-2 px-2 text-sm text-muted-foreground">Loading coins...</div>
-                        ) : baseCoins.length === 0 ? (
-                          <div className="py-2 px-2 text-sm text-muted-foreground">No base coins available</div>
-                        ) : (
-                          baseCoins.map((coin: any) => (
-                            <SelectItem key={coin.id} value={coin.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                                  {coin.symbol.substring(0, 2)}
-                                </div>
-                                <span>{coin.name} ({coin.symbol})</span>
-                              </div>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Quote Coin (USD Pair)</label>
-                    <Select value={quoteCoinId} onValueChange={setQuoteCoinId} disabled={creating}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select quote coin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {loadingCoins ? (
-                          <div className="py-2 px-2 text-sm text-muted-foreground">Loading coins...</div>
-                        ) : quoteCoins.length === 0 ? (
-                          <div className="py-2 px-2 text-sm text-muted-foreground">No quote coins available</div>
-                        ) : (
-                          quoteCoins.map((coin: any) => (
-                            <SelectItem key={coin.id} value={coin.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                                  {coin.symbol.substring(0, 2)}
-                                </div>
-                                <span>{coin.name} ({coin.symbol})</span>
-                              </div>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      className="w-full"
-                      disabled={!baseCoinId || !quoteCoinId || creating}
-                      onClick={handleCreate}
-                    >
-                      {creating ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create Trading Pair
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Search */}
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search pairs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Trading Pairs List
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <Skeleton className="h-10 w-20 rounded" />
-                      <Skeleton className="h-4 w-32 rounded" />
-                    </div>
-                    <Skeleton className="h-6 w-11 rounded-full" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredPairs?.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                  <TrendingUp className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">
-                  {searchQuery ? 'No matching pairs found' : 'No trading pairs available'}
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  {searchQuery
-                    ? 'Try adjusting your search terms'
-                    : 'Start by creating your first trading pair'}
-                </p>
-                <Button onClick={() => setOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Pair
-                </Button>
-              </div>
-            ) : (
-              <div className="overflow-hidden border rounded-lg">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Pair</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Base Coin</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">WebSocket</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Price</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPairs?.map((pair: any) => (
-                      <tr
-                        key={pair.id}
-                        className="border-b hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                              <span className="font-bold text-primary">
-                                {pair.symbol?.split('/')[0]?.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-base">{pair.symbol}</div>
-                              <div className="text-sm text-muted-foreground">{pair.wsSymbol}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono">
-                              {pair.baseCoin?.symbol}
-                            </Badge>
-                            <span className="text-sm">{pair.baseCoin?.name}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <code className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                            {pair.wsSymbol}
-                          </code>
-                        </td>
-                        <td className="py-4 px-4">
-                          {pair.lastPrice ? (
-                            <div className="font-semibold">
-                              ${parseFloat(pair.lastPrice).toFixed(2)}
-                              {pair.priceChangePercent && (
-                                <span className={`text-xs ml-2 ${pair.priceChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {pair.priceChangePercent >= 0 ? '↗' : '↘'} {Math.abs(pair.priceChangePercent)}%
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge
-                            variant={pair.isActive ? "default" : "secondary"}
-                            className={`flex items-center gap-1.5 w-fit ${
-                              pair.isActive
-                                ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200"
-                                : "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200"
-                            }`}
-                          >
-                            {pair.isActive ? (
-                              <>
-                                <CheckCircle className="h-3 w-3" />
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                <PauseCircle className="h-3 w-3" />
-                                Inactive
-                              </>
-                            )}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={pair.isActive}
-                              onCheckedChange={(checked) => handleTogglePair(pair, checked)}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Add edit functionality here
-                                toast({
-                                  title: "Edit Pair",
-                                  description: `Edit functionality for ${pair.symbol} coming soon.`,
-                                });
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Summary */}
-            {filteredPairs && filteredPairs.length > 0 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Showing {filteredPairs.length} of {pairs?.pairs?.length} pairs
-                </div>
-                <div className="text-sm">
-                  <span className="text-green-600 font-medium">{activePairs.length} active</span>
-                  <span className="mx-2">•</span>
-                  <span className="text-amber-600 font-medium">{inactivePairs.length} inactive</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Edit Dialog */}
+      <EditDialog
+        isEditDialogOpen={isEditDialogOpen}
+        setIsEditDialogOpen={setIsEditDialogOpen}
+        selectedPair={selectedPair}
+        pricePrecision={pricePrecision}
+        setPricePrecision={setPricePrecision}
+        quantityPrecision={quantityPrecision}
+        setQuantityPrecision={setQuantityPrecision}
+        minTradeAmount={minTradeAmount}
+        setMinTradeAmount={setMinTradeAmount}
+        handleUpdatePair={handleUpdatePair}
+        updating={updating}
+      />
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Delete Trading Pair
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              trading pair{" "}
+              <span className="font-semibold">{selectedPair?.symbol}</span> and
+              remove all associated data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedPair(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePair}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Pair
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
