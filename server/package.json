@@ -4,8 +4,6 @@
   "description": "Express server for Tradovate",
   "main": "dist/index.js",
   "scripts": {
-    "preinstall": "node -e \"try{require('fs').mkdirSync('node_modules/.prisma',{ recursive: true }) }catch(e){}\"",
-    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "migrate:deploy": "prisma migrate deploy",
@@ -24,8 +22,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/adapter-pg": "^7.1.0",
-    "@prisma/client": "^7.1.0",
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
     "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -38,6 +36,7 @@
     "nodemailer": "^6.9.10",
     "pg": "^8.16.3",
     "qrcode": "^1.5.4",
+    "redis": "^5.10.0",
     "resend": "^6.6.0",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
