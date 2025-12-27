@@ -1,4 +1,4 @@
-import WebSocket from "ws";
+import WebSocket, { RawData } from "ws";
 import { publishPrice } from "./publisher";
 
 const STREAM_URL =
@@ -11,14 +11,14 @@ export function startBinanceWorker() {
     console.log("✓ Binance WebSocket connected");
   });
 
-  ws.on("message", async (data) => {
+  ws.on("message", async (data: RawData) => {
     const payload = JSON.parse(data.toString());
 
     await publishPrice({
       symbol: payload.s,
       price: payload.c,
       change: payload.P,
-      time: Date.now()
+      time: Date.now(),
     });
   });
 
@@ -27,7 +27,7 @@ export function startBinanceWorker() {
     setTimeout(startBinanceWorker, 2000);
   });
 
-  ws.on("error", (err) => {
+  ws.on("error", (err: Error) => {
     console.error("❌ Binance WS error", err);
     ws.close();
   });
