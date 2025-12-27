@@ -1,27 +1,29 @@
 import WebSocket from "ws";
 import { publishPrice } from "./publisher";
 
-const BINANCE_WS = "wss://stream.binance.com:9443/ws/btcusdt@ticker";
+const STREAM_URL =
+  "wss://stream.binance.com:9443/ws/btcusdt@ticker";
 
 export function startBinanceWorker() {
-  const ws = new WebSocket(BINANCE_WS);
+  const ws = new WebSocket(STREAM_URL);
 
   ws.on("open", () => {
-    console.log("✓ Binance WS connected");
+    console.log("✓ Binance WebSocket connected");
   });
 
-  ws.on("message", (msg) => {
-    const data = JSON.parse(msg.toString());
+  ws.on("message", async (data) => {
+    const payload = JSON.parse(data.toString());
 
-    publishPrice({
-      symbol: data.s,
-      price: data.c,
-      time: Date.now(),
+    await publishPrice({
+      symbol: payload.s,
+      price: payload.c,
+      change: payload.P,
+      time: Date.now()
     });
   });
 
   ws.on("close", () => {
-    console.log("⚠ Binance WS closed. Reconnecting...");
+    console.warn("⚠ Binance WS closed. Reconnecting...");
     setTimeout(startBinanceWorker, 2000);
   });
 
