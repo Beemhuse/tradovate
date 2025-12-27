@@ -39,7 +39,17 @@ services:
     ports:
       - "127.0.0.1:4002:80"
     restart: unless-stopped
+  
+  market_worker:
+    build: ./market-worker
+    env_file: ./market-worker/.env
+    restart: unless-stopped
+    depends_on:
+      - redis
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
   healthcheck:
   test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
   interval: 30s
