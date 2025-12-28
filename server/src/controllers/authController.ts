@@ -100,7 +100,7 @@ export const adminSignup = async (req: Request, res: Response) => {
     const whitelisted = await prisma.adminWhitelist.findUnique({
       where: { email },
     });
-
+console.log(whitelisted)
     if (!whitelisted) {
       return res.status(403).json({
         error:

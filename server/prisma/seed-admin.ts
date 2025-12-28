@@ -16,7 +16,7 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter } as any);
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL || "brightawah94@gmail.com";
+  const adminEmail = process.env.ADMIN_EMAIL || "inspire.ig5702@gmail.com";
   console.log("Seeding admin whitelist...");
 
   const existing = await prisma.adminWhitelist.findUnique({
