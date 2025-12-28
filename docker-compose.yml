@@ -20,7 +20,7 @@ services:
     depends_on:
       - tradovate_db
     environment:
-      DATABASE_URL: postgresql://tradovate:tradovate_pass@tradovate_db:5432/tradovate_db
+      DATABASE_URL: postgresql://tradovate:super-strong-password-here@tradovate_db:5432/tradovate_db
 
     ports:
       - "127.0.0.1:4100:4000"
