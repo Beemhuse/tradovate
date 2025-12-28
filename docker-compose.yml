@@ -9,53 +9,70 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5433:5432" # optional local access
+      - "127.0.0.1:5433:5432"
     restart: unless-stopped
+    networks:
+      - tradovate_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: tradovate_redis
+    restart: unless-stopped
+    networks:
+      - tradovate_net
 
   admin_server:
     build: ./server
     container_name: tradovate_admin_server
     env_file:
-      - ./server/.env.server
+      - ./server/.env
+    environment:
+      DATABASE_URL: postgresql://tradovate:super-strong-password-here@tradovate_db:5432/tradovate
+      REDIS_URL: redis://tradovate_redis:6379
     depends_on:
       - tradovate_db
-    environment:
-      DATABASE_URL: postgresql://tradovate:super-strong-password-here@tradovate_db:5432/tradovate_db
-
-    ports:
-      - "127.0.0.1:4100:4000"
+      - redis
     restart: unless-stopped
+    networks:
+      - tradovate_net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   frontend:
     build: ./frontend
     container_name: tradovate_frontend
-    ports:
-      - "127.0.0.1:4001:80"
     restart: unless-stopped
+    networks:
+      - tradovate_net
 
   admin_frontend:
     build: ./admin
     container_name: tradovate_admin_frontend
+    restart: unless-stopped
+    networks:
+      - tradovate_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: tradovate_nginx
     ports:
-      - "127.0.0.1:4002:80"
-    restart: unless-stopped
-  
-  market_worker:
-    build: ./market-worker
-    env_file: ./market-worker/.env
-    restart: unless-stopped
+      - "9001:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - redis
-
-  redis:
-    image: redis:7-alpine
+      - admin_server
+      - frontend
+      - admin_frontend
     restart: unless-stopped
-  healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
-  interval: 30s
-  timeout: 5s
-  retries: 3
+    networks:
+      - tradovate_net
 
+networks:
+  tradovate_net:
+    driver: bridge
 
 volumes:
   db_data:

@@ -15,33 +15,28 @@ const adapter = new PrismaPg({ connectionString });
 // PrismaClientOptions typings may not include `adapter`, cast to any to satisfy TS.
 const prisma = new PrismaClient({ adapter } as any);
 
-async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL || "inspire.ig5702@gmail.com";
-  console.log("Seeding admin whitelist...");
 
-  const existing = await prisma.adminWhitelist.findUnique({
-    where: { email: adminEmail },
+async function main() {
+  const adminEmails = [
+    "admin@tradovatefutures.com",
+    "inspire.ig5702@gmail.com",
+  ];
+
+  console.log("🌱 Seeding admin whitelist...");
+
+  await prisma.adminWhitelist.createMany({
+    data: adminEmails.map(email => ({ email })),
+    skipDuplicates: true, // 🔥 important
   });
 
-  if (existing) {
-    console.log(`✓ Admin email ${adminEmail} already in whitelist`);
-  } else {
-    await prisma.adminWhitelist.create({
-      data: { email: adminEmail },
-    });
-    console.log(`✓ Added ${adminEmail} to admin whitelist`);
-  }
-
-  console.log("\nAdmin whitelist seeding complete!");
+  console.log("✅ Admin whitelist seeded successfully");
 }
 
 main()
   .catch((e) => {
-    console.error("Error seeding admin whitelist:", e);
+    console.error("❌ Seeding failed:", e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-    // ensure process exits after disconnect
-    process.exit(0);
   });
