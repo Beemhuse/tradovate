@@ -1,4 +1,4 @@
-name: Deploy Tradovate to VPS (Selective)
+name: Deploy Tradovate to VPS
 
 on:
   push:
@@ -10,38 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Detect changed folders
-        id: changes
-        run: |
-          git diff --name-only HEAD~1 HEAD > changes.txt
-
-          echo "ADMIN_CHANGED=false" >> $GITHUB_ENV
-          echo "FRONTEND_CHANGED=false" >> $GITHUB_ENV
-          echo "SERVER_CHANGED=false" >> $GITHUB_ENV
-          echo "COMPOSE_CHANGED=false" >> $GITHUB_ENV
-
-          if grep -q '^admin/' changes.txt; then
-            echo "ADMIN_CHANGED=true" >> $GITHUB_ENV
-          fi
-
-          if grep -q '^frontend/' changes.txt; then
-            echo "FRONTEND_CHANGED=true" >> $GITHUB_ENV
-          fi
-
-          if grep -q '^server/' changes.txt; then
-            echo "SERVER_CHANGED=true" >> $GITHUB_ENV
-          fi
-
-          if grep -q '^docker-compose.yml' changes.txt; then
-            echo "COMPOSE_CHANGED=true" >> $GITHUB_ENV
-          fi
-
-      - name: Deploy changed services to VPS
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -49,35 +21,21 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
+
+            echo "🚀 Starting deployment..."
             cd ${{ secrets.VPS_PATH }}
 
-            echo "⬇️ Updating code"
+            echo "⬇️ Pulling latest code"
             git fetch origin
             git reset --hard origin/main
 
-            if [ "${COMPOSE_CHANGED}" = "true" ]; then
-              echo "🔄 docker-compose.yml changed — redeploying ALL services"
-              docker compose build
-              docker compose up -d
-              exit 0
-            fi
+            echo "🛑 Stopping running containers"
+            docker compose down
 
-            if [ "${ADMIN_CHANGED}" = "true" ]; then
-              echo "🚀 Redeploying admin_frontend"
-              docker compose build admin_frontend
-              docker compose up -d admin_frontend
-            fi
+            echo "🔨 Building images"
+            docker compose build --no-cache
 
-            if [ "${FRONTEND_CHANGED}" = "true" ]; then
-              echo "🚀 Redeploying frontend"
-              docker compose build frontend
-              docker compose up -d frontend
-            fi
+            echo "▶️ Starting containers"
+            docker compose up -d
 
-            if [ "${SERVER_CHANGED}" = "true" ]; then
-              echo "🚀 Redeploying admin_server"
-              docker compose build admin_server
-              docker compose up -d admin_server
-            fi
-
-            echo "✅ Selective deployment complete"
+            echo "✅ Deployment completed successfully"
