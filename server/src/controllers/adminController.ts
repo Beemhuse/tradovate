@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
+import { Prisma, Network, CoinNetwork } from "@prisma/client";
+
 import { z } from "zod";
 import {
   handlePrismaError,
   isPrismaError,
 } from "../utils/prisma-error-handler";
-import { Prisma } from "@prisma/client";
 import { AuthRequest } from "middlewares/authMiddleware";
-// import { isPrismaError, handlePrismaError, getErrorMessage } from '../utils/prisma-error-handler';
+
 const suspendSchema = z.object({
   suspend: z.boolean(),
   reason: z.string().optional().nullable(),
@@ -33,6 +34,12 @@ const linkCoinNetworkSchema = z.object({
   contractAddress: z.string().optional(),
   decimals: z.number().optional(),
 });
+let network: {
+  id: string;
+  name: string;
+  type: string | null;
+  isActive: boolean;
+} | null = null;
 
 // Coin Management
 export const createCoin = async (req: Request, res: Response) => {
@@ -41,7 +48,6 @@ export const createCoin = async (req: Request, res: Response) => {
       networkId: z.string().optional(),
       contractAddress: z.string().optional(),
       decimals: z.number().optional().default(18),
-      // Add network creation data
       networkName: z.string().optional(),
       networkType: z.string().optional(),
     });
@@ -56,7 +62,6 @@ export const createCoin = async (req: Request, res: Response) => {
       ...coinData
     } = data;
 
-    // Check if coin with same symbol already exists
     const existingCoin = await prisma.coin.findUnique({
       where: { symbol: coinData.symbol },
     });
@@ -69,114 +74,101 @@ export const createCoin = async (req: Request, res: Response) => {
       });
     }
 
-    // Use transaction to ensure both operations succeed or fail together
-    const result = await prisma.$transaction(async (prisma) => {
-      // 1. Create the coin
-      const coin = await prisma.coin.create({
+    const result = await prisma.$transaction(async (tx) => {
+      // 1️⃣ Create coin
+      const coin = await tx.coin.create({
         data: coinData,
         include: {
           networks: {
-            include: {
-              network: true,
-            },
+            include: { network: true },
           },
         },
       });
 
-      let coinNetwork = null;
-      let network = null;
+      let network: Network | null = null;
+      let coinNetwork: (CoinNetwork & { network: Network }) | null = null;
 
-      // 2. Handle network if provided
-      if (networkId || networkName) {
-        // Try to find existing network by ID or name
-        if (networkId) {
-          network = await prisma.network.findUnique({
-            where: { id: networkId },
-          });
-        } else if (networkName) {
-          network = await prisma.network.findFirst({
-            where: {
-              OR: [{ name: networkName }, { type: networkType }],
-            },
-          });
-        }
-
-        // Create network if it doesn't exist
-        if (!network && networkName) {
-          network = await prisma.network.create({
-            data: {
-              name: networkName,
-              type: networkType || "CUSTOM",
-              isActive: true,
-            },
-          });
-        }
-
-        if (network) {
-          // Check if contract address is required for non-native networks
-          const networkType = network.type?.toLowerCase() || "";
-          const isNativeNetwork = networkType.includes("native");
-
-          if (!isNativeNetwork && !contractAddress) {
-            throw new Error(
-              `Contract address is required for ${network.type} tokens`
-            );
-          }
-
-          // Check if link already exists
-          const existingLink = await prisma.coinNetwork.findFirst({
-            where: {
-              coinId: coin.id,
-              networkId: network.id,
-            },
-          });
-
-          if (existingLink) {
-            throw new Error(
-              `Coin is already linked to network ${network.name}`
-            );
-          }
-
-          // Check contract address uniqueness if provided
-          if (contractAddress) {
-            const existingContract = await prisma.coinNetwork.findFirst({
-              where: {
-                networkId: network.id,
-                contractAddress: contractAddress,
-              },
-            });
-
-            if (existingContract) {
-              throw new Error(
-                `Contract address ${contractAddress} is already in use on this network`
-              );
-            }
-          }
-
-          // Create the coin-network link
-          coinNetwork = await prisma.coinNetwork.create({
-            data: {
-              coinId: coin.id,
-              networkId: network.id,
-              contractAddress: contractAddress,
-              decimals: decimals,
-              isActive: true,
-            },
-            include: {
-              network: true,
-            },
-          });
-
-          // Add the network link to the coin response
-          coin.networks.push(coinNetwork);
-        }
+      // 2️⃣ Resolve network
+      if (networkId) {
+        network = await tx.network.findUnique({
+          where: { id: networkId },
+        });
+      } else if (networkName) {
+        network = await tx.network.findFirst({
+          where: {
+            OR: [
+              { name: networkName },
+              networkType ? { type: networkType } : undefined,
+            ].filter(Boolean) as Prisma.NetworkWhereInput[],
+          },
+        });
       }
 
-      return {
-        coin,
-        coinNetwork,
-        network,
-      };
+      // 3️⃣ Create network if missing
+      if (!network && networkName) {
+        network = await tx.network.create({
+          data: {
+            name: networkName,
+            type: networkType || "CUSTOM",
+            isActive: true,
+          },
+        });
+      }
+
+      // 4️⃣ Link coin ↔ network
+      if (network) {
+        const isNativeNetwork =
+          network.type?.toLowerCase().includes("native") ?? false;
+
+        if (!isNativeNetwork && !contractAddress) {
+          throw new Error(
+            `Contract address is required for ${network.type} tokens`
+          );
+        }
+
+        const existingLink = await tx.coinNetwork.findFirst({
+          where: {
+            coinId: coin.id,
+            networkId: network.id,
+          },
+        });
+
+        if (existingLink) {
+          throw new Error(
+            `Coin is already linked to network ${network.name}`
+          );
+        }
+
+        if (contractAddress) {
+          const existingContract = await tx.coinNetwork.findFirst({
+            where: {
+              networkId: network.id,
+              contractAddress,
+            },
+          });
+
+          if (existingContract) {
+            throw new Error(
+              `Contract address ${contractAddress} is already in use on this network`
+            );
+          }
+        }
+
+        coinNetwork = await tx.coinNetwork.create({
+          data: {
+            coinId: coin.id,
+            networkId: network.id,
+            contractAddress,
+            decimals,
+            isActive: true,
+          },
+          include: { network: true },
+        });
+
+        coin.networks.push(coinNetwork);
+      }
+
+      return { coin, coinNetwork };
     });
 
     const response: any = {
@@ -195,7 +187,7 @@ export const createCoin = async (req: Request, res: Response) => {
       };
     }
 
-    res.status(201).json(response);
+    return res.status(201).json(response);
   } catch (error) {
     console.error("Create coin error:", error);
 
@@ -217,7 +209,6 @@ export const createCoin = async (req: Request, res: Response) => {
       }
     }
 
-    // Handle custom transaction errors
     if (error instanceof Error) {
       return res.status(400).json({
         success: false,
@@ -226,14 +217,12 @@ export const createCoin = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: "Failed to create coin",
-      details: "An unexpected error occurred",
     });
   }
 };
-
 export const getAllCoins = async (req: Request, res: Response) => {
   try {
     const { includeInactive = "false" } = req.query;
