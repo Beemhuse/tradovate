@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, requireRole } from '../middlewares/authMiddleware';
 import { getCoins, getCoin } from '../controllers/coinController';
-import { getAssets, createWallet, requestDeposit, requestWithdraw, getTransactions, requestBankWithdraw } from '../controllers/walletController';
+import { getAssets, createWallet, requestDeposit, requestWithdraw, getTransactions, requestBankWithdraw, getWalletConversions } from '../controllers/walletController';
 import { getMarketPrices, placeOrder, getUserOrders } from '../controllers/orderController';
 import { adminGetPairs, createPair, getPairById, getPairs, updatePair } from '../controllers/marketController';
 
@@ -521,5 +521,117 @@ router.post('/order', placeOrder);
  *         description: User orders
  */
 router.get('/orders', getUserOrders);
+/**
+ * @swagger
+ * /market/conversion:
+ *   get:
+ *     summary: Convert wallet balances using real-time market prices
+ *     description: >
+ *       Converts user wallet balances using live market prices.
+ *       The endpoint supports two modes:
+ *       
+ *       **Portfolio mode (default):**
+ *       - Converts the full balance of all wallets owned by the user.
+ *       
+ *       **Single-coin mode:**
+ *       - Converts a specified amount of a specific coin owned by the user.
+ *       - Requires both `coin` and `amount` query parameters.
+ *     tags:
+ *       - Wallets
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: to
+ *         required: false
+ *         schema:
+ *           type: string
+ *           example: USDT
+ *         description: Target currency symbol to convert balances into (default is USDT)
+ *       - in: query
+ *         name: coin
+ *         required: false
+ *         schema:
+ *           type: string
+ *           example: BTC
+ *         description: Coin symbol to convert from (required for single-coin conversion)
+ *       - in: query
+ *         name: amount
+ *         required: false
+ *         schema:
+ *           type: number
+ *           example: 0.05
+ *         description: Amount of the specified coin to convert (required for single-coin conversion)
+ *     responses:
+ *       200:
+ *         description: Conversion successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 mode:
+ *                   type: string
+ *                   enum: [portfolio, single]
+ *                   example: single
+ *                 base:
+ *                   type: string
+ *                   example: USDT
+ *                 totalValue:
+ *                   type: number
+ *                   example: 2843.42
+ *                 wallets:
+ *                   type: array
+ *                   description: Returned only in portfolio mode
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       walletId:
+ *                         type: string
+ *                         example: wallet_123
+ *                       coin:
+ *                         type: string
+ *                         example: BTC
+ *                       balance:
+ *                         type: number
+ *                         example: 0.05
+ *                       price:
+ *                         type: number
+ *                         example: 43000
+ *                       value:
+ *                         type: number
+ *                         example: 2150
+ *                       convertedTo:
+ *                         type: string
+ *                         example: USDT
+ *                 from:
+ *                   type: string
+ *                   example: BTC
+ *                 to:
+ *                   type: string
+ *                   example: USDT
+ *                 amount:
+ *                   type: number
+ *                   example: 0.05
+ *                 price:
+ *                   type: number
+ *                   example: 43000
+ *                 value:
+ *                   type: number
+ *                   example: 2150
+ *       400:
+ *         description: Invalid request parameters or unsupported currency
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient balance or wallet not owned by user
+ *       500:
+ *         description: Failed to convert wallet balances
+ */
+
+router.get("/conversion", getWalletConversions);
 
 export default router;

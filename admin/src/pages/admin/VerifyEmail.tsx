@@ -69,7 +69,7 @@ const VerifyEmail = () => {
 
     try {
       await verifyEmail(email, code);
-      navigate("/admin/login");
+      navigate("/");
     } catch (error: any) {
       console.error("Verification error:", error);
     } finally {

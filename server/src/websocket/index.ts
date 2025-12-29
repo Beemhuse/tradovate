@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import { Server as HttpServer } from "http";
-import { marketEvents } from "../services/redisSubscriber";
+// import { marketEvents } from "../services/redisSubscriber";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -33,14 +33,14 @@ export function startSocketServer(httpServer: HttpServer) {
     socket.join(`user:${socket.data.user.id}`);
   });
 
-  // 🔥 Only Redis-driven events
-  marketEvents.on("priceUpdate", (data) => {
-    io.emit("priceUpdate", data);
-  });
+  // // 🔥 Only Redis-driven events
+  // marketEvents.on("priceUpdate", (data) => {
+  //   io.emit("priceUpdate", data);
+  // });
 
-  marketEvents.on("klineUpdate", (data) => {
-    io.emit("klineUpdate", data);
-  });
+  // marketEvents.on("klineUpdate", (data) => {
+  //   io.emit("klineUpdate", data);
+  // });
 
   return io;
 }

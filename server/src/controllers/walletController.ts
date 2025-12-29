@@ -4,6 +4,7 @@ import { AuthRequest } from "../middlewares/authMiddleware";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { enforceFinancialAccess } from "../utils/accessGuard";
+import { getMarketPriceForCoin } from "../services/marketPriceService";
 
 const createWalletSchema = z.object({
   coinId: z.string(),
@@ -647,5 +648,165 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
     res.json(transactions);
   } catch (error) {
     res.status(500).json({ error: "Failed" });
+  }
+};
+
+
+export const getWalletConversions = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user!.userId;
+
+    const toSymbol = (req.query.to as string)?.toUpperCase() || "USDT";
+    const fromSymbol = (req.query.coin as string)?.toUpperCase();
+    const amountParam = req.query.amount
+      ? Number(req.query.amount)
+      : undefined;
+
+    if (amountParam !== undefined && amountParam <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Amount must be greater than zero",
+      });
+    }
+
+    /* 1️⃣ Target coin (e.g. USDT) */
+    const targetCoin = await prisma.coin.findFirst({
+      where: { symbol: toSymbol, isActive: true },
+    });
+
+    if (!targetCoin) {
+      return res.status(400).json({
+        success: false,
+        error: `Target currency ${toSymbol} not supported`,
+      });
+    }
+
+    /* ===============================
+       SINGLE COIN + AMOUNT CONVERSION
+    =============================== */
+    if (fromSymbol && amountParam !== undefined) {
+      const fromCoin = await prisma.coin.findFirst({
+        where: { symbol: fromSymbol, isActive: true },
+      });
+
+      if (!fromCoin) {
+        return res.status(404).json({
+          success: false,
+          error: `Coin ${fromSymbol} not found`,
+        });
+      }
+
+      // Verify user actually owns this coin
+      const wallet = await prisma.wallet.findFirst({
+        where: {
+          userId,
+          coinId: fromCoin.id,
+        },
+        include: { coin: true },
+      });
+
+      if (!wallet) {
+        return res.status(403).json({
+          success: false,
+          error: `You do not own ${fromSymbol}`,
+        });
+      }
+
+      if (wallet.balance < amountParam) {
+        return res.status(400).json({
+          success: false,
+          error: `Insufficient ${fromSymbol} balance`,
+        });
+      }
+
+      // Same-coin conversion
+      if (fromCoin.id === targetCoin.id) {
+        return res.json({
+          success: true,
+          mode: "single",
+          from: fromSymbol,
+          to: targetCoin.symbol,
+          amount: amountParam,
+          price: 1,
+          value: amountParam,
+        });
+      }
+
+      const market = await getMarketPriceForCoin(fromCoin.id);
+      if (!market) {
+        return res.status(400).json({
+          success: false,
+          error: "Market price not available",
+        });
+      }
+
+      const value = amountParam * market.price;
+
+      return res.json({
+        success: true,
+        mode: "single",
+        from: fromSymbol,
+        to: targetCoin.symbol,
+        amount: amountParam,
+        price: market.price,
+        value,
+      });
+    }
+
+    /* ===============================
+       PORTFOLIO CONVERSION (DEFAULT)
+    =============================== */
+    const wallets = await prisma.wallet.findMany({
+      where: { userId },
+      include: { coin: true },
+    });
+
+    const conversions = await Promise.all(
+      wallets.map(async (wallet) => {
+        if (wallet.balance <= 0) return null;
+
+        if (wallet.coinId === targetCoin.id) {
+          return {
+            walletId: wallet.id,
+            coin: wallet.coin.symbol,
+            balance: wallet.balance,
+            price: 1,
+            value: wallet.balance,
+            convertedTo: targetCoin.symbol,
+          };
+        }
+
+        const market = await getMarketPriceForCoin(wallet.coinId);
+        if (!market) return null;
+
+        return {
+          walletId: wallet.id,
+          coin: wallet.coin.symbol,
+          balance: wallet.balance,
+          price: market.price,
+          value: wallet.balance * market.price,
+          convertedTo: targetCoin.symbol,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      mode: "portfolio",
+      base: targetCoin.symbol,
+      totalValue: conversions
+        .filter(Boolean)
+        .reduce((sum, c: any) => sum + c.value, 0),
+      wallets: conversions.filter(Boolean),
+    });
+  } catch (error) {
+    console.error("Conversion error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to convert wallet balances",
+    });
   }
 };
