@@ -1,6 +1,3 @@
-😂 say less — here’s a **clean, professional `README.md`** you can drop straight into your repo.
-It documents *exactly* what you built and saves future-you (or collaborators) a lot of stress.
-
 ---
 
 ```md
