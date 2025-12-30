@@ -134,14 +134,13 @@ export const createCoin = async (req: Request, res: Response) => {
         });
 
         if (existingLink) {
-          throw new Error(
-            `Coin is already linked to network ${network.name}`
-          );
+          throw new Error(`Coin is already linked to network ${network.name}`);
         }
 
         if (contractAddress) {
           const existingContract = await tx.coinNetwork.findFirst({
             where: {
+              coinId: coin.id,
               networkId: network.id,
               contractAddress,
             },
@@ -149,7 +148,7 @@ export const createCoin = async (req: Request, res: Response) => {
 
           if (existingContract) {
             throw new Error(
-              `Contract address ${contractAddress} is already in use on this network`
+              `This coin is already linked to ${network.name} with contract address ${contractAddress}`
             );
           }
         }
@@ -781,7 +780,7 @@ export const getAllUsersWithWallets = async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       include: {
         wallets: {
-          include: { coin: true }
+          include: { coin: true },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -791,7 +790,10 @@ export const getAllUsersWithWallets = async (req: Request, res: Response) => {
       const { password, ...rest } = user;
 
       // SUM ALL WALLET BALANCES
-      const totalBalance = user.wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+      const totalBalance = user.wallets.reduce(
+        (sum, w) => sum + (w.balance || 0),
+        0
+      );
 
       return {
         ...rest,
@@ -804,7 +806,6 @@ export const getAllUsersWithWallets = async (req: Request, res: Response) => {
       count: sanitizedUsers.length,
       users: sanitizedUsers,
     });
-
   } catch (error) {
     console.error("Fetch users error:", error);
     return res.status(500).json({ error: "Failed to fetch users" });
@@ -860,18 +861,22 @@ export const suspendUser = async (req: AuthRequest, res: Response) => {
   try {
     const adminId = req.user?.userId;
     const userId = req.params.id;
-    if (!userId) return res.status(400).json({ success: false, error: "Missing user id" });
+    if (!userId)
+      return res.status(400).json({ success: false, error: "Missing user id" });
 
     const parsed = suspendSchema.parse(req.body);
     const { suspend, reason } = parsed;
 
     // Ensure target user exists
     const target = await prisma.user.findUnique({ where: { id: userId } });
-    if (!target) return res.status(404).json({ success: false, error: "User not found" });
+    if (!target)
+      return res.status(404).json({ success: false, error: "User not found" });
 
     // Prevent suspending an admin (optional)
     if (target.role === "ADMIN") {
-      return res.status(403).json({ success: false, error: "Cannot suspend admin users" });
+      return res
+        .status(403)
+        .json({ success: false, error: "Cannot suspend admin users" });
     }
 
     const data: any = {
@@ -908,10 +913,18 @@ export const suspendUser = async (req: AuthRequest, res: Response) => {
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ success: false, error: "Invalid payload", details: err.errors });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "Invalid payload",
+          details: err.errors,
+        });
     }
     console.error("suspendUser error", err);
-    return res.status(500).json({ success: false, error: "Failed to update user suspension" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Failed to update user suspension" });
   }
 };
 // Add these to your existing adminController.ts file:
