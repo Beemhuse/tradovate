@@ -40,153 +40,114 @@ let network: {
   type: string | null;
   isActive: boolean;
 } | null = null;
-
-// Coin Management
 export const createCoin = async (req: Request, res: Response) => {
   try {
-    const extendedCoinSchema = createCoinSchema.extend({
-      networkId: z.string().optional(),
-      contractAddress: z.string().optional(),
-      decimals: z.number().optional().default(18),
+    const schema = createCoinSchema.extend({
+      networkId: z.string().uuid().optional(),
       networkName: z.string().optional(),
       networkType: z.string().optional(),
+      contractAddress: z.string().optional(),
+      decimals: z.number().optional().default(18),
     });
 
-    const data = extendedCoinSchema.parse(req.body);
+    const data = schema.parse(req.body);
     const {
       networkId,
-      contractAddress,
-      decimals,
       networkName,
       networkType,
+      contractAddress,
+      decimals,
       ...coinData
     } = data;
 
-    const existingCoin = await prisma.coin.findUnique({
-      where: { symbol: coinData.symbol },
-    });
-
-    if (existingCoin) {
-      return res.status(409).json({
-        success: false,
-        error: "Coin already exists",
-        details: `A coin with symbol ${coinData.symbol} already exists`,
-      });
-    }
-
     const result = await prisma.$transaction(async (tx) => {
-      // 1️⃣ Create coin
-      const coin = await tx.coin.create({
-        data: coinData,
-        include: {
-          networks: {
-            include: { network: true },
+      // 1️⃣ FIND or CREATE coin (KEY FIX)
+      const coin =
+        (await tx.coin.findFirst({
+          where: {
+            symbol: coinData.symbol,
+            name: coinData.name,
           },
-        },
-      });
+        })) ??
+        (await tx.coin.create({
+          data: coinData,
+        }));
 
-      let network: Network | null = null;
       let coinNetwork: (CoinNetwork & { network: Network }) | null = null;
 
-      // 2️⃣ Resolve network
-      if (networkId) {
-        network = await tx.network.findUnique({
-          where: { id: networkId },
-        });
-      } else if (networkName) {
-        network = await tx.network.findFirst({
-          where: {
-            OR: [
-              { name: networkName },
-              networkType ? { type: networkType } : undefined,
-            ].filter(Boolean) as Prisma.NetworkWhereInput[],
-          },
-        });
-      }
+      // 2️⃣ Attach network if provided
+      if (networkId || networkName) {
+        let network: Network | null = null;
 
-      // 3️⃣ Create network if missing
-      if (!network && networkName) {
-        network = await tx.network.create({
-          data: {
-            name: networkName,
-            type: networkType || "CUSTOM",
-            isActive: true,
-          },
-        });
-      }
+        if (networkId) {
+          network = await tx.network.findUnique({
+            where: { id: networkId },
+          });
+        } else if (networkName) {
+          network = await tx.network.findFirst({
+            where: {
+              name: networkName,
+              ...(networkType ? { type: networkType } : {}),
+            },
+          });
+        }
 
-      // 4️⃣ Link coin ↔ network
-      if (network) {
-        const isNativeNetwork =
+        if (!network && networkName) {
+          network = await tx.network.create({
+            data: {
+              name: networkName,
+              type: networkType || "CUSTOM",
+              isActive: true,
+            },
+          });
+        }
+
+        if (!network) {
+          throw new Error("Network could not be resolved");
+        }
+
+        const isNative =
           network.type?.toLowerCase().includes("native") ?? false;
 
-        if (!isNativeNetwork && !contractAddress) {
+        if (!isNative && !contractAddress) {
           throw new Error(
             `Contract address is required for ${network.type} tokens`
           );
         }
 
-        const existingLink = await tx.coinNetwork.findFirst({
-          where: {
-            coinId: coin.id,
-            networkId: network.id,
-          },
-        });
-
-        if (existingLink) {
-          throw new Error(`Coin is already linked to network ${network.name}`);
-        }
-
-        if (contractAddress) {
-          const existingContract = await tx.coinNetwork.findFirst({
+        // 3️⃣ Idempotent coin-network link (KEY FIX)
+        coinNetwork =
+          (await tx.coinNetwork.findFirst({
             where: {
               coinId: coin.id,
               networkId: network.id,
-              contractAddress,
+              contractAddress: contractAddress ?? null,
             },
-          });
-
-          if (existingContract) {
-            throw new Error(
-              `This coin is already linked to ${network.name} with contract address ${contractAddress}`
-            );
-          }
-        }
-
-        coinNetwork = await tx.coinNetwork.create({
-          data: {
-            coinId: coin.id,
-            networkId: network.id,
-            contractAddress,
-            decimals,
-            isActive: true,
-          },
-          include: { network: true },
-        });
-
-        coin.networks.push(coinNetwork);
+            include: { network: true },
+          })) ??
+          (await tx.coinNetwork.create({
+            data: {
+              coinId: coin.id,
+              networkId: network.id,
+              contractAddress: contractAddress ?? null,
+              decimals,
+              isActive: true,
+            },
+            include: { network: true },
+          }));
       }
 
       return { coin, coinNetwork };
     });
 
-    const response: any = {
+    return res.status(201).json({
       success: true,
-      message: "Coin created successfully",
+      message: result.coinNetwork
+        ? "Coin saved and linked to network"
+        : "Coin saved successfully",
       coin: result.coin,
-    };
-
-    if (result.coinNetwork) {
-      response.message += " and linked to network";
-      response.coinNetwork = result.coinNetwork;
-      response.details = {
-        network: result.coinNetwork.network.name,
-        contractAddress: result.coinNetwork.contractAddress,
-        decimals: result.coinNetwork.decimals,
-      };
-    }
-
-    return res.status(201).json(response);
+      coinNetwork: result.coinNetwork,
+    });
   } catch (error) {
     console.error("Create coin error:", error);
 
@@ -198,30 +159,15 @@ export const createCoin = async (req: Request, res: Response) => {
       });
     }
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2002") {
-        return res.status(409).json({
-          success: false,
-          error: "Duplicate entry",
-          details: "A coin with this symbol may already exist",
-        });
-      }
-    }
-
-    if (error instanceof Error) {
-      return res.status(400).json({
-        success: false,
-        error: "Creation failed",
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
-      error: "Failed to create coin",
+      error:
+        error instanceof Error ? error.message : "Failed to create coin",
     });
   }
 };
+
+
 export const getAllCoins = async (req: Request, res: Response) => {
   try {
     const { includeInactive = "false" } = req.query;

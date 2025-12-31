@@ -1,7 +1,7 @@
 import app from "./app";
 import dotenv from "dotenv";
 import http from "http";
-import { startSchedulers } from "./services/scheduler";
+// import { startSchedulers } from "./services/scheduler";
 import { startSocketServer } from "./websocket";
 import { startBinanceFeed } from "./services/wsPriceFeed";
 // import { startBybitFeed } from "./services/wsPriceFeed";

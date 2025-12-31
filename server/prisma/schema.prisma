@@ -94,7 +94,6 @@ model User {
   suspendedReason String?
   suspendedBy     String?
 }
-
 model MarketPair {
   id          String @id @default(uuid())
   baseCoinId  String
@@ -111,8 +110,9 @@ model MarketPair {
 
   orders Order[]
 
-  @@unique([symbol, networkId]) // ✅ REQUIRED
+  @@unique([baseCoinId, quoteCoinId, networkId])
 }
+  
 
 
 model Kyc {
@@ -165,6 +165,7 @@ model Coin {
 
   marketPairsAsBase  MarketPair[] @relation("BaseCoin")
   marketPairsAsQuote MarketPair[] @relation("QuoteCoin")
+
 }
 
 model Network {
@@ -190,8 +191,7 @@ model CoinNetwork {
   coin    Coin    @relation(fields: [coinId], references: [id], onDelete: Cascade)
   network Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
 
-  @@unique([coinId, networkId])
-  @@unique([networkId, contractAddress])
+  @@unique([coinId, networkId, contractAddress])
 }
 
 model Wallet {
