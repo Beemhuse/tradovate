@@ -350,9 +350,7 @@ const CoinDetailsPage = () => {
   coinId={coin.id}
   networks={coin.networks || []}
   onOpenChange={setIsNetworksOpen}
-  // onSuccess={() =>
-  //   queryClient.invalidateQueries({ queryKey: ["coin", id] })
-  // }
+
 />
 
 

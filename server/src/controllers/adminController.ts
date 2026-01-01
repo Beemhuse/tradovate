@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
-import { Prisma, Network, CoinNetwork } from "@prisma/client";
+import { Network, CoinNetwork } from "@prisma/client";
 
 import { z } from "zod";
 import {
@@ -488,43 +488,6 @@ export const deleteCoin = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllNetworks = async (req: Request, res: Response) => {
-  try {
-    const { includeInactive = "false" } = req.query;
-
-    const networks = await prisma.network.findMany({
-      where: includeInactive === "true" ? {} : { isActive: true },
-      include: {
-        coins: {
-          include: {
-            coin: true,
-          },
-        },
-        _count: {
-          select: {
-            coins: true,
-          },
-        },
-      },
-      orderBy: [
-        // { isActive: 'desc' },
-        { name: "asc" },
-      ],
-    });
-
-    res.json({
-      success: true,
-      count: networks.length,
-      networks,
-    });
-  } catch (error) {
-    console.error("Get all networks error:", error);
-    res.status(500).json({
-      error: "Failed to fetch networks",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
 
 export const linkCoinToNetwork = async (req: Request, res: Response) => {
   try {

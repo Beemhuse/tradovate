@@ -1,7 +1,6 @@
 import express from "express";
 import { authenticateToken, requireRole } from './../middlewares/authMiddleware';
-import { createNetwork, deactivateNetwork, deleteNetwork, getNetworkById, updateNetwork } from "../controllers/networkController";
-import { getAllNetworks } from "../controllers/adminController";
+import { addCoinNetwork, createNetwork, deactivateNetwork, deleteCoinNetwork, deleteNetwork, getNetworkById, getNetworks, updateCoinNetwork, updateNetwork } from "../controllers/networkController";
 
 const router = express.Router();
 router.use(authenticateToken, requireRole("ADMIN"));
@@ -10,7 +9,7 @@ router.use(authenticateToken, requireRole("ADMIN"));
 
 /**
  * @swagger
- * /admin/networks:
+ * /:
  *   post:
  *     summary: Create a new blockchain network
  *     description: Add a new blockchain network to the platform (Admin only)
@@ -78,11 +77,11 @@ router.use(authenticateToken, requireRole("ADMIN"));
  *       500:
  *         description: Internal server error
  */
-router.post("/networks", createNetwork);
+router.post("/network", createNetwork);
 
 /**
  * @swagger
- * /admin/networks:
+ * /network:
  *   get:
  *     summary: Get all networks
  *     description: Retrieve all blockchain networks (Admin only)
@@ -122,11 +121,11 @@ router.post("/networks", createNetwork);
  *       500:
  *         description: Internal server error
  */
-router.get("/networks", getAllNetworks);
+router.get("/", getNetworks);
 
 /**
  * @swagger
- * /admin/networks/{id}:
+ * /networks/{id}:
  *   get:
  *     summary: Get network by ID
  *     description: Retrieve a specific network by its ID (Admin only)
@@ -164,11 +163,11 @@ router.get("/networks", getAllNetworks);
  *       500:
  *         description: Internal server error
  */
-router.get("/networks/:id", getNetworkById);
+router.get("/:id", getNetworkById);
 
 /**
  * @swagger
- * /admin/networks/{id}:
+ * /networks/{id}:
  *   put:
  *     summary: Update network
  *     description: Update an existing blockchain network (Admin only)
@@ -353,5 +352,171 @@ router.delete("/networks/:id/deactivate", deactivateNetwork);
  *         description: Internal server error
  */
 router.delete("/networks/:id", deleteNetwork);
+
+/**
+ * @swagger
+ * /admin/coins/{coinId}/networks:
+ *   post:
+ *     summary: Add a network to a coin
+ *     description: |
+ *       Links a blockchain network to a coin.
+ *       This does not create a new network — it creates an association.
+ *     tags: [Admin - Coin Networks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coinId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Coin ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [networkId]
+ *             properties:
+ *               networkId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Network ID to associate
+ *               contractAddress:
+ *                 type: string
+ *                 description: Smart contract address (if applicable)
+ *                 example: "0x123abc..."
+ *               isActive:
+ *                 type: boolean
+ *                 description: Initial active status for this network
+ *                 example: true
+ *     responses:
+ *       201:
+ *         description: Network successfully linked to coin
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin role required
+ *       404:
+ *         description: Coin or network not found
+ *       409:
+ *         description: Network already linked to coin
+ *       500:
+ *         description: Failed to add network to coin
+ */
+
+/**
+ * @swagger
+ * /admin/coins/{coinId}/networks/{networkId}:
+ *   patch:
+ *     summary: Update coin network configuration
+ *     description: |
+ *       Updates settings for a network linked to a coin.
+ *       Supports toggling active status and updating contract address.
+ *     tags: [Admin - Coin Networks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coinId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Coin ID
+ *       - in: path
+ *         name: networkId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Network ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               isActive:
+ *                 type: boolean
+ *                 description: Enable or disable this network for the coin
+ *                 example: false
+ *               contractAddress:
+ *                 type: string
+ *                 description: Updated smart contract address
+ *                 example: "0xabc456..."
+ *     responses:
+ *       200:
+ *         description: Coin network updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin role required
+ *       404:
+ *         description: Network not linked to coin
+ *       500:
+ *         description: Failed to update coin network
+ */
+
+/**
+ * @swagger
+ * /admin/coins/{coinId}/networks/{networkId}:
+ *   delete:
+ *     summary: Remove network from coin
+ *     description: |
+ *       Unlinks a network from a coin.
+ *       This does not delete the network itself.
+ *     tags: [Admin - Coin Networks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coinId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Coin ID
+ *       - in: path
+ *         name: networkId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Network ID
+ *     responses:
+ *       200:
+ *         description: Network successfully removed from coin
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin role required
+ *       404:
+ *         description: Network not linked to coin
+ *       500:
+ *         description: Failed to remove network from coin
+ */
+
+
+router.patch(
+  "/admin/coins/:coinId/networks/:networkId",
+  requireRole("ADMIN"),
+  updateCoinNetwork
+);
+
+router.delete(
+  "/admin/coins/:coinId/networks/:networkId",
+  requireRole("ADMIN"),
+  deleteCoinNetwork
+);
+
+router.post(
+"/admin/coins/:coinId/networks",
+  requireRole("ADMIN"),
+  addCoinNetwork
+);
 
 export default router;

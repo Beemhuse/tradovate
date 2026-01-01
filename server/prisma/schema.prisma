@@ -169,16 +169,24 @@ model Coin {
 }
 
 model Network {
-  id       String  @id @default(uuid())
-  name     String
-  type     String?
-  isActive Boolean @default(true)
+  id          String   @id @default(uuid())
+  slug        String?  @unique   
+  name        String
+  type        String?
+  chainId     String?
+  icon        String?
+  description String?
+  isActive    Boolean  @default(true)
 
   coins       CoinNetwork[]
   wallets     Wallet[]
   orders      Order[]
   marketPairs MarketPair[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime?          
 }
+
 
 model CoinNetwork {
   id              String  @id @default(uuid())

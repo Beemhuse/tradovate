@@ -317,3 +317,191 @@ export const getNetworkById = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+export const updateCoinNetwork = async (req: Request, res: Response) => {
+  try {
+    const { coinId, networkId } = req.params;
+    const { isActive, contractAddress } = req.body;
+
+    // 1️⃣ Ensure mapping exists
+    const coinNetwork = await prisma.coinNetwork.findFirst({
+      where: {
+        coinId,
+        networkId,
+      },
+    });
+
+    if (!coinNetwork) {
+      return res.status(404).json({
+        error: "Network not linked to coin",
+        details: `Network ${networkId} is not associated with coin ${coinId}`,
+      });
+    }
+
+    // 2️⃣ Update mapping
+    const updated = await prisma.coinNetwork.update({
+      where: { id: coinNetwork.id },
+      data: {
+        ...(typeof isActive === "boolean" && { isActive }),
+        ...(typeof contractAddress === "string" && {
+          contractAddress,
+        }),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Coin network updated successfully",
+      network: updated,
+    });
+  } catch (error) {
+    console.error("Update coin network error:", error);
+    res.status(500).json({
+      error: "Failed to update coin network",
+    });
+  }
+};
+
+
+export const deleteCoinNetwork = async (req: Request, res: Response) => {
+  try {
+    const { coinId, networkId } = req.params;
+
+    // 1️⃣ Ensure mapping exists
+    const coinNetwork = await prisma.coinNetwork.findFirst({
+      where: {
+        coinId,
+        networkId,
+      },
+    });
+
+    if (!coinNetwork) {
+      return res.status(404).json({
+        error: "Network not linked to coin",
+      });
+    }
+
+    // 2️⃣ Delete association
+    await prisma.coinNetwork.delete({
+      where: { id: coinNetwork.id },
+    });
+
+    res.json({
+      success: true,
+      message: "Network removed from coin successfully",
+    });
+  } catch (error) {
+    console.error("Delete coin network error:", error);
+    res.status(500).json({
+      error: "Failed to remove network from coin",
+    });
+  }
+};
+
+
+export const addCoinNetwork = async (req: Request, res: Response) => {
+  try {
+    const { coinId } = req.params;
+    const { networkId, contractAddress, isActive = true } = req.body;
+
+    // Prevent duplicates
+    const existing = await prisma.coinNetwork.findFirst({
+      where: { coinId, networkId },
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        error: "Network already linked to coin",
+      });
+    }
+
+    const coinNetwork = await prisma.coinNetwork.create({
+      data: {
+        coinId,
+        networkId,
+        contractAddress,
+        isActive,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Network added to coin",
+      network: coinNetwork,
+    });
+  } catch (error) {
+    console.error("Add coin network error:", error);
+    res.status(500).json({
+      error: "Failed to add network to coin",
+    });
+  }
+};
+
+
+// export const getAllNetworks = async (req: Request, res: Response) => {
+//   try {
+//     const { includeInactive = "false" } = req.query;
+
+//     const networks = await prisma.network.findMany({
+//       where: includeInactive === "true" ? {} : { isActive: true },
+//       include: {
+//         coins: {
+//           include: {
+//             coin: true,
+//           },
+//         },
+//         _count: {
+//           select: {
+//             coins: true,
+//           },
+//         },
+//       },
+//       orderBy: [
+//         // { isActive: 'desc' },
+//         { name: "asc" },
+//       ],
+//     });
+
+//     res.json({
+//       success: true,
+//       count: networks.length,
+//       networks,
+//     });
+//   } catch (error) {
+//     console.error("Get all networks error:", error);
+//     res.status(500).json({
+//       error: "Failed to fetch networks",
+//       details: error instanceof Error ? error.message : "Unknown error",
+//     });
+//   }
+// };
+
+export const getNetworks = async (req: Request, res: Response) => {
+  try {
+    const {
+      active = "true", // default: only active networks
+    } = req.query;
+
+    const networks = await prisma.network.findMany({
+      where: {
+        ...(active === "true" && { isActive: true }),
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    res.json({
+      success: true,
+      count: networks.length,
+      networks,
+    });
+  } catch (error) {
+    console.error("Get networks error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch networks",
+    });
+  }
+};

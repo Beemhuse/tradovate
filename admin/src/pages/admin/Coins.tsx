@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import AdminNav from "@/components/layout/AdminNav";
 import CoinCard from "@/components/coin-management/coin-card";
 import CoinTable from "@/components/coin-management/coin-table";
 import DeleteConfirmationModal from "@/components/coin-management/delete-confirmation-modal";
-import EditCoinDialog from "@/components/coin-management/edit-coin-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useFetchData,
@@ -11,7 +9,6 @@ import {
   useDeleteData,
   usePatchData,
 } from "@/hooks/use-api";
-import { HARDCODED_NETWORKS } from "@/constants/networks";
 import {
   Coin,
   CreateCoinPayload,
@@ -30,9 +27,9 @@ const AdminCoinsPage: React.FC = () => {
     success: boolean;
     count: number;
     networks: Network[];
-  }>("/admin/networks", "admin-networks");
-  const allNetworks = networksData?.networks || HARDCODED_NETWORKS;
-
+  }>("/network", "admin-networks");
+  const allNetworks = networksData?.networks;
+// console.log("Networks Data:", allNetworks);
   const {
     data: coinsData,
     isLoading,

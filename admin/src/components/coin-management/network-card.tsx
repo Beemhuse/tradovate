@@ -18,7 +18,7 @@ const NetworkCard: React.FC<Props> = ({ network, selected, onSelect }) => {
         selected ? "border-primary bg-primary/5" : "hover:bg-muted"
       }`}
     >
-      <div className="text-2xl">{network.icon || "🌐"}</div>
+      <img className="w-6 h-6" src={network.icon} />
       <div className="flex-1">
         <div className="font-medium text-sm">{network.name}</div>
         <div className="text-xs text-muted-foreground mt-1">{network.description}</div>
