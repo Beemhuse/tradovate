@@ -20,37 +20,44 @@ import CreatePairDialog from "./CreatePairDialog";
 import EditPairDialog from "./EditDialog";
 import DeletePairDialog from "./DeletePairDialog";
 import { Coin, TradingPair, CreatePairFormData, CoinNetwork } from "./types";
+type TradableCoin = {
+  id: string; // CoinNetwork.id
+  coinId: string;
+  symbol: string;
+  name: string;
+  network: {
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+  };
+  contractAddress?: string;
+  decimals: number;
+  isActive: boolean;
+  iconUrl?: string | null;
+};
 
-// Helper to transform coins data to the expected format
-const transformCoinsData = (coinsData: any[]): any[] => {
-  if (!coinsData || !Array.isArray(coinsData)) return [];
-  
-  const transformed: any[] = [];
-  
-  coinsData?.forEach((coin) => {
-    if (coin.networks && Array.isArray(coin.networks)) {
-      coin.networks.forEach((network: CoinNetwork) => {
-        transformed.push({
-          id: network.id, // Use network.id as the unique identifier
-          coinId: coin.id,
-          coin: {
-            symbol: coin.symbol,
-            name: coin.name,
-          },
-          network: {
-            id: network.network.id,
-            name: network.network.name,
-          },
-          iconUrl: coin.iconUrl,
-          isActive: coin.isActive && network.isActive,
-          contractAddress: network.contractAddress,
-          decimals: network.decimals,
-        });
-      });
-    }
-  });
-  
-  return transformed;
+const transformCoinsData = (coinsData: any[]): TradableCoin[] => {
+  if (!Array.isArray(coinsData)) return [];
+
+  return coinsData.flatMap((coin) =>
+    (coin.networks || []).map((cn: any) => ({
+      id: cn.id, // CoinNetwork.id
+      coinId: coin.id,
+      symbol: coin.symbol,
+      name: coin.name,
+      iconUrl: coin.iconUrl,
+      contractAddress: cn.contractAddress,
+      decimals: cn.decimals ?? 18,
+      isActive: coin.isActive && cn.isActive && cn.network?.isActive,
+      network: {
+        id: cn.network.id,
+        name: cn.network.name,
+        slug: cn.network.slug,
+        type: cn.network.type,
+      },
+    }))
+  );
 };
 
 const AdminTradingPairs = () => {
@@ -60,9 +67,13 @@ const AdminTradingPairs = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [networkFilter, setNetworkFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"name" | "volume" | "price" | "date">("name");
+  const [sortBy, setSortBy] = useState<"name" | "volume" | "price" | "date">(
+    "name"
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // 🔹 Fetch coins
@@ -70,8 +81,8 @@ const AdminTradingPairs = () => {
     data: coinsData,
     isLoading: loadingCoins,
     error: coinsError,
-  } = useFetchData("/market/coins", "admin-coins");
-
+  } = useFetchData("/market/coins?active=true", "admin-coins");
+  console.log("Coins Data:", coinsData);
   // 🔹 Fetch trading pairs with polling
   const {
     data: pairsData,
@@ -79,7 +90,7 @@ const AdminTradingPairs = () => {
     refetch: refetchPairs,
     error: pairsError,
   } = useFetchData("/market/admin-pairs", "market-pairs");
-
+  console.log("Pairs Data:", pairsData);
   // 🔹 Mutations
   const { mutate: createPair, isPending: creating } = useCreateData(
     "/market/pairs",
@@ -102,9 +113,9 @@ const AdminTradingPairs = () => {
   );
 
   // Transform coins data
-  const coins = useMemo(() => {
-    if (!coinsData || !Array.isArray(coinsData)) return [];
-    return transformCoinsData(coinsData);
+  const coins = useMemo<TradableCoin[]>(() => {
+    if (!coinsData?.coins) return [];
+    return transformCoinsData(coinsData.coins);
   }, [coinsData]);
 
   const pairs = useMemo(() => {
@@ -116,27 +127,17 @@ const AdminTradingPairs = () => {
 
   // Group coins by network
   const groupedCoins = useMemo(() => {
-    return coins.reduce((acc: Record<string, any[]>, coin: any) => {
-      const networkName = coin?.network?.name;
-      if (!networkName) return acc;
-      
-      if (!acc[networkName]) {
-        acc[networkName] = [];
-      }
-      acc[networkName].push(coin);
+    return coins.reduce<Record<string, TradableCoin[]>>((acc, coin) => {
+      const name = coin.network.name;
+      if (!acc[name]) acc[name] = [];
+      acc[name].push(coin);
       return acc;
     }, {});
   }, [coins]);
 
   // Get unique networks
   const networks = useMemo(() => {
-    const uniqueNetworks = new Set<string>();
-    coins.forEach((coin: any) => {
-      if (coin?.network?.name) {
-        uniqueNetworks.add(coin.network.name);
-      }
-    });
-    return Array.from(uniqueNetworks);
+    return Array.from(new Set(coins.map((c) => c.network.name)));
   }, [coins]);
 
   // Filter and sort pairs
@@ -146,8 +147,12 @@ const AdminTradingPairs = () => {
     const filtered = pairs.filter((pair: TradingPair) => {
       const matchesSearch =
         pair.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pair.baseCoin?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pair.baseCoin?.symbol?.toLowerCase().includes(searchQuery.toLowerCase());
+        pair.baseCoin?.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        pair.baseCoin?.symbol
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -155,10 +160,7 @@ const AdminTradingPairs = () => {
         (statusFilter === "inactive" && !pair.isActive);
 
       const matchesNetwork =
-        networkFilter === "all" ||
-        pair.baseCoin?.networks?.some((network: CoinNetwork) => 
-          network.network.name === networkFilter
-        );
+        networkFilter === "all" || pair.network?.name === networkFilter;
 
       return matchesSearch && matchesStatus && matchesNetwork;
     });
@@ -214,10 +216,17 @@ const AdminTradingPairs = () => {
 
     const activePairs = pairs.filter((p: TradingPair) => p.isActive);
     const inactivePairs = pairs.filter((p: TradingPair) => !p.isActive);
-    const totalVolume = pairs.reduce((sum: number, p: TradingPair) => sum + (p.volume24h || 0), 0);
-    const averagePrice = pairs.length > 0 
-      ? pairs.reduce((sum: number, p: TradingPair) => sum + (p.lastPrice || 0), 0) / pairs.length
-      : 0;
+    const totalVolume = pairs.reduce(
+      (sum: number, p: TradingPair) => sum + (p.volume24h || 0),
+      0
+    );
+    const averagePrice =
+      pairs.length > 0
+        ? pairs.reduce(
+            (sum: number, p: TradingPair) => sum + (p.lastPrice || 0),
+            0
+          ) / pairs.length
+        : 0;
 
     return {
       total: pairs.length,
@@ -225,7 +234,8 @@ const AdminTradingPairs = () => {
       inactive: inactivePairs.length,
       totalVolume,
       averagePrice,
-      activePercentage: pairs.length > 0 ? (activePairs.length / pairs.length) * 100 : 0,
+      activePercentage:
+        pairs.length > 0 ? (activePairs.length / pairs.length) * 100 : 0,
     };
   }, [pairs]);
 
@@ -242,14 +252,19 @@ const AdminTradingPairs = () => {
       onError: (error: any) => {
         toast({
           title: "❌ Creation Failed",
-          description: error.message || "Failed to create trading pair. Please try again.",
+          description:
+            error.message || "Failed to create trading pair. Please try again.",
           variant: "destructive",
         });
       },
     });
   };
 
-  const handleUpdatePair = (formData: { pricePrecision: number; quantityPrecision: number; minTradeAmount: number }) => {
+  const handleUpdatePair = (formData: {
+    pricePrecision: number;
+    quantityPrecision: number;
+    minTradeAmount: number;
+  }) => {
     if (!selectedPair) return;
 
     const updateData = {
@@ -284,7 +299,9 @@ const AdminTradingPairs = () => {
         onSuccess: () => {
           toast({
             title: checked ? "✅ Pair Activated" : "⏸️ Pair Paused",
-            description: `${pair.symbol} is now ${checked ? "active for trading" : "temporarily disabled"}`,
+            description: `${pair.symbol} is now ${
+              checked ? "active for trading" : "temporarily disabled"
+            }`,
           });
         },
         onError: (error: any) => {
@@ -346,17 +363,24 @@ const AdminTradingPairs = () => {
   if (pairsError || coinsError) {
     return (
       <div className="min-h-screen bg-background">
-        <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <Card className="border-destructive/50">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-12">
                 <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Failed to Load Data</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Failed to Load Data
+                </h3>
                 <p className="text-muted-foreground text-center mb-4">
-                  {pairsError?.message || coinsError?.message || "An error occurred"}
+                  {pairsError?.message ||
+                    coinsError?.message ||
+                    "An error occurred"}
                 </p>
-                <Button onClick={() => { refetchPairs(); }}>
+                <Button
+                  onClick={() => {
+                    refetchPairs();
+                  }}
+                >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
                 </Button>
@@ -382,7 +406,9 @@ const AdminTradingPairs = () => {
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Trading Pairs</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    Trading Pairs
+                  </h1>
                   <p className="text-muted-foreground">
                     Manage exchange trading pairs and market configuration
                   </p>

@@ -1,207 +1,197 @@
-// src/components/coin-management/CoinForm.tsx
-import React, { useState, useEffect } from "react";
-import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import React, { useState } from "react";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Globe, Network as NetworkIcon } from "lucide-react";
+
 import { CreateCoinPayload, Network } from "@/types/coins";
 import NetworkCard from "./network-card";
 
 type Props = {
-  networks: Network[]; // available networks (fetched or fallback)
-  initial?: Partial<CreateCoinPayload> & { name?: string; symbol?: string; iconUrl?: string; isActive?: boolean; }; 
+  networks: Network[];
   onCancel: () => void;
   onSubmit: (payload: CreateCoinPayload) => Promise<void> | void;
   isSubmitting?: boolean;
 };
 
-const CoinForm: React.FC<Props> = ({ networks, initial, onCancel, onSubmit, isSubmitting }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+const CoinForm: React.FC<Props> = ({
+  networks,
+  onCancel,
+  onSubmit,
+  isSubmitting,
+}) => {
+  const [step, setStep] = useState<1 | 2>(1);
+
   const [form, setForm] = useState({
-    name: initial?.name || "",
-    symbol: initial?.symbol || "",
-    iconUrl: initial?.iconUrl || "",
-    isActive: initial?.isActive ?? true,
-    networkId: initial?.networkName || "",
-    contractAddress: initial?.contractAddress || "",
-    decimals: initial?.decimals ?? 18,
-    requiresContractAddress: false,
-    customNetworkName: "",
-    customNetworkType: "",
+    name: "",
+    symbol: "",
+    iconUrl: "",
+    isActive: true,
+    networkId: "",
+    contractAddress: "",
+    decimals: 18,
   });
 
-  useEffect(() => {
-    // update requirement when network changes
-    const selected = networks.find((n) => n.id === form.networkId);
-    setForm((s) => ({ ...s, requiresContractAddress: selected ? selected.type !== "Native" : false }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.networkId, networks]);
+  const selectedNetwork = networks.find(
+    (n) => n.id === form.networkId
+  );
 
-  const validateStep1 = () => form.name.trim() !== "" && form.symbol.trim() !== "";
-  const validateStep2 = () => {
-    if (!form.networkId || form.networkId === "custom") {
-      // if custom network and non-native, require contract address
-      if (form.networkId === "custom" && form.customNetworkType !== "Native") {
-        return form.contractAddress.trim() !== "";
-      }
-      return true;
-    }
-    const selected = networks.find((n) => n.id === form.networkId);
-    if (!selected) return true;
-    if (selected.type === "Native") return true;
-    return form.contractAddress.trim() !== "";
-  };
+  const requiresContract =
+    selectedNetwork && selectedNetwork.type !== "Native";
 
-  const canProceed = validateStep1();
-  const canSubmit = validateStep1() && validateStep2();
+  const canProceed = form.name && form.symbol;
+  const canSubmit =
+    canProceed && (!requiresContract || form.contractAddress);
 
-  const preparePayload = (): CreateCoinPayload => {
-    const payload: any = {
-      symbol: form.symbol.toUpperCase(),
+  const submit = () => {
+    const payload: CreateCoinPayload = {
       name: form.name,
+      symbol: form.symbol.toUpperCase(),
       iconUrl: form.iconUrl || undefined,
       isActive: form.isActive,
       decimals: form.decimals,
     };
 
-    if (form.networkId && form.networkId !== "custom") {
-      const selected = networks.find((n) => n.id === form.networkId);
-      if (selected) {
-        payload.networkName = selected.name;
-        payload.networkType = selected.type;
-        if (form.contractAddress) payload.contractAddress = form.contractAddress;
-      }
-    } else if (form.networkId === "custom") {
-      payload.networkName = form.customNetworkName;
-      payload.networkType = form.customNetworkType;
-      if (form.contractAddress) payload.contractAddress = form.contractAddress;
+    if (form.networkId) {
+      payload.networkId = form.networkId;
+      payload.contractAddress = form.contractAddress || undefined;
     }
 
-    return payload as CreateCoinPayload;
+    onSubmit(payload);
   };
 
   return (
     <div>
       <DialogHeader>
-        <div className="flex items-center justify-between">
-          <DialogTitle>{currentStep === 1 ? "Create New Coin" : "Configure Network"}</DialogTitle>
-          <Badge variant="outline" className="text-xs">Step {currentStep} of 2</Badge>
-        </div>
+        <DialogTitle>
+          {step === 1 ? "Create Coin" : "Link Network"}
+        </DialogTitle>
         <DialogDescription>
-          {currentStep === 1 ? "Enter basic coin information" : "Optionally link this coin to a network"}
+          {step === 1
+            ? "Enter basic coin information"
+            : "Optionally attach this coin to a network"}
         </DialogDescription>
+        <Badge variant="outline">Step {step} of 2</Badge>
       </DialogHeader>
 
-      {currentStep === 1 ? (
-        <div className="space-y-4 py-2">
+      {step === 1 && (
+        <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Coin Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={form.name}
+                onChange={(e) =>
+                  setForm({ ...form, name: e.target.value })
+                }
+              />
             </div>
-            <div className="space-y-2">
+            <div>
               <Label>Symbol</Label>
-              <Input value={form.symbol} onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })} />
+              <Input
+                value={form.symbol}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    symbol: e.target.value.toUpperCase(),
+                  })
+                }
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Icon URL (optional)</Label>
-            <Input value={form.iconUrl} onChange={(e) => setForm({ ...form, iconUrl: e.target.value })} />
-            <p className="text-xs text-muted-foreground">Emoji, image URL or SVG is fine</p>
-          </div>
+          <Label>Icon URL</Label>
+          <Input
+            value={form.iconUrl}
+            onChange={(e) =>
+              setForm({ ...form, iconUrl: e.target.value })
+            }
+          />
 
           <div className="flex items-center justify-between pt-4 border-t">
-            <div>
-              <Label>Active Status</Label>
-              <p className="text-sm text-muted-foreground">Set whether this coin is active</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{form.isActive ? "Active" : "Inactive"}</span>
-              <Switch checked={form.isActive} onCheckedChange={(c) => setForm({ ...form, isActive: c })} />
-            </div>
+            <Label>Status</Label>
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(v) =>
+                setForm({ ...form, isActive: v })
+              }
+            />
           </div>
         </div>
-      ) : (
-        <div className="space-y-6 py-2">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <NetworkIcon className="h-5 w-5 text-muted-foreground" />
-              <Label>Select Network (Optional)</Label>
-            </div>
+      )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                className={`p-3 border rounded-lg text-left ${form.networkId === "" ? "border-primary bg-primary/5" : "hover:bg-muted"}`}
-                onClick={() => setForm({ ...form, networkId: "" })}
-              >
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">No Network</div>
-                    <div className="text-xs text-muted-foreground">Native coin only</div>
-                  </div>
-                </div>
-              </button>
-
-              {networks.map((n) => (
-                <NetworkCard key={n.id} network={n} selected={form.networkId === n.id} onSelect={(id) => setForm({ ...form, networkId: id })} />
-              ))}
-
-              <button
-                type="button"
-                className={`p-3 border rounded-lg text-left ${form.networkId === "custom" ? "border-primary bg-primary/5" : "hover:bg-muted"}`}
-                onClick={() => setForm({ ...form, networkId: "custom" })}
-              >
-                <div className="font-medium">Custom Network</div>
-                <div className="text-xs text-muted-foreground">Provide custom network fields</div>
-              </button>
-            </div>
+      {step === 2 && (
+        <div className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-2">
+            {networks.map((n) => (
+              <NetworkCard
+                key={n.id}
+                network={n}
+                selected={form.networkId === n.id}
+                onSelect={(id) =>
+                  setForm({ ...form, networkId: id })
+                }
+              />
+            ))}
           </div>
 
-          {form.networkId && form.networkId !== "custom" && (
+          {form.networkId && requiresContract && (
             <>
-              <div className="space-y-2 p-4 border rounded-lg bg-muted/20">
-                <Label>Contract Address {form.requiresContractAddress ? "*" : ""}</Label>
-                <Input value={form.contractAddress} onChange={(e) => setForm({ ...form, contractAddress: e.target.value })} className="font-mono text-sm" />
-                <Label>Decimals</Label>
-                <Input type="number" value={form.decimals} onChange={(e) => setForm({ ...form, decimals: parseInt(e.target.value || "18") })} />
-              </div>
-            </>
-          )}
+              <Label>Contract Address</Label>
+              <Input
+                value={form.contractAddress}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    contractAddress: e.target.value,
+                  })
+                }
+              />
 
-          {form.networkId === "custom" && (
-            <div className="space-y-2 p-4 border rounded-lg bg-muted/20">
-              <Label>Network Name</Label>
-              <Input value={form.customNetworkName} onChange={(e) => setForm({ ...form, customNetworkName: e.target.value })} />
-              <Label>Network Type</Label>
-              <Input value={form.customNetworkType} onChange={(e) => setForm({ ...form, customNetworkType: e.target.value })} />
-              <Label>Contract Address (if applicable)</Label>
-              <Input value={form.contractAddress} onChange={(e) => setForm({ ...form, contractAddress: e.target.value })} />
-            </div>
+              <Label>Decimals</Label>
+              <Input
+                type="number"
+                value={form.decimals}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    decimals: Number(e.target.value),
+                  })
+                }
+              />
+            </>
           )}
         </div>
       )}
 
-      <DialogFooter className="flex justify-between pt-6 border-t">
-        {currentStep === 1 ? (
+      <DialogFooter className="flex justify-between pt-4 border-t">
+        {step === 1 ? (
           <>
-            <Button variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button onClick={() => setCurrentStep(2)} disabled={!canProceed}>Next: Configure Network <ChevronRight className="h-4 w-4 ml-2" /></Button>
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button onClick={() => setStep(2)} disabled={!canProceed}>
+              Next
+            </Button>
           </>
         ) : (
           <>
-            <Button variant="outline" onClick={() => setCurrentStep(1)}><ChevronLeft className="h-4 w-4 mr-2" />Back</Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => { onSubmit(preparePayload()); }} disabled={isSubmitting}>Skip Network</Button>
-              <Button onClick={() => { if (canSubmit) onSubmit(preparePayload()); }} disabled={isSubmitting || !canSubmit}>
-                {isSubmitting ? "Creating..." : "Create Coin"}
-              </Button>
-            </div>
+            <Button variant="outline" onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <Button
+              onClick={submit}
+              disabled={!canSubmit || isSubmitting}
+            >
+              {isSubmitting ? "Creating…" : "Create Coin"}
+            </Button>
           </>
         )}
       </DialogFooter>

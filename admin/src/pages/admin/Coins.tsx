@@ -29,7 +29,6 @@ const AdminCoinsPage: React.FC = () => {
     networks: Network[];
   }>("/network", "admin-networks");
   const allNetworks = networksData?.networks;
-// console.log("Networks Data:", allNetworks);
   const {
     data: coinsData,
     isLoading,

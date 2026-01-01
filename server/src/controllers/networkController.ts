@@ -505,3 +505,44 @@ export const getNetworks = async (req: Request, res: Response) => {
     });
   }
 };
+
+// GET /market/networks/:networkId/usdt
+export const getUSDTByNetwork = async (req: Request, res: Response) => {
+  try {
+    const { networkId } = req.params;
+
+    const usdt = await prisma.coinNetwork.findFirst({
+      where: {
+        networkId,
+        isActive: true,
+        coin: {
+          symbol: "USDT",
+          isActive: true,
+        },
+      },
+      include: {
+        coin: {
+          select: { id: true, symbol: true, name: true },
+        },
+        network: {
+          select: { id: true, name: true, },
+        },
+      },
+    });
+
+    if (!usdt) {
+      return res.json({
+        success: true,
+        usdt: null,
+      });
+    }
+
+    res.json({
+      success: true,
+      usdt,
+    });
+  } catch (err) {
+    console.error("getUSDTByNetwork error", err);
+    res.status(500).json({ success: false, message: "Failed to resolve USDT" });
+  }
+};

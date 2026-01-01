@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticateToken, requireRole } from './../middlewares/authMiddleware';
-import { addCoinNetwork, createNetwork, deactivateNetwork, deleteCoinNetwork, deleteNetwork, getNetworkById, getNetworks, updateCoinNetwork, updateNetwork } from "../controllers/networkController";
+import { addCoinNetwork, createNetwork, deactivateNetwork, deleteCoinNetwork, deleteNetwork, getNetworkById, getNetworks, getUSDTByNetwork, updateCoinNetwork, updateNetwork } from "../controllers/networkController";
 
 const router = express.Router();
 router.use(authenticateToken, requireRole("ADMIN"));
@@ -77,7 +77,8 @@ router.use(authenticateToken, requireRole("ADMIN"));
  *       500:
  *         description: Internal server error
  */
-router.post("/network", createNetwork);
+router.post("/", requireRole('ADMIN'), createNetwork);
+router.get("/:networkId/usdt", requireRole('ADMIN'), getUSDTByNetwork);
 
 /**
  * @swagger

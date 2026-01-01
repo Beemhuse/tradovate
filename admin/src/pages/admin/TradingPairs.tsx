@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import AdminNav from "@/components/layout/AdminNav";
 import {
   Card,
   CardContent,
@@ -59,6 +58,22 @@ interface TradingPair {
   createdAt: string;
   updatedAt: string;
 }
+interface TradableCoin {
+  id: string;            // CoinNetwork ID
+  coinId: string;
+  symbol: string;
+  name: string;
+  network: {
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+  };
+  contractAddress?: string;
+  decimals: number;
+  isActive: boolean;
+}
+
 
 const AdminTradingPairs = () => {
   const { toast } = useToast();
@@ -68,15 +83,6 @@ const AdminTradingPairs = () => {
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null);
   const [baseCoinId, setBaseCoinId] = useState("");
   const [quoteCoinId, setQuoteCoinId] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
-  const [networkFilter, setNetworkFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"name" | "volume" | "price" | "date">(
-    "name"
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [pricePrecision, setPricePrecision] = useState<number>(8);
   const [quantityPrecision, setQuantityPrecision] = useState<number>(8);
   const [minTradeAmount, setMinTradeAmount] = useState<string>("0.001");
@@ -118,117 +124,8 @@ console.log("pairsData", pairsData);
     ["market-pairs"]
   );
 
-  const coins = useMemo(() => coinsData?.coins || [], [coinsData]);
-  const pairs = useMemo(() => pairsData?.pairs || [], [pairsData]);
 
-  // Group coins by network
-  const groupedCoins = useMemo(() => {
-    return coins.reduce((acc: Record<string, Coin[]>, coin: Coin) => {
-      const networkName = coin.network.name;
-      if (!acc[networkName]) {
-        acc[networkName] = [];
-      }
-      acc[networkName].push(coin);
-      return acc;
-    }, {});
-  }, [coins]);
-
-  // Get unique networks
-  const networks = useMemo(() => {
-    const uniqueNetworks = new Set(
-      coins.map((coin: Coin) => coin.network.name)
-    );
-    return Array.from(uniqueNetworks);
-  }, [coins]);
-
-  // Filter and sort pairs
-  const filteredPairs = useMemo(() => {
-    if (!pairs.length) return [];
-
-    const filtered = pairs.filter((pair: TradingPair) => {
-      const matchesSearch =
-        pair.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pair.baseCoin?.coin?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        pair.baseCoin?.coin?.symbol
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && pair.isActive) ||
-        (statusFilter === "inactive" && !pair.isActive);
-
-      const matchesNetwork =
-        networkFilter === "all" ||
-        pair.baseCoin?.network?.name === networkFilter;
-
-      return matchesSearch && matchesStatus && matchesNetwork;
-    });
-
-    // Sort
-    filtered.sort((a: TradingPair, b: TradingPair) => {
-      let aValue, bValue;
-
-      switch (sortBy) {
-        case "name":
-          aValue = a.symbol;
-          bValue = b.symbol;
-          break;
-        case "volume":
-          aValue = a.volume24h || 0;
-          bValue = b.volume24h || 0;
-          break;
-        case "price":
-          aValue = a.lastPrice || 0;
-          bValue = b.lastPrice || 0;
-          break;
-        case "date":
-          aValue = new Date(a.createdAt).getTime();
-          bValue = new Date(b.createdAt).getTime();
-          break;
-        default:
-          aValue = a.symbol;
-          bValue = b.symbol;
-      }
-
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-
-    return filtered;
-  }, [pairs, searchQuery, statusFilter, networkFilter, sortBy, sortOrder]);
-
-  // Stats
-  const stats = useMemo(() => {
-    const activePairs = pairs.filter((p: TradingPair) => p.isActive);
-    const inactivePairs = pairs.filter((p: TradingPair) => !p.isActive);
-    const totalVolume = pairs.reduce(
-      (sum: number, p: TradingPair) => sum + (p.volume24h || 0),
-      0
-    );
-    const averagePrice =
-      pairs?.length > 0
-        ? pairs?.reduce(
-            (sum: number, p: TradingPair) => sum + (p.lastPrice || 0),
-            0
-          ) / pairs?.length
-        : 0;
-
-    return {
-      total: pairs?.length,
-      active: activePairs.length,
-      inactive: inactivePairs.length,
-      totalVolume,
-      averagePrice,
-      activePercentage:
-        pairs.length > 0 ? (activePairs?.length / pairs.length) * 100 : 0,
-    };
-  }, [pairs]);
+  // Each tradable coin is (coin + network)
 
 
   const handleUpdatePair = () => {
@@ -261,28 +158,6 @@ console.log("pairsData", pairsData);
     });
   };
 
-  const handleTogglePair = (pair: TradingPair, checked: boolean) => {
-    patchPair(
-      { id: pair.id, isActive: checked },
-      {
-        onSuccess: () => {
-          toast({
-            title: checked ? "✅ Pair Activated" : "⏸️ Pair Paused",
-            description: `${pair.symbol} is now ${
-              checked ? "active for trading" : "temporarily disabled"
-            }`,
-          });
-        },
-        onError: (error: any) => {
-          toast({
-            title: "❌ Update Failed",
-            description: error.message || "Failed to update pair status.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  };
 
   const handleDeletePair = () => {
     if (!selectedPair) return;
@@ -306,13 +181,6 @@ console.log("pairsData", pairsData);
     });
   };
 
-  const handleEditPair = (pair: TradingPair) => {
-    setSelectedPair(pair);
-    setPricePrecision(8); // Default or fetch from pair data
-    setQuantityPrecision(8);
-    setMinTradeAmount("0.001");
-    setIsEditDialogOpen(true);
-  };
 
   const resetForm = () => {
     setBaseCoinId("");
@@ -323,24 +191,16 @@ console.log("pairsData", pairsData);
     setFormErrors({});
   };
 
-  const handleSort = (field: "name" | "volume" | "price" | "date") => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("asc");
-    }
-  };
 
 
   // Auto-refetch on mount
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetchPairs();
-    }, 30000); // 30 seconds
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     refetchPairs();
+  //   }, 30000); // 30 seconds
 
-    return () => clearInterval(interval);
-  }, [refetchPairs]);
+  //   return () => clearInterval(interval);
+  // }, [refetchPairs]);
 
   if (pairsError || coinsError) {
     return (
@@ -377,32 +237,8 @@ console.log("pairsData", pairsData);
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <TradingMain
-        pairs={filteredPairs}
-        coins={coins}
-        baseCoinId={baseCoinId}
-        setBaseCoinId={setBaseCoinId}
-        quoteCoinId={quoteCoinId}
-        setQuoteCoinId={setQuoteCoinId}
-        sortBy={sortBy}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        networkFilter={networkFilter}
-        setNetworkFilter={setNetworkFilter}
-        formErrors={formErrors}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        loadingPairs={loadingPairs}
-        refetchPairs={refetchPairs}
-        groupedCoins={groupedCoins}
-        isCreateDialogOpen={isCreateDialogOpen}
-        setIsCreateDialogOpen={setIsCreateDialogOpen}
-        sortOrder={sortOrder}
-        handleSort={handleSort}
-        handleTogglePair={handleTogglePair}
-        patching={patching}
-        handleEditPair={handleEditPair}
-        setSelectedPair={setSelectedPair}
-        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+        // pairs={filteredPairs}
+        
       />
 
       {/* Edit Dialog */}
