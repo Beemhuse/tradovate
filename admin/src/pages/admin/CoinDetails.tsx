@@ -5,8 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Globe, Wallet, Hash, Info } from "lucide-react";
-import { useFetchData } from "@/hooks/use-api";
+import { useFetchData, usePatchData } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { toast } from "sonner";
+import EditCoinDialog from "@/components/coin-management/edit-coin-dialog";
+import ManageNetworksDialog from "@/components/coin-management/manage-networks-dialog";
+import { UpdateCoinPayload } from "@/types/coins";
 
 type Coin = {
   id: string;
@@ -39,6 +44,16 @@ const CoinDetailsPage = () => {
     isError,
   } = useFetchData<Coin>(`/market/coins/${id}`, ["coin", id]);
 
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isNetworksOpen, setIsNetworksOpen] = useState(false);
+  // const queryClient = useQueryClient();
+  const toggleCoin = usePatchData<void, { id: string }>(
+    ({ id }) => `/admin/coins/${id}/toggle`,
+    [["coin", id], "admin-coins"]
+  );
+ const updateCoin = usePatchData<Coin, UpdateCoinPayload>(`/admin/coins/${id}`, [
+    "admin-coins",
+  ]);
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -115,13 +130,24 @@ const CoinDetailsPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/admin/coins/${id}/edit`)}
-            >
+            <Button variant="outline" onClick={() => setIsEditOpen(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Coin
             </Button>
+
+            <Button
+              variant={coin.isActive ? "destructive" : "default"}
+              onClick={async () => {
+                await toggleCoin.mutateAsync({ id: coin.id });
+                toast.success(
+                  coin.isActive ? "Coin deactivated" : "Coin activated"
+                );
+                // queryClient.invalidateQueries({ queryKey: ["coin", id] });
+              }}
+            >
+              {coin.isActive ? "Deactivate" : "Activate"}
+            </Button>
+
             {coin.website && (
               <Button variant="outline" asChild>
                 <a
@@ -279,15 +305,16 @@ const CoinDetailsPage = () => {
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={() => navigate(`/admin/coins/${id}/edit`)}
+                  onClick={() => setIsEditOpen(true)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Coin
                 </Button>
+
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={() => navigate(`/admin/coins/${id}/networks`)}
+                  onClick={() => setIsNetworksOpen(true)}
                 >
                   <Globe className="h-4 w-4 mr-2" />
                   Manage Networks
@@ -297,6 +324,38 @@ const CoinDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {coin && (
+  <EditCoinDialog
+    open={isEditOpen}
+    coin={{
+      id: coin.id,
+      name: coin.name,
+      symbol: coin.symbol,
+      icon: coin.iconUrl || "",
+      isActive: !!coin.isActive,
+    }}
+    onOpenChange={setIsEditOpen}
+    onSave={async (data) => {
+      await updateCoin.mutateAsync({ id: data.id, ...data });
+      toast.success("Coin updated");
+      setIsEditOpen(false);
+      // queryClient.invalidateQueries({ queryKey: ["coin", id] });
+    }}
+  />
+)}
+
+<ManageNetworksDialog
+  open={isNetworksOpen}
+  coinId={coin.id}
+  networks={coin.networks || []}
+  onOpenChange={setIsNetworksOpen}
+  // onSuccess={() =>
+  //   queryClient.invalidateQueries({ queryKey: ["coin", id] })
+  // }
+/>
+
+
     </div>
   );
 };

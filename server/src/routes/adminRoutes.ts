@@ -12,8 +12,9 @@ import {
   getCoinNetworks,
   getAllCoins,
   getCoinById,
-  deactivateCoin,
+  // deactivateCoin,
   suspendUser,
+  toggleCoinStatus,
 } from "../controllers/adminController";
 
 const router = Router();
@@ -183,14 +184,17 @@ router.get("/coins/:id", getCoinById);
  *       409:
  *         description: Symbol conflict
  */
-router.put("/coins/:id", updateCoin);
+router.patch("/coins/:id", updateCoin);
 
 /**
  * @swagger
- * /admin/coins/{id}/deactivate:
- *   delete:
- *     summary: Deactivate a coin
- *     description: Soft delete - marks coin as inactive without removing data
+ * /admin/coins/{id}/toggle:
+ *   patch:
+ *     summary: Toggle coin active status
+ *     description: |
+ *       Toggles a coin between active and inactive states.
+ *       This is a soft operation and does not delete any data.
+ *       Optionally toggles all associated network mappings.
  *     tags: [Admin - Coins]
  *     security:
  *       - bearerAuth: []
@@ -203,23 +207,61 @@ router.put("/coins/:id", updateCoin);
  *           format: uuid
  *         description: Coin ID
  *       - in: query
- *         name: deactivateNetworks
+ *         name: toggleNetworks
  *         schema:
  *           type: string
  *           enum: [true, false]
- *         description: Also deactivate associated networks
- *         default: "true"
+ *           default: "true"
+ *         description: Toggle the active status of all associated networks
  *     responses:
  *       200:
- *         description: Coin deactivated successfully
+ *         description: Coin status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Coin activated successfully
+ *                 details:
+ *                   type: object
+ *                   properties:
+ *                     coin:
+ *                       type: string
+ *                       example: Bitcoin
+ *                     symbol:
+ *                       type: string
+ *                       example: BTC
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     walletsAffected:
+ *                       type: number
+ *                       example: 120
+ *                     ordersAffected:
+ *                       type: number
+ *                       example: 45
+ *                     networksAffected:
+ *                       type: number
+ *                       example: 3
+ *                     networksToggled:
+ *                       type: boolean
+ *                       example: true
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden - Admin role required
  *       404:
  *         description: Coin not found
+ *       500:
+ *         description: Failed to toggle coin status
  */
-router.delete("/coins/:id/deactivate", deactivateCoin);
+
+router.patch("/coins/:id/toggle", toggleCoinStatus);
 
 /**
  * @swagger

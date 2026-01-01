@@ -1,4 +1,5 @@
 // components/coin-management/EditCoinDialog.tsx
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,26 @@ const EditCoinDialog = ({
   onSave,
   isLoading = false,
 }: EditCoinDialogProps) => {
+  const [form, setForm] = useState(coin);
+
+  // Sync form when dialog opens or coin changes
+  useEffect(() => {
+    if (open) {
+      setForm(coin);
+    }
+  }, [open, coin]);
+
+  const handleChange = (
+    field: keyof typeof form,
+    value: string | boolean
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    await onSave(form);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -45,53 +66,57 @@ const EditCoinDialog = ({
           <DialogTitle>Edit Coin</DialogTitle>
           <DialogDescription>Modify coin details</DialogDescription>
         </DialogHeader>
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="edit-coin-name">Coin Name</Label>
             <Input
               id="edit-coin-name"
-              value={coin.name}
-              onChange={(e) =>
-                onSave({ ...coin, name: e.target.value })
-              }
+              value={form.name}
+              onChange={(e) => handleChange("name", e.target.value)}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="edit-coin-symbol">Symbol</Label>
             <Input
               id="edit-coin-symbol"
-              value={coin.symbol}
-              onChange={(e) =>
-                onSave({ ...coin, symbol: e.target.value })
-              }
+              value={form.symbol}
+              onChange={(e) => handleChange("symbol", e.target.value)}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="edit-coin-icon">Icon URL</Label>
             <Input
               id="edit-coin-icon"
-              value={coin.icon}
-              onChange={(e) =>
-                onSave({ ...coin, icon: e.target.value })
-              }
+              value={form.icon}
+              onChange={(e) => handleChange("icon", e.target.value)}
             />
           </div>
+
           <div className="flex items-center gap-2">
-            <Label>Active</Label>
+            <Label htmlFor="edit-coin-active">Active</Label>
             <input
+              id="edit-coin-active"
               type="checkbox"
-              checked={coin.isActive}
+              checked={form.isActive}
               onChange={(e) =>
-                onSave({ ...coin, isActive: e.target.checked })
+                handleChange("isActive", e.target.checked)
               }
             />
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-          <Button onClick={() => onSave(coin)} disabled={isLoading}>
+          <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>

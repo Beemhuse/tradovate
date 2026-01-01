@@ -325,12 +325,12 @@ export const updateCoin = async (req: Request, res: Response) => {
   }
 };
 
-export const deactivateCoin = async (req: Request, res: Response) => {
+export const toggleCoinStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { deactivateNetworks = "true" } = req.query;
+    const { toggleNetworks = "true" } = req.query;
 
-    // Check if coin exists
+    // 1️⃣ Check if coin exists
     const coin = await prisma.coin.findUnique({
       where: { id },
       include: {
@@ -354,45 +354,48 @@ export const deactivateCoin = async (req: Request, res: Response) => {
       });
     }
 
-    // Use transaction to ensure consistency
-    const result = await prisma.$transaction(async (prisma) => {
-      // Deactivate the coin
-      const updatedCoin = await prisma.coin.update({
+    const newStatus = !coin.isActive;
+
+    // 2️⃣ Transaction for consistency
+    const updatedCoin = await prisma.$transaction(async (tx) => {
+      const updated = await tx.coin.update({
         where: { id },
-        data: { isActive: false },
+        data: { isActive: newStatus },
       });
 
-      // Optionally deactivate all network associations
-      if (deactivateNetworks === "true") {
-        await prisma.coinNetwork.updateMany({
+      // 3️⃣ Optionally toggle all network associations
+      if (toggleNetworks === "true") {
+        await tx.coinNetwork.updateMany({
           where: { coinId: id },
-          data: { isActive: false },
+          data: { isActive: newStatus },
         });
       }
 
-      return updatedCoin;
+      return updated;
     });
 
     res.json({
       success: true,
-      message: "Coin deactivated successfully",
+      message: `Coin ${newStatus ? "activated" : "deactivated"} successfully`,
       details: {
         coin: coin.name,
         symbol: coin.symbol,
+        isActive: newStatus,
         walletsAffected: coin._count.wallets,
         ordersAffected: coin._count.orders,
         networksAffected: coin._count.networks,
-        networksDeactivated: deactivateNetworks === "true",
+        networksToggled: toggleNetworks === "true",
       },
     });
   } catch (error) {
-    console.error("Deactivate coin error:", error);
+    console.error("Toggle coin status error:", error);
     res.status(500).json({
-      error: "Failed to deactivate coin",
+      error: "Failed to toggle coin status",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
+
 
 export const deleteCoin = async (req: Request, res: Response) => {
   try {

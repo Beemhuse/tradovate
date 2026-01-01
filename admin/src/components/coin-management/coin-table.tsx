@@ -98,14 +98,14 @@ const CoinTable = ({ coins, onToggleStatus, onEdit, onDelete }: CoinTableProps) 
               </td>
               <td className="py-4 px-4" onClick={handleActionClick}>
                 <div className="flex items-center justify-end gap-2">
-                  <Button 
+                  {/* <Button 
                     size="sm" 
                     variant="ghost" 
                     title="Edit details"
                     onClick={() => onEdit(coin)}
                   >
                     <Edit className="h-4 w-4" />
-                  </Button>
+                  </Button> */}
                   <Button
                     size="sm"
                     variant="ghost"

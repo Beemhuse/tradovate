@@ -9,7 +9,7 @@ import {
   useFetchData,
   useCreateData,
   useDeleteData,
-  useUpdateData,
+  usePatchData,
 } from "@/hooks/use-api";
 import { HARDCODED_NETWORKS } from "@/constants/networks";
 import {
@@ -39,7 +39,7 @@ const AdminCoinsPage: React.FC = () => {
     isError,
     refetch,
   } = useFetchData<{ success: boolean; count: number; coins: Coin[] }>(
-    "/admin/coins",
+    "/admin/coins?includeInactive=true",
     "admin-coins"
   );
   const coins = coinsData?.coins || [];
@@ -48,13 +48,18 @@ const AdminCoinsPage: React.FC = () => {
     "admin-coins",
     "/market/coins",
   ]);
-  const updateCoin = useUpdateData<Coin, UpdateCoinPayload>("/admin/coins", [
+  const updateCoin = usePatchData<Coin, UpdateCoinPayload>("/admin/coins", [
     "admin-coins",
   ]);
-  const deactivateCoin = useDeleteData<void>(
-    (id: string | number) => `/admin/coins/${id}/deactivate`,
+  const toggleCoin = usePatchData<
+    void,
+    { id: string | number; toggleNetworks?: boolean }
+  >(
+    ({ id, toggleNetworks = true }) =>
+      `/admin/coins/${id}/toggle?toggleNetworks=${toggleNetworks}`,
     ["admin-coins"]
   );
+
   const deleteCoin = useDeleteData<void>(
     (id: string | number) => `/admin/coins/${id}?force=true`,
     ["admin-coins"]
@@ -101,22 +106,28 @@ const AdminCoinsPage: React.FC = () => {
       toast.error("Failed to update coin");
     }
   };
-
   const handleDeleteConfirm = async () => {
     if (!coinToDelete) return;
+
     try {
       if (coinToDelete._count?.wallets || coinToDelete._count?.orders) {
-        await deactivateCoin.mutateAsync(coinToDelete.id);
-        toast.success("Coin deactivated");
+        await toggleCoin.mutateAsync({
+          id: coinToDelete.id,
+          toggleNetworks: true,
+        });
+        toast.success(
+          coinToDelete.isActive ? "Coin deactivated" : "Coin activated"
+        );
       } else {
         await deleteCoin.mutateAsync(coinToDelete.id);
         toast.success("Coin deleted");
       }
+
       setIsDeleteOpen(false);
       setCoinToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["admin-coins"] });
     } catch (err: any) {
-      toast.error("Failed to delete/deactivate coin");
+      toast.error("Failed to update coin");
     }
   };
 
@@ -148,7 +159,7 @@ const AdminCoinsPage: React.FC = () => {
               <select
                 value={activeTab}
                 onChange={(e) => setActiveTab(e.target.value as any)}
-                className="p-2 border rounded"
+                className="p-2 border bg-black rounded"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -164,9 +175,9 @@ const AdminCoinsPage: React.FC = () => {
           <CoinTable
             coins={filteredCoins}
             onToggleStatus={async (coin) =>
-              await updateCoin.mutateAsync({
+              await toggleCoin.mutateAsync({
                 id: coin.id,
-                data: { isActive: !coin.isActive },
+                toggleNetworks: true,
               })
             }
             onEdit={(coin) => {
@@ -191,7 +202,7 @@ const AdminCoinsPage: React.FC = () => {
         </Dialog>
 
         {/* Edit Dialog */}
-        {editingCoin && (
+        {/* {editingCoin && (
           <EditCoinDialog
             open={isEditOpen}
             coin={{
@@ -205,7 +216,7 @@ const AdminCoinsPage: React.FC = () => {
             onSave={(data) => handleEditSave({ id: data.id, ...data })}
             isLoading={updateCoin.isPending}
           />
-        )}
+        )} */}
 
         {/* Delete Confirmation */}
         <DeleteConfirmationModal
@@ -229,7 +240,7 @@ const AdminCoinsPage: React.FC = () => {
             !!coinToDelete?.networks && coinToDelete.networks.length > 0
           }
           networkCount={coinToDelete?.networks?.length || 0}
-          isLoading={deleteCoin.isPending || deactivateCoin.isPending}
+          isLoading={deleteCoin.isPending || toggleCoin.isPending}
         />
       </div>
     </div>
