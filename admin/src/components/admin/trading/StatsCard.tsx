@@ -45,7 +45,7 @@ const StatsCards = ({ stats, isLoading, onRefresh }: StatsCardsProps) => {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
+      {/* <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -81,7 +81,7 @@ const StatsCards = ({ stats, isLoading, onRefresh }: StatsCardsProps) => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 };

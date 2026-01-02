@@ -136,7 +136,7 @@ const PairsTable = ({
                   </Button>
                 </TableHead>
                 <TableHead>Network</TableHead>
-                <TableHead>
+                {/* <TableHead>
                   <Button
                     variant="ghost"
                     onClick={() => onSort("price")}
@@ -145,8 +145,8 @@ const PairsTable = ({
                     Last Price
                     <ArrowUpDown className="h-3 w-3" />
                   </Button>
-                </TableHead>
-                <TableHead>
+                </TableHead> */}
+                {/* <TableHead>
                   <Button
                     variant="ghost"
                     onClick={() => onSort("volume")}
@@ -155,7 +155,7 @@ const PairsTable = ({
                     24h Volume
                     <ArrowUpDown className="h-3 w-3" />
                   </Button>
-                </TableHead>
+                </TableHead> */}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>

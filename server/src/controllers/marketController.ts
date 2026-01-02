@@ -12,39 +12,31 @@ export const createPairSchema = z.object({
 const updatePairSchema = z.object({
   isActive: z.boolean().optional(),
 });
-
 export const createPair = async (req: Request, res: Response) => {
   try {
-    const { baseCoinNetworkId, quoteCoinNetworkId } = createPairSchema.parse(
-      req.body
-    );
+    const { baseCoinNetworkId, quoteCoinNetworkId } =
+      createPairSchema.parse(req.body);
 
     /* ===========================
-       Load base coin-network
+       Load coin-networks
     ============================ */
-    const base = await prisma.coinNetwork.findUnique({
-      where: { id: baseCoinNetworkId },
-      include: { coin: true, network: true },
-    });
+    const [base, quote] = await Promise.all([
+      prisma.coinNetwork.findUnique({
+        where: { id: baseCoinNetworkId },
+        include: { coin: true },
+      }),
+      prisma.coinNetwork.findUnique({
+        where: { id: quoteCoinNetworkId },
+        include: { coin: true },
+      }),
+    ]);
 
     if (!base || !base.isActive) {
-      return res.status(400).json({
-        error: "Invalid or inactive base coin selection",
-      });
+      return res.status(400).json({ error: "Invalid base coin" });
     }
 
-    /* ===========================
-       Load quote coin-network
-    ============================ */
-    const quote = await prisma.coinNetwork.findUnique({
-      where: { id: quoteCoinNetworkId },
-      include: { coin: true, network: true },
-    });
-
     if (!quote || !quote.isActive) {
-      return res.status(400).json({
-        error: "Invalid or inactive quote coin selection",
-      });
+      return res.status(400).json({ error: "Invalid quote coin" });
     }
 
     /* ===========================
@@ -52,79 +44,89 @@ export const createPair = async (req: Request, res: Response) => {
     ============================ */
     if (base.networkId !== quote.networkId) {
       return res.status(400).json({
-        error: "Base and quote coins must be on the same network",
+        error: "Base and quote must be on the same network",
       });
     }
 
     /* ===========================
-       Prevent nonsense pairs
+       Enforce market rules
     ============================ */
     if (base.coinId === quote.coinId) {
       return res.status(400).json({
-        error: "Base and quote coin cannot be the same",
+        error: "Base and quote cannot be the same asset",
+      });
+    }
+
+    // 🔥 CRITICAL RULE
+    if (quote.coin.symbol !== "USDT") {
+      return res.status(400).json({
+        error: "Only USDT is allowed as quote currency",
+      });
+    }
+
+    if (base.coin.symbol === "USDT") {
+      return res.status(400).json({
+        error: "USDT cannot be used as base currency",
       });
     }
 
     /* ===========================
-       Final safety check (CRITICAL)
-    ============================ */
-    if (!base.coin || !quote.coin || !base.networkId) {
-      return res.status(500).json({
-        error: "CoinNetwork data is corrupted (missing coin or network)",
-      });
-    }
-
-    /* ===========================
-       Build symbols (backend-owned)
+       Build symbols
     ============================ */
     const symbol = `${base.coin.symbol}/${quote.coin.symbol}`;
     const wsSymbol = `${base.coin.symbol}${quote.coin.symbol}`.toLowerCase();
 
     /* ===========================
-       Create or update pair (SAFE)
+       DUPLICATE CHECK (EXACT)
     ============================ */
-    const existingPair = await prisma.marketPair.findFirst({
+    const existingPair = await prisma.marketPair.findUnique({
       where: {
-        symbol,
-        networkId: base.networkId,
+        baseCoinId_quoteCoinId_networkId: {
+          baseCoinId: base.coinId,
+          quoteCoinId: quote.coinId,
+          networkId: base.networkId,
+        },
       },
     });
-    console.log("PAIR CREATE DEBUG", {
-      baseCoinId: base?.coinId,
-      quoteCoinId: quote?.coinId,
-      networkId: base?.networkId,
-      symbol,
-      wsSymbol,
-      isActive: true,
-    });
 
-    const pair = existingPair
-      ? await prisma.marketPair.update({
-          where: { id: existingPair.id },
-          data: {
-            isActive: true,
-          },
-        })
-      : await prisma.marketPair.create({
-          data: {
-            baseCoinId: base.coinId,
-            quoteCoinId: quote.coinId,
-            networkId: base.networkId,
-            symbol,
-            wsSymbol,
-            isActive: true,
-          },
-        });
+    if (existingPair) {
+      const updated = await prisma.marketPair.update({
+        where: { id: existingPair.id },
+        data: { isActive: true },
+      });
+
+      return res.status(200).json({
+        success: true,
+        pair: updated,
+        message: "Pair already existed and was reactivated",
+      });
+    }
+
+    /* ===========================
+       Create pair
+    ============================ */
+    const pair = await prisma.marketPair.create({
+      data: {
+        baseCoinId: base.coinId,
+        quoteCoinId: quote.coinId,
+        networkId: base.networkId,
+        symbol,
+        wsSymbol,
+        isActive: true,
+      },
+    });
 
     return res.status(201).json({
       success: true,
       pair,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("createPair error:", err);
 
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.errors });
+    if (err.code === "P2002") {
+      return res.status(409).json({
+        error: "Trading pair already exists",
+      });
     }
 
     return res.status(500).json({
@@ -132,6 +134,7 @@ export const createPair = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 export const updatePair = async (req: Request, res: Response) => {
   try {
@@ -215,8 +218,17 @@ export const getPairs = async (req: Request, res: Response) => {
 export const adminGetPairs = async (req: Request, res: Response) => {
   try {
     const pairs = await prisma.marketPair.findMany({
-      //   where: { isActive: true },
       include: {
+        network: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            type: true,
+            icon: true,
+            isActive: true,
+          },
+        },
         baseCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },
         },
@@ -232,10 +244,11 @@ export const adminGetPairs = async (req: Request, res: Response) => {
       pairs,
     });
   } catch (err) {
-    console.error("getPairs error", err);
+    console.error("adminGetPairs error", err);
     res.status(500).json({ error: "Failed to fetch pairs" });
   }
 };
+
 export const getPairById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

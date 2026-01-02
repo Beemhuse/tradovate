@@ -62,10 +62,10 @@ const PairRow = ({ pair, onEdit, onToggle, onDelete, isPatching }: PairRowProps)
       <TableCell>
         <Badge variant="outline" className="font-normal">
           <Network className="h-3 w-3 mr-1" />
-          {pair.baseCoin?.network?.name}
+          {pair.network?.name}
         </Badge>
       </TableCell>
-      <TableCell>
+      {/* <TableCell>
         {pair.lastPrice ? (
           <div>
             <div className="font-medium">
@@ -105,7 +105,7 @@ const PairRow = ({ pair, onEdit, onToggle, onDelete, isPatching }: PairRowProps)
         ) : (
           <span className="text-muted-foreground">-</span>
         )}
-      </TableCell>
+      </TableCell> */}
       <TableCell>
         <div className="flex items-center gap-2">
           <Switch

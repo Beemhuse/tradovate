@@ -241,9 +241,9 @@ const AdminTradingPairs = () => {
 
   const handleCreatePair = (formData: CreatePairFormData) => {
     createPair(formData, {
-      onSuccess: () => {
+      onSuccess: (res) => {
         toast({
-          title: "🎉 Pair Created Successfully",
+          title: `🎉 ${res.message}`,
           description: "New trading pair has been added to the exchange.",
           variant: "default",
         });
