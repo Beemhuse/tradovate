@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: tradovate
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5433:5432"
     restart: unless-stopped
     networks:
       - tradovate_net
