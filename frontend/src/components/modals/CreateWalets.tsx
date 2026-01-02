@@ -19,12 +19,11 @@ import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateData, useFetchData } from "@/hooks/use-api";
 import { COINS } from "@/hooks/apiEndpoint";
-import { cn } from "@/lib/utils";
 
 interface AddCoinsProps {
   addCoinOpen: boolean;
   setAddCoinOpen: (open: boolean) => void;
-  assets: any;
+  assets: any[];
   refetch: () => void;
   isLoading: boolean;
 }
@@ -36,243 +35,244 @@ const AddCoins = ({
   refetch,
   isLoading,
 }: AddCoinsProps) => {
-  const [selectedCoinToAdd, setSelectedCoinToAdd] = useState<string>("");
-  const [isDeposite, setIsDeposite] = useState<boolean>(false);
-  const [isFundWallet, setIsFundWallet] = useState<boolean>(true);
-  const [networkId, setNetworkId] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-
-  const { data: coinList } = useFetchData(COINS.COINLIST, "coin_list");
-
-  const { mutate: createCoin, isPending: createCoinPending } = useCreateData(
-    COINS.CREATE,
-    ["create_coin"]
-  );
-  const { mutate: coinDepositMutate, isPending: coinDepositPending } =
-    useCreateData(COINS.DEPOSIT, ["coin_deposit"]);
-
   const { toast } = useToast();
 
-  const selectedCoinData = useMemo(() => {
-    const coin = coinList?.find((coin) => coin.id === selectedCoinToAdd);
+  const [selectedCoinId, setSelectedCoinId] = useState("");
+  const [networkEntryId, setNetworkEntryId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [isDeposit, setIsDeposit] = useState(false);
 
-    return coin;
-  }, [coinList, selectedCoinToAdd]);
+const { data: coinResponse } = useFetchData(COINS.COINLIST, "coin_list");
 
-  const coinData = useMemo(() => {
-    const coin = assets?.find((coin) => coin.coinId === selectedCoinToAdd);
-    return coin;
-  }, [assets, selectedCoinToAdd]);
+const coinList = coinResponse?.coins ?? [];
 
-  const handleCopyAddress = () => {
-    if (coinData?.address || coinData?.contractAddress) {
-      navigator.clipboard.writeText(
-        coinData?.address || coinData?.contractAddress
-      );
-      toast({ title: coinData?.coin?.name + " Address copied!" });
-    }
+  const { mutate: createWallet, isPending: creatingWallet } =
+    useCreateData(COINS.CREATE, ["create_coin"]);
+
+  const { mutate: depositCoin, isPending: depositing } =
+    useCreateData(COINS.DEPOSIT, ["coin_deposit"]);
+
+  /**
+   * Selected Coin
+   */
+  const selectedCoin = useMemo(
+    () => coinList?.find((c) => c.id === selectedCoinId),
+    [coinList, selectedCoinId]
+  );
+
+  /**
+   * Selected Network Entry (wallet-network mapping)
+   */
+  const selectedNetwork = useMemo(() => {
+    return selectedCoin?.networks?.find(
+      (n: any) => n.id === networkEntryId
+    );
+  }, [selectedCoin, networkEntryId]);
+
+  /**
+   * Existing Wallet (if any)
+   */
+  const existingWallet = useMemo(() => {
+    return assets?.find(
+      (w) =>
+        w.coinId === selectedCoinId &&
+        w.networkId === selectedNetwork?.network?.id
+    );
+  }, [assets, selectedCoinId, selectedNetwork]);
+
+  /**
+   * Reset dependent state
+   */
+  useEffect(() => {
+    setNetworkEntryId("");
+    setIsDeposit(false);
+    setAmount("");
+  }, [selectedCoinId]);
+
+  /**
+   * Create wallet
+   */
+  const handleCreateWallet = () => {
+    if (!selectedCoin || !selectedNetwork) return;
+
+    createWallet(
+      {
+        coinId: selectedCoin.id,
+        networkId: selectedNetwork.network.id,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Wallet created",
+            description: `${selectedCoin.symbol} wallet created successfully`,
+          });
+          refetch();
+          setIsDeposit(true);
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Wallet creation failed",
+            description:
+              error?.response?.data?.message ||
+              error?.message ||
+              "Something went wrong",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
-  const handleFundCoinWallet = () => {
-    const payload = {
-      coinId: selectedCoinData?.id,
-      networkId: networkId,
-    };
 
-    createCoin(payload, {
-      onSuccess: () => {
-        toast({
-          title: "Coin wallet created",
-          description: "Coin wallet created successfully!",
-        });
-        // setIsDeposite(true);
-        // setIsFundWallet(false);
-        // refetch();
+  /**
+   * Deposit
+   */
+  const handleDeposit = () => {
+    if (!existingWallet || !amount) return;
+
+    depositCoin(
+      {
+        walletId: existingWallet.id,
+        amount: Number(amount),
       },
-      onError: (error) => {
-        toast({
-          title: "Coin wallet creation failed",
-          description:
-            (error as any)?.response?.data?.message ||
-            (error as any)?.response?.data?.error ||
-            (error as any)?.response?.data ||
-            error?.message ||
-            "Something went wrong",
-          variant: "destructive",
-        });
-      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Deposit submitted",
+            description:
+              "Deposit submitted successfully. Awaiting admin approval.",
+          });
+          refetch();
+          setAddCoinOpen(false);
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Deposit failed",
+            description:
+              error?.response?.data?.message ||
+              error?.message ||
+              "Something went wrong",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  /**
+   * Copy address
+   */
+  const handleCopy = () => {
+    if (!selectedNetwork?.contractAddress) return;
+
+    navigator.clipboard.writeText(selectedNetwork.contractAddress);
+    toast({
+      title: `${selectedCoin?.symbol} address copied`,
     });
   };
-  const handleCoinDeposit = () => {
-    const payload = {
-      walletId: coinData?.id,
-      amount: +amount,
-    };
-    coinDepositMutate(payload, {
-      onSuccess: () => {
-        toast({
-          title: "Coin deposited successfully",
-          description:
-            coinData?.coin?.name +
-            " deposited successfully!, wait for admin approval",
-        });
-        refetch();
-        setIsDeposite(true);
-      },
-      onError: (error) => {
-        toast({
-          title: "Coin deposit creation failed",
-          description:
-            (error as any)?.response?.data?.message ||
-            (error as any)?.response?.data?.error ||
-            (error as any)?.response?.data ||
-            error?.message ||
-            "Something went wrong",
-          variant: "destructive",
-        });
-      },
-    });
-  };
+
   return (
     <Dialog open={addCoinOpen} onOpenChange={setAddCoinOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Coin Wallet Address</DialogTitle>
+          <DialogTitle>Add Coin</DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4">
-          <div className="flex gap-2 items-center">
-            {/* selected coin address */}
-            <div className="space-y-2 w-full">
-              <Label>Select Coin </Label>
+          {/* Coin */}
+          <div className="space-y-2">
+            <Label>Coin</Label>
+            <Select value={selectedCoinId} onValueChange={setSelectedCoinId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select coin" />
+              </SelectTrigger>
+              <SelectContent>
+                {coinList?.map((coin: any) => (
+                  <SelectItem key={coin.id} value={coin.id}>
+                    <div className="flex items-center gap-2">
+                      {coin.iconUrl && (
+                        <img src={coin.iconUrl} className="w-5 h-5" />
+                      )}
+                      <span>{coin.symbol}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Network */}
+          {selectedCoin?.networks?.length > 0 && (
+            <div className="space-y-2">
+              <Label>Network</Label>
               <Select
-                value={selectedCoinToAdd}
-                onValueChange={setSelectedCoinToAdd}
+                value={networkEntryId}
+                onValueChange={setNetworkEntryId}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select coin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {coinList?.map((coin) => (
-                    <SelectItem key={coin.id} value={coin.id}>
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={coin?.iconUrl}
-                          alt={coin.name}
-                          className="w-6 h-6"
-                        />
-                        <span>{coin?.symbol}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {/* selected coin networks */}
-            <div
-              className={cn(
-                "origin-right transition-all duration-200",
-                selectedCoinData?.networks?.length > 0
-                  ? "w-fit scale-100"
-                  : "w-0 scale-0"
-              )}
-            >
-              <Label>Network </Label>
-              <Select value={networkId} onValueChange={setNetworkId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select network" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedCoinData?.networks?.map((network) => (
-                    <SelectItem
-                      key={network?.networkId}
-                      value={network?.networkId}
-                    >
-                      <span>{network?.network?.name}</span>
+                  {selectedCoin.networks.map((n: any) => (
+                    <SelectItem key={n.id} value={n.id}>
+                      {n.network.name} ({n.network.type})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {selectedCoinData && networkId && isFundWallet && (
-            <div className="w-full flex gap-2">
-              <Button
-                variant="outline"
-                className="w-full hover:bg-transparent hover:text-primary text-primary hover:scale-95 transition-all duration-200"
-                onClick={() => setAddCoinOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                className="w-full hover:scale-95 transition-all duration-200"
-                onClick={handleFundCoinWallet}
-                disabled={createCoinPending}
-              >
-                {createCoinPending ? "Creating..." : "Create Wallet"}
-              </Button>
-            </div>
           )}
-          {isLoading && <div>Loading...</div>}
-          {isDeposite && coinData && !isLoading && (
-            <div className="space-y-2">
+
+          {/* Create Wallet */}
+          {selectedNetwork && !existingWallet && (
+            <Button
+              className="w-full"
+              onClick={handleCreateWallet}
+              disabled={creatingWallet}
+            >
+              {creatingWallet ? "Creating..." : "Create Wallet"}
+            </Button>
+          )}
+
+          {/* Deposit */}
+          {existingWallet && selectedNetwork && (
+            <div className="space-y-3">
               <Label>Deposit Amount</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="font-mono text-sm"
-                />
-              </div>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+
               <Label>Deposit Address</Label>
               <div className="flex gap-2">
                 <Input
-                  value={coinData?.address || coinData?.contractAddress}
                   readOnly
-                  className="font-mono text-sm"
+                  value={selectedNetwork.contractAddress || ""}
+                  className="font-mono"
                 />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyAddress}
-                >
+                <Button size="icon" variant="outline" onClick={handleCopy}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground pb-5">
-                Send only {selectedCoinData.symbol} to this address. Deposits
-                will be credited after admin approval.
-              </p>
 
-              <p className="text-xs text-muted-foreground pb-5 flex flex-col items-center gap-2">
+              {selectedNetwork.qrCode && (
                 <img
-                  src={coinData?.qrCode}
-                  alt="se"
-                  className="w-40 h-40 rounded-md border p-1"
+                  src={selectedNetwork.qrCode}
+                  className="w-40 h-40 mx-auto border rounded"
                 />
-                Scan and send only {coinData?.coin?.symbol} to this address.
-              </p>
+              )}
 
-              <div className="w-full flex gap-2">
-                <Button
-                  variant="outline"
-                  className="w-full hover:bg-transparent hover:text-primary text-primary hover:scale-95 transition-all duration-200"
-                  onClick={() => setAddCoinOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  className="w-full hover:scale-95 transition-all duration-200"
-                  onClick={handleCoinDeposit}
-                  disabled={coinDepositPending}
-                >
-                  {coinDepositPending ? "Depositing..." : "Deposit"}
-                </Button>
-              </div>
+              <Button
+                className="w-full"
+                onClick={handleDeposit}
+                disabled={depositing || !amount}
+              >
+                {depositing ? "Depositing..." : "Deposit"}
+              </Button>
             </div>
           )}
+
+          {isLoading && <p className="text-sm">Loading...</p>}
         </div>
       </DialogContent>
     </Dialog>
