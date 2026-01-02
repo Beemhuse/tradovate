@@ -1,7 +1,6 @@
 services:
   tradovate_db:
     image: postgres:18-alpine
-    container_name: tradovate_db
     environment:
       POSTGRES_USER: tradovate
       POSTGRES_PASSWORD: super-strong-password-here
@@ -16,14 +15,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: tradovate_redis
     restart: unless-stopped
     networks:
       - tradovate_net
 
   admin_server:
     build: ./server
-    container_name: tradovate_admin_server
     env_file:
       - ./server/.env
     environment:
@@ -43,21 +40,18 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: tradovate_frontend
     restart: unless-stopped
     networks:
       - tradovate_net
 
   admin_frontend:
     build: ./admin
-    container_name: tradovate_admin_frontend
     restart: unless-stopped
     networks:
       - tradovate_net
 
   nginx:
     image: nginx:alpine
-    container_name: tradovate_nginx
     ports:
       - "9001:80"
     volumes:
