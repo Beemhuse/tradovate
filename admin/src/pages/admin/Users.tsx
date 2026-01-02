@@ -300,7 +300,7 @@ const AdminUsers = () => {
                             </td>
                             <td className="py-4 px-4">
                               <div className="flex items-center justify-end gap-2">
-                                <Link to={`/users/${user.id}`}>
+                                <Link to={`/admin/users/${user.id}`}>
                                   <Button
                                     size="sm"
                                     variant="ghost"

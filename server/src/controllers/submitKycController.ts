@@ -3,8 +3,11 @@ import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { z } from "zod";
 import path from "path";
-import { AuthRequest } from "middlewares/authMiddleware";
+import { AuthRequest } from "../middlewares/authMiddleware";
 import dotenv from "dotenv";
+import fs from "fs";
+import { encryptAndMove } from "../middlewares/kycUpload";
+import { decryptFileToStream } from "../utils/crypto";
 
 dotenv.config();
 
@@ -37,41 +40,67 @@ const submitKycSchema = z.object({
 export const getMyKyc = async (req: MulterRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const kyc = await prisma.kyc.findUnique({ where: { userId } });
-    if (!kyc) return res.status(404).json({ error: "KYC not found" });
-    return res.json(kyc);
+    if (!kyc) {
+      return res.status(404).json({ error: "KYC not found" });
+    }
+
+    return res.json({
+      id: kyc.id,
+      userId: kyc.userId,
+      status: kyc.status,
+      createdAt: kyc.createdAt,
+      reviewedAt: kyc.reviewedAt,
+      // ✅ return filenames only
+      frontImage: kyc.frontImage, // e.g. "1704123-abc.enc"
+      backImage: kyc.backImage,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("getMyKyc error:", error);
     return res.status(500).json({ error: "Failed to fetch KYC" });
   }
 };
 
-// Admin handlers (approve/reject/list)
 
-export const adminListKyc = async (req: AuthRequest, res: Response) => {
+// Admin handlers (approve/reject/list)
+export const adminListKyc = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const records = await prisma.kyc.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true } },
+        user: {
+          select: { id: true, email: true },
+        },
       },
     });
 
-    const mapped = records.map((r) => ({
-      ...r,
-      frontImage: r.frontImage ? `${BASE_URL}${r.frontImage}` : null,
-      backImage:  r.backImage  ? `${BASE_URL}${r.backImage}`  : null,
-      createdAt: r.createdAt,
-      reviewedAt: r.reviewedAt,
-      user: r.user ?? null,
-    }));
-
-    return res.json({ success: true, count: mapped.length, kyc: mapped });
-  } catch (err) {
-    console.error("getAllKyc error", err);
-    return res.status(500).json({ success: false, error: "Failed to fetch KYC records" });
+    return res.json({
+      success: true,
+      kyc: records.map((r) => ({
+        id: r.id,
+        userId: r.userId,
+        status: r.status,
+        createdAt: r.createdAt,
+        reviewedAt: r.reviewedAt,
+        user: r.user,
+        // ✅ filenames only
+        frontImage: r.frontImage,
+        backImage: r.backImage,
+      })),
+    });
+  } catch (error) {
+    console.error("adminListKyc error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch KYC records",
+    });
   }
 };
 
@@ -153,61 +182,38 @@ export const updateKycStatus = async (req: AuthRequest, res: Response) => {
 };
 
 
+
 export const submitKyc = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const files = req.files as any;
 
     if (!files?.front?.[0] || !files?.back?.[0]) {
-      return res.status(400).json({
-        success: false,
-        error: "Front and back images are required",
-      });
+      return res.status(400).json({ error: "Front and back required" });
     }
 
-    // Fetch existing KYC + user's current KYC status
-    const existingKyc = await prisma.kyc.findUnique({ where: { userId } });
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { kycStatus: true },
-    });
+    const existing = await prisma.kyc.findUnique({ where: { userId } });
 
-    // --- CASE 1: KYC Already Exists & Is NOT Rejected ---
-    if (existingKyc && user?.kycStatus !== 'PENDING' && existingKyc?.status !== 'REJECTED') {
-      return res.status(409).json({
-        success: false,
-        error: "KYC already submitted",
-        currentStatus: existingKyc.status,
-      });
+    if (existing && existing.status !== "REJECTED") {
+      return res.status(409).json({ error: "KYC already submitted" });
     }
 
-    // --- CASE 2: KYC was REJECTED -> Allow re-submission ---
-    if (existingKyc && existingKyc?.status === "REJECTED") {
+    if (existing?.status === "REJECTED") {
       await prisma.kyc.delete({ where: { userId } });
-
-      // Reset user status so admin can review again
-      await prisma.user.update({
-        where: { id: userId },
-        data: { kycStatus: "PENDING" },
-      });
     }
 
-    // --- CREATE NEW KYC RECORD ---
-    const created = await prisma.kyc.create({
+    const frontFile = encryptAndMove(userId, files.front[0]);
+    const backFile = encryptAndMove(userId, files.back[0]);
+
+    const kyc = await prisma.kyc.create({
       data: {
         userId,
-        frontImage: `/uploads/kyc/${userId}/${files.front[0].filename}`,
-        backImage: `/uploads/kyc/${userId}/${files.back[0].filename}`,
         status: "PENDING",
-      },
-      include: {
-        user: {
-          select: { id: true, email: true, kycStatus: true },
-        },
+        frontImage: frontFile,
+        backImage: backFile,
       },
     });
 
-    // Ensure the user status is updated
     await prisma.user.update({
       where: { id: userId },
       data: { kycStatus: "PENDING" },
@@ -215,19 +221,46 @@ export const submitKyc = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json({
       success: true,
-      message: "KYC submitted successfully",
       kyc: {
-        ...created,
-        frontImage: `${BASE_URL}${created.frontImage}`,
-        backImage: `${BASE_URL}${created.backImage}`,
+        id: kyc.id,
+        status: kyc.status,
+        userId,
       },
     });
-  } catch (error) {
-    console.error("Submit KYC error:", error);
-
-    return res.status(500).json({
-      success: false,
-      error: "Failed to submit KYC",
-    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to submit KYC" });
   }
 };
+
+
+
+export const getKycImage = async (req: AuthRequest, res: Response) => {
+  const { userId, filename } = req.params;
+
+  const isAdmin = req.user?.role === "ADMIN";
+  const isOwner = req.user?.userId === userId;
+
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const filePath = path.join(
+    process.cwd(),
+    "private_uploads",
+    "kyc",
+    userId,
+    filename
+  );
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
+  res.setHeader("Content-Type", "image/webp");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  decryptFileToStream(filePath, res);
+};
+

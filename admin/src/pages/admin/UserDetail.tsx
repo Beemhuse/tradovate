@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import AdminNav from "@/components/layout/AdminNav";
-import { useFetchData } from "@/hooks/use-api";
+import { useFetchData, usePatchData, useCreateData } from "@/hooks/use-api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,14 +43,35 @@ const UserDetail: React.FC = () => {
     address: "",
     balance: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch user data
   const {
     data: user,
     isLoading,
     error,
     refetch,
   } = useFetchData<any>(`/admin/users/${id}`, `adminUser-${id}`);
+
+  // Update wallet mutation
+  const updateWalletMutation = usePatchData<
+    any,
+    { address: string; balance: number }
+  >(
+    (data) => `/admin/wallets/${isEditingWallet}`, // Dynamic endpoint
+    [`adminUser-${id}`] // Invalidate user cache
+  );
+
+  // Update role mutation
+  const updateRoleMutation = usePatchData<any, { role: string }>(
+    `/admin/users/${id}/role`,
+    [`adminUser-${id}`]
+  );
+
+  // Verify user mutation (using POST)
+  const verifyUserMutation = useCreateData<any, { verify: boolean }>(
+    `/admin/users/${id}/verify`,
+    [`adminUser-${id}`]
+  );
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -96,85 +116,32 @@ const UserDetail: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/wallets/${walletId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          address: walletEditData.address,
-          balance: parseFloat(walletEditData.balance) || 0,
-        }),
+      await updateWalletMutation.mutateAsync({
+        address: walletEditData.address,
+        balance: parseFloat(walletEditData.balance) || 0,
       });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Wallet updated successfully",
-        });
-        setIsEditingWallet(null);
-        refetch();
-      } else {
-        throw new Error("Failed to update wallet");
-      }
+      setIsEditingWallet(null);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update wallet",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      // Error is handled by the mutation hook
+    }
+  };
+
+  const handleUpdateRole = async (role: string) => {
+    try {
+      await updateRoleMutation.mutateAsync({ role });
+    } catch (error) {
+      // Error is handled by the mutation hook
     }
   };
 
   const handleVerifyUser = async () => {
     try {
-      const response = await fetch(`/api/admin/users/${id}/verify`, {
-        method: "POST",
+      await verifyUserMutation.mutateAsync({
+        verify: !user?.isVerified,
       });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "User verification status updated",
-        });
-        refetch();
-      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update verification status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateRole = async (newRole: string) => {
-    try {
-      const response = await fetch(`/api/admin/users/${id}/role`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "User role updated successfully",
-        });
-        refetch();
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update user role",
-        variant: "destructive",
-      });
+      // Error is handled by the mutation hook
     }
   };
 
@@ -241,7 +208,7 @@ const UserDetail: React.FC = () => {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">
-                  {(user as any).name || user.email}
+                  {user.name || user.email}
                 </h1>
                 <Badge
                   variant={user.isVerified ? "default" : "secondary"}
@@ -278,7 +245,11 @@ const UserDetail: React.FC = () => {
             <div className="flex gap-2">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={updateRoleMutation.isPending}
+                  >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Role
                   </Button>
@@ -290,6 +261,7 @@ const UserDetail: React.FC = () => {
                   <Select
                     onValueChange={handleUpdateRole}
                     defaultValue={user.role}
+                    disabled={updateRoleMutation.isPending}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
@@ -300,6 +272,23 @@ const UserDetail: React.FC = () => {
                       <SelectItem value="moderator">Moderator</SelectItem>
                     </SelectContent>
                   </Select>
+                  <DialogFooter>
+                    <Button 
+                      onClick={() => {
+                        // Role is updated on change
+                      }}
+                      disabled={updateRoleMutation.isPending}
+                    >
+                      {updateRoleMutation.isPending ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        "Update Role"
+                      )}
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
 
@@ -307,8 +296,11 @@ const UserDetail: React.FC = () => {
                 variant={user.isVerified ? "outline" : "default"}
                 size="sm"
                 onClick={handleVerifyUser}
+                disabled={verifyUserMutation.isPending}
               >
-                {user.isVerified ? (
+                {verifyUserMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : user.isVerified ? (
                   <>
                     <XCircle className="w-4 h-4 mr-2" />
                     Unverify
@@ -393,11 +385,11 @@ const UserDetail: React.FC = () => {
                   <Badge
                     variant="outline"
                     className={`flex items-center ${getStatusColor(
-                      (user.kyc as any).status
+                      user.kyc.status
                     )}`}
                   >
-                    {getStatusIcon((user.kyc as any).status)}
-                    {(user.kyc as any).status}
+                    {getStatusIcon(user.kyc.status)}
+                    {user.kyc.status}
                   </Badge>
                 )}
               </div>
@@ -408,16 +400,14 @@ const UserDetail: React.FC = () => {
                     <dt className="text-sm text-muted-foreground mb-1">
                       Full Name
                     </dt>
-                    <dd>{(user.kyc as any).fullName}</dd>
+                    <dd>{user.kyc.fullName}</dd>
                   </div>
-                  {(user.kyc as any).idNumber && (
+                  {user.kyc.idNumber && (
                     <div>
                       <dt className="text-sm text-muted-foreground mb-1">
                         ID Number
                       </dt>
-                      <dd className="font-mono">
-                        {(user.kyc as any).idNumber}
-                      </dd>
+                      <dd className="font-mono">{user.kyc.idNumber}</dd>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4">
@@ -426,7 +416,7 @@ const UserDetail: React.FC = () => {
                         Front Image
                       </p>
                       <img
-                        src={(user.kyc as any).frontImage}
+                        src={user.kyc.frontImage}
                         alt="ID Front"
                         className="w-full h-40 object-cover rounded border"
                       />
@@ -436,18 +426,16 @@ const UserDetail: React.FC = () => {
                         Back Image
                       </p>
                       <img
-                        src={(user.kyc as any).backImage}
+                        src={user.kyc.backImage}
                         alt="ID Back"
                         className="w-full h-40 object-cover rounded border"
                       />
                     </div>
                   </div>
-                  {(user.kyc as any).verifiedAt && (
+                  {user.kyc.verifiedAt && (
                     <div className="text-sm text-muted-foreground">
                       Verified on{" "}
-                      {new Date(
-                        (user.kyc as any).verifiedAt
-                      ).toLocaleDateString()}
+                      {new Date(user.kyc.verifiedAt).toLocaleDateString()}
                     </div>
                   )}
                 </div>
@@ -498,6 +486,7 @@ const UserDetail: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => startEditWallet(wallet)}
+                        disabled={updateWalletMutation.isPending}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -540,14 +529,22 @@ const UserDetail: React.FC = () => {
                           <Button
                             size="sm"
                             onClick={() => handleUpdateWallet(wallet.id)}
-                            disabled={isSubmitting}
+                            disabled={updateWalletMutation.isPending}
                           >
-                            {isSubmitting ? "Saving..." : "Save Changes"}
+                            {updateWalletMutation.isPending ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Changes"
+                            )}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setIsEditingWallet(null)}
+                            disabled={updateWalletMutation.isPending}
                           >
                             Cancel
                           </Button>

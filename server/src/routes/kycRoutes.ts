@@ -5,11 +5,12 @@ import {
   getMyKyc,
   adminListKyc,
   updateKycStatus,
+  getKycImage,
 } from "../controllers/submitKycController";
-import { kycUpload } from "../middlewares/uploadKyc";
+// import { kycUpload } from "../middlewares/uploadKyc";
 
-// placeholder auth middlewares - adapt to your auth implementation
 import { authenticateToken, requireRole } from "../middlewares/authMiddleware";
+import { kycUpload } from "../middlewares/kycUpload";
 
 const router = express.Router();
 
@@ -96,10 +97,7 @@ const router = express.Router();
 router.post(
   "/",
   authenticateToken,
-  kycUpload.fields([
-    { name: "front", maxCount: 1 },
-    { name: "back", maxCount: 1 },
-  ]),
+  kycUpload,
   submitKyc
 );
 
@@ -314,4 +312,9 @@ router.get("/admin/list", authenticateToken, requireRole("ADMIN"), adminListKyc)
  */
 router.patch("/admin/:id/status", authenticateToken, requireRole("ADMIN"), updateKycStatus);
 
+router.get(
+  "/image/:userId/:filename",
+  authenticateToken, requireRole("ADMIN"),
+  getKycImage
+);
 export default router;
