@@ -1,17 +1,24 @@
-FROM node:18-alpine AS builder
+# ======================
+# Build stage
+# ======================
+FROM node:20-bullseye AS build
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++ libc6-compat
-
-COPY package*.json ./
-
-RUN npm install --legacy-peer-deps
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
-
 RUN npm run build
 
+# ======================
+# Runtime stage
+# ======================
 FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+
+RUN rm -rf /usr/share/nginx/html/*
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
 EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
