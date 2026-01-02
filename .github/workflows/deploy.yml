@@ -24,10 +24,19 @@ jobs:
 
             PROJECT=tradovate
             NEW_PROJECT=tradovate_new
-            PATH=${{ secrets.VPS_PATH }}
+            APP_PATH=${{ secrets.VPS_PATH }}
+
+            echo "🔍 Ensuring Git is installed"
+            if ! command -v git >/dev/null 2>&1; then
+              echo "📦 Git not found, installing..."
+              sudo apt-get update -y
+              sudo apt-get install -y git
+            else
+              echo "✅ Git already installed"
+            fi
 
             echo "🚀 Starting blue-green deployment"
-            cd $PATH
+            cd "$APP_PATH"
 
             echo "⬇️ Fetching latest code"
             git fetch origin
