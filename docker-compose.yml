@@ -1,5 +1,7 @@
+version: "3.9"
+
 services:
-  tradovate_db:
+  db:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: tradovate
@@ -7,68 +9,45 @@ services:
       POSTGRES_DB: tradovate
     volumes:
       - db_data:/var/lib/postgresql/data
-    restart: unless-stopped
     networks:
       - tradovate_net
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
     networks:
       - tradovate_net
+    restart: unless-stopped
 
   admin_server:
     build: ./server
     env_file:
       - ./server/.env
-    expose:
-      - "4000"
-    environment:
-      DATABASE_URL: postgresql://tradovate:super-strong-password-here@tradovate_db:5432/tradovate
-      REDIS_URL: redis://tradovate_redis:6379
     depends_on:
-      - tradovate_db
+      - db
       - redis
-    restart: unless-stopped
     networks:
       - tradovate_net
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    ports:
+      - "127.0.0.1:4000:4000"
+
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
-    expose:
-      - "3000"
-    restart: unless-stopped
     networks:
       - tradovate_net
+    ports:
+    - "127.0.0.1:3000:80"
+    restart: unless-stopped
 
   admin_frontend:
     build: ./admin
-    expose:
-      - "3002"
-
-    restart: unless-stopped
     networks:
       - tradovate_net
-
-  nginx:
-    image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - admin_server
-      - frontend
-      - admin_frontend
+    - "127.0.0.1:3002:80"
     restart: unless-stopped
-    networks:
-      - tradovate_net
 
 networks:
   tradovate_net:
