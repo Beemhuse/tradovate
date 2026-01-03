@@ -22,7 +22,6 @@ export const useLivePrice = (wsSymbol: string) => {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("✅ WS connected:", wsSymbol);
     };
 
     ws.onmessage = (event: MessageEvent) => {

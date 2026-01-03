@@ -2,9 +2,8 @@ import { CookieManager } from "@/utils/cookie-utils";
 import axios from "axios";
 // import { CookieManager } from "./cookie-utils"; // Import your CookieManager utility
 
-export const API_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:3001/api/v1';
+export const API_URL = import.meta.env.VITE_BASE_URL || "https://api.travodatefutures.com/api/v1";
 export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
-// export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 
 export default function initAxios() {
   // Set the base URL and ensure credentials are handled correctly
@@ -12,7 +11,6 @@ export default function initAxios() {
   axios.defaults.withCredentials = false;
 
   const accessToken = CookieManager.get("travodate-token");
-  console.log(accessToken)
 
   // Set authorization header if token exists (using CookieManager)
   if (typeof window !== "undefined") {

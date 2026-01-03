@@ -14,7 +14,6 @@ redis.on("error", (err: Error) => {
 async function connectRedis() {
   if (!redis.isOpen) {
     await redis.connect();
-    console.log("✓ Redis connected (api)");
   }
 }
 

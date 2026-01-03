@@ -82,7 +82,6 @@ const AdminTradingPairs = () => {
     isLoading: loadingCoins,
     error: coinsError,
   } = useFetchData("/market/coins?active=true", "admin-coins");
-  console.log("Coins Data:", coinsData);
   // 🔹 Fetch trading pairs with polling
   const {
     data: pairsData,
@@ -90,7 +89,6 @@ const AdminTradingPairs = () => {
     refetch: refetchPairs,
     error: pairsError,
   } = useFetchData("/market/admin-pairs", "market-pairs");
-  console.log("Pairs Data:", pairsData);
   // 🔹 Mutations
   const { mutate: createPair, isPending: creating } = useCreateData(
     "/market/pairs",

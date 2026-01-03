@@ -1,4 +1,4 @@
-name: Deploy Tradovate to VPS (Safe Blue-Green)
+name: Deploy Tradovate to VPS
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy to VPS (Blue-Green)
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -22,59 +22,22 @@ jobs:
           script: |
             set -e
 
-            PROJECT=tradovate
-            NEW_PROJECT=tradovate_new
             APP_PATH=${{ secrets.VPS_PATH }}
 
-            echo "🔍 Ensuring Git is installed"
-            if ! command -v git >/dev/null 2>&1; then
-              echo "📦 Git not found, installing..."
-              sudo apt-get update -y
-              sudo apt-get install -y git
-            else
-              echo "✅ Git already installed"
-            fi
-
-            echo "🚀 Starting blue-green deployment"
+            echo "🚀 Starting deployment"
             cd "$APP_PATH"
 
             echo "⬇️ Fetching latest code"
             git fetch origin
             git reset --hard origin/main
 
-            echo "🔨 Building new images"
-            docker compose -p $NEW_PROJECT build
+            echo "🔨 Building images"
+            docker compose build
 
-            echo "▶️ Starting new containers"
-            docker compose -p $NEW_PROJECT up -d
+            echo "🔄 Restarting services"
+            docker compose up -d
 
-            echo "⏳ Waiting for containers to be healthy..."
-            sleep 15
-
-            echo "🔍 Checking container health"
-            UNHEALTHY=$(docker ps \
-              --filter "name=$NEW_PROJECT" \
-              --filter "health=unhealthy" \
-              --format '{{.Names}}')
-
-            if [ -n "$UNHEALTHY" ]; then
-              echo "❌ New containers are unhealthy:"
-              echo "$UNHEALTHY"
-              echo "🧹 Cleaning up failed deployment"
-              docker compose -p $NEW_PROJECT down
-              exit 1
-            fi
-
-            echo "✅ New containers healthy"
-
-            echo "🛑 Stopping old containers"
-            docker compose -p $PROJECT down || true
-
-            echo "🔁 Promoting new containers"
-            docker compose -p $NEW_PROJECT down
-            docker compose -p $PROJECT up -d
-
-            echo "🧹 Cleanup unused images"
+            echo "🧹 Pruning unused images"
             docker image prune -f
 
             echo "✅ Deployment completed successfully"

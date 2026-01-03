@@ -54,7 +54,6 @@ export const useCreateData = <T = any, D = any>(
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey });
-      console.log("✅ useCreateData success:", data);
     },
     onError: (error) => {
       const message = handleGenericError(error);

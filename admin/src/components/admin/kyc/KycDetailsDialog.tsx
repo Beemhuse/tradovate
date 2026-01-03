@@ -28,7 +28,6 @@ export default function KycDetailsDialog({
 }: Props) {
   const front = useKycImage(kyc?.userId, kyc?.frontImage);
   const back = useKycImage(kyc?.userId, kyc?.backImage);
-  console.log(front.data);
   if (!kyc) return null;
 
   return (

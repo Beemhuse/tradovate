@@ -67,7 +67,6 @@ const Dashboard = () => {
 
   const sortAssets = assets?.sort((a, b) => b.balance - a.balance);
 
-  console.log("sortAssets", sortAssets);
 
   return (
     <div className="min-h-screen bg-background">

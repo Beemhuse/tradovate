@@ -28,7 +28,6 @@ export const sendOtpEmail = async (email: string, otp: string) => {
       return false;
     }
 
-    console.log("Email sent:", data?.id);
     return true;
   } catch (err) {
     console.error("Unexpected email error:", err);

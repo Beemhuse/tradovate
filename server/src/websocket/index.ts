@@ -24,7 +24,6 @@ export function startSocketServer(httpServer: HttpServer) {
   });
 
   io.on("connection", async (socket) => {
-    console.log("✓ WebSocket Authenticated User:", socket.data.user.id);
 
     // OPTIONAL: initial snapshot from Redis / DB
     // const prices = await getLatestPrices();
