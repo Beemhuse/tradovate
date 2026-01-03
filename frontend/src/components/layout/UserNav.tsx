@@ -3,11 +3,14 @@ import { Home, TrendingUp, Wallet, FileText, LogOut, FileCheck, MessageSquare } 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCreateData } from "@/hooks/use-api";
+import { AUTH } from "@/hooks/apiEndpoint";
+import { useToast } from "@/hooks/use-toast";
 
 const UserNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, user } = useAuth();
+  const { removeUser, user } = useAuth();
 
   const navItems = [
     { to: "/dashboard", icon: Home, label: "Home" },
@@ -18,9 +21,36 @@ const UserNav = () => {
     { to: "/support", icon: MessageSquare, label: "Support" },
   ];
 
+  const { mutate: logout, isPending } = useCreateData(AUTH.LOGOUT, ["logout"]);
+  const { toast } = useToast();
+
   const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
+    logout({}, {
+      onSuccess: () => {
+        // Clear all cookies
+        document.cookie.split(";").forEach((cookie) => {
+          document.cookie = cookie
+            .replace(/^ +/, "")
+            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+        // Clear local storage
+        localStorage.clear();
+        removeUser();
+        navigate("/");
+        toast({
+          title: "Success",
+          description: "Logged out successfully",
+          variant: "default",
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: (error as any)?.response?.data?.message || (error as any)?.response?.data?.error || (error as any)?.response?.data || error?.message || "Something went wrong",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   return (
@@ -52,9 +82,9 @@ const UserNav = () => {
           </div>
 
           {/* Logout Button */}
-          <Button variant="outline" size="sm" className="hidden md:flex" onClick={handleLogout}>
+          <Button variant="outline" size="sm" className="hidden md:flex" onClick={handleLogout} disabled={isPending}>
             <LogOut className="h-4 w-4 mr-2" />
-            Logout
+            {isPending ? "Logging out..." : "Logout"}
           </Button>
         </div>
 

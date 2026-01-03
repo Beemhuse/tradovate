@@ -84,6 +84,7 @@ const UserKYC = () => {
       back: back?.file,
     };
 
+    console.log("payload", payload);
 
     mutate(payload, {
       onSuccess: () => {

@@ -67,6 +67,7 @@ const Dashboard = () => {
 
   const sortAssets = assets?.sort((a, b) => b.balance - a.balance);
 
+  console.log("sortAssets", sortAssets);
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,7 +133,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-2xl font-bold">${coin?.balance}</p>
+                      <p className="text-2xl font-bold">${Number(coin?.balance).toLocaleString()}</p>
                       <p className={true ? "text-success" : "text-danger"}>
                         +{2.01}%
                       </p>
@@ -181,7 +182,7 @@ const Dashboard = () => {
                           <ChartNoAxesCombined />
                         </td>
                         <td className="text-center py-3 px-4">
-                          ${priceData?.price || "..."}
+                          ${Number(priceData?.price).toLocaleString() || "..."}
                         </td>
                         <td
                           className={`text-right py-3 px-4 ${

@@ -2,8 +2,9 @@ import { CookieManager } from "@/utils/cookie-utils";
 import axios from "axios";
 // import { CookieManager } from "./cookie-utils"; // Import your CookieManager utility
 
-export const API_URL = import.meta.env.VITE_BASE_URL || "https://api.tradovatefutures.com/api/v1";
+export const API_URL = import.meta.env.VITE_BASE_URL || '';
 export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
+// export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 
 export default function initAxios() {
   // Set the base URL and ensure credentials are handled correctly
@@ -11,6 +12,7 @@ export default function initAxios() {
   axios.defaults.withCredentials = false;
 
   const accessToken = CookieManager.get("travodate-token");
+  console.log(accessToken)
 
   // Set authorization header if token exists (using CookieManager)
   if (typeof window !== "undefined") {
@@ -23,25 +25,25 @@ export default function initAxios() {
   axios.interceptors.response.use(
     (response) => response,
     async (error) => {
-      // if (error?.response?.status === 401 || error?.response?.status === 403) {
-      //   // Handle unauthorized access
-      //   if (typeof window !== "undefined") {
-      //     // Clear the auth token cookie
-      //     CookieManager.delete("travodate-token", "/");
-      //     CookieManager.delete("travodate-refresh-token", "/");
-      //     CookieManager.delete("travodate-user", "/");
+      if (error?.response?.status === 401) {
+        // Handle unauthorized access
+        if (typeof window !== "undefined") {
+          // Clear the auth token cookie
+          CookieManager.delete("travodate-token", "/");
+          CookieManager.delete("travodate-refresh-token", "/");
+          CookieManager.delete("travodate-user", "/");
 
-      //     // Clear local storage
-      //     localStorage.clear();
+          // Clear local storage
+          localStorage.clear();
 
-      //     // Clear the axios auth header
-      //     delete axios.defaults.headers.common.Authorization;
+          // Clear the axios auth header
+          delete axios.defaults.headers.common.Authorization;
 
-      //     // Redirect to home
-      //     window.location.href = "/";
-      //   }
-      // }
-      // return Promise.reject(error);
+          // Redirect to home
+          window.location.href = "/";
+        }
+      }
+      return Promise.reject(error);
     }
   );
 }
@@ -61,7 +63,7 @@ export const setAuthToken = (token: string) => {
   axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 };
 export const setAuthUser = (token: string) => {
-  // Set cookie with 7 day expiration
+
   CookieManager.set("travodate-user", token, {
     expires: 7,
     path: "/",

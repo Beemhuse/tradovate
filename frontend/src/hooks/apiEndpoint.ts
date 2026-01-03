@@ -1,5 +1,6 @@
 export const AUTH = {
     LOGIN: '/auth/login',
+    LOGOUT: '/auth/logout',
     SIGNUP: '/auth/signup',
     VERIFY_EMAIL: '/auth/verify-email',
     FORGOT_PASSWORD: '/auth/forgot-password',

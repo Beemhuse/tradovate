@@ -1,159 +1,123 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import UserNav from "@/components/layout/UserNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Clock, CheckCircle } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserTickets, useCreateTicket } from "@/hooks/useSupportTickets";
+import { Phone, Mail, Send, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const UserSupport = () => {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
-
-  const { user, isLoading: authLoading } = useAuth();
-  const { data: tickets, isLoading } = useUserTickets();
-  const createTicket = useCreateTicket();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [user, authLoading, navigate]);
-
-  const handleSubmit = async () => {
+  const handleEmailSubmit = () => {
     if (!subject.trim() || !message.trim()) {
       toast({ title: "Please fill in all fields", variant: "destructive" });
       return;
     }
 
-    try {
-      await createTicket.mutateAsync({ subject: subject.trim(), message: message.trim() });
-      toast({ title: "Support ticket created successfully" });
-      setSubject("");
-      setMessage("");
-    } catch (error: any) {
-      toast({ title: "Error creating ticket", description: error.message, variant: "destructive" });
+    const email = "tradovatef@gmail.com";
+    const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+
+    // Open the default email client
+    window.location.href = mailtoLink;
+
+    toast({ title: "Opening email client..." });
+    setSubject("");
+    setMessage("");
+  };
+
+  const contactOptions = [
+    {
+      icon: Phone,
+      label: "Phone Call",
+      value: "+1 (585) 609-0385",
+      action: () => window.location.href = "tel:+15856090385",
+      color: "bg-blue-500/10 text-blue-500"
+    },
+    {
+      icon: MessageCircle, // WhatsApp usually represented by message/chat icon or brand icon if available
+      label: "WhatsApp",
+      value: "+1 (585) 609-0385",
+      action: () => window.open("https://wa.me/15856090385", "_blank"),
+      color: "bg-green-500/10 text-green-500"
+    },
+    {
+      icon: Mail,
+      label: "Email Support",
+      value: "tradovatef@gmail.com",
+      action: () => window.location.href = "mailto:tradovatef@gmail.com",
+      color: "bg-orange-500/10 text-orange-500"
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    return status === "closed" ? (
-      <Badge className="bg-success"><CheckCircle className="h-3 w-3 mr-1" />Closed</Badge>
-    ) : (
-      <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Open</Badge>
-    );
-  };
-
-  if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <UserNav />
-
+    <div className="min-h-[calc(100vh-6rem)] overflow-auto bg-background">
+      {/* <UserNav /> */}
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Support</h1>
-          <p className="text-muted-foreground">Get help from our support team</p>
+          <h1 className="text-3xl font-bold mb-2">Support Center</h1>
+          <p className="text-muted-foreground">Choose a way to contact us</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* New Ticket Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Ticket</CardTitle>
-              <CardDescription>Describe your issue and we'll get back to you</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Subject</Label>
-                <Input
-                  placeholder="Brief description of your issue"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
-              </div>
+        <div className="flex flex-col md:flex-row gap-3 w-full">
+          <div className="grid md:grid-cols-1 gap-6 w-full md:w-1/3">
+            {contactOptions.map((option, index) => (
+              <Card key={index} className="hover:bg-secondary/50 transition-colors cursor-pointer" onClick={option.action}>
+                <CardContent className="pt-6 flex items-center text-center gap-4">
+                  <div className={`p-4 rounded-full ${option.color}`}>
+                    <option.icon className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{option.label}</h3>
+                    <p className="text-sm text-muted-foreground">{option.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-              <div className="space-y-2">
-                <Label>Message</Label>
-                <Textarea
-                  placeholder="Provide details about your issue..."
-                  rows={5}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                />
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={handleSubmit}
-                disabled={createTicket.isPending}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {createTicket.isPending ? "Submitting..." : "Submit Ticket"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Ticket History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Tickets</CardTitle>
-              <CardDescription>View your support ticket history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {tickets && tickets.length > 0 ? (
-                <div className="space-y-4">
-                  {tickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="border border-border rounded-lg p-4 space-y-3"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium">{ticket.subject}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(ticket.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        {getStatusBadge(ticket.status)}
-                      </div>
-
-                      <div className="bg-secondary/50 rounded p-3">
-                        <p className="text-sm font-medium mb-1">Your message:</p>
-                        <p className="text-sm text-muted-foreground">{ticket.message}</p>
-                      </div>
-
-                      {ticket.admin_reply && (
-                        <div className="bg-primary/10 rounded p-3">
-                          <p className="text-sm font-medium mb-1">Support reply:</p>
-                          <p className="text-sm">{ticket.admin_reply}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+          <div className="w-full">
+            <Card>
+              <CardHeader>
+                <CardTitle>Send us a Message</CardTitle>
+                <CardDescription>
+                  Compose a message and send it directly via your email client.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Subject</Label>
+                  <Input
+                    placeholder="What is this regarding?"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  />
                 </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No tickets submitted yet</p>
+
+                <div className="space-y-2">
+                  <Label>Message</Label>
+                  <Textarea
+                    placeholder="Type your message here..."
+                    rows={6}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                <Button
+                  className="w-full"
+                  onClick={handleEmailSubmit}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Open Email Client
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

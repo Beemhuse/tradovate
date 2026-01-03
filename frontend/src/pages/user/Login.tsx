@@ -31,8 +31,12 @@ const UserLogin = () => {
     e.preventDefault();
     setLoading(isPending);
 
-    mutate(
-      { email, password },
+    const payLoad = {
+      email,
+      password
+    }
+
+    mutate( payLoad ,
       {
         onSuccess: (res) => {
           toast({
@@ -47,6 +51,7 @@ const UserLogin = () => {
           setUser(userData)
         },
         onError: (error) => {
+          console.log("error data", error)
           toast({
             title: "Login Failed",
             description: (error as any)?.response?.data?.message || (error as any)?.response?.data?.error || (error as any)?.response?.data || error?.message || "Something went wrong",

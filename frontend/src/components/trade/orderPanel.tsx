@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCreateData } from "@/hooks/use-api";
 import clsx from "clsx";
+import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 type Props = {
   coinId: string;
@@ -34,12 +36,18 @@ const OrderPanel = ({
   const [selectedPeriod, setSelectedPeriod] =
     useState<(typeof TRADE_PERIODS)[number]>(TRADE_PERIODS[0]);
   const [loading, setLoading] = useState(false);
+  
+    const { toast } = useToast();
 
   const { mutate } = useCreateData("/market/order", ["user-trades"]);
 
   const placeTrade = (direction: Direction) => {
     if (!stake || stake <= 0) {
-      alert("Enter a valid amount");
+      toast({
+            title: "Trade Failed",
+            description: "Enter a valid amount",
+            variant: "destructive",
+          });
       return;
     }
 
@@ -48,19 +56,26 @@ const OrderPanel = ({
     mutate(
       {
         coinId,
-        networkId,
-        direction,
-        period: selectedPeriod.period,
-        stake,
-        entryPrice: currentPrice,
+        // networkId,
+        type: direction === "BULLISH" ? "BUY" : "SELL",
+        // period: selectedPeriod.period,
+        amount:stake,
+        price: currentPrice,
       },
       {
         onSuccess: () => {
-          alert("Trade placed successfully");
+          toast({
+            title: "Trade Placed",
+            description: "Trade placed successfully!",
+          });
           setLoading(false);
         },
         onError: (err: any) => {
-          alert(err?.message || "Trade failed");
+          toast({
+            title: "Trade Failed",
+            description: (err as any)?.response?.data?.message || (err as any)?.response?.data?.error || (err as any)?.response?.data || err?.message || "Something went wrong",
+            variant: "destructive",
+          });
           setLoading(false);
         },
       }
