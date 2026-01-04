@@ -5,33 +5,38 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  useUpdateData,
-  useCreateData,
-  useDeleteData,
-  useFetchData,
-  usePatchData,
-} from "@/hooks/use-api";
+import { useFetchData, usePatchData, useDeleteData, useCreateData } from "@/hooks/use-api";
 
-type NetworkItem = {
-  id: string; // networkId
+/* ---------------------------- Types ---------------------------- */
+
+type CoinNetwork = {
+  id: string; // coinNetworkId
+  networkId: string;
+  isActive: boolean;
+  network: {
+    id: string;
+    name: string;
+    type?: string;
+  };
+};
+
+type Network = {
+  id: string;
   name: string;
   type?: string;
-  contractAddress?: string;
-  isActive?: boolean;
 };
 
 type Props = {
   open: boolean;
   coinId: string;
-  networks: NetworkItem[];
+  networks: CoinNetwork[];
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  refetchCoin?: () => void;
 };
 
 const ManageNetworksDialog = ({
@@ -40,101 +45,75 @@ const ManageNetworksDialog = ({
   networks,
   onOpenChange,
   onSuccess,
+  refetchCoin,
 }: Props) => {
-  const [localNetworks, setLocalNetworks] =
-    useState<NetworkItem[]>(networks);
+  const [localNetworks, setLocalNetworks] = useState<CoinNetwork[]>(networks);
 
   const [selectedNetworkId, setSelectedNetworkId] = useState("");
-  const [newContract, setNewContract] = useState("");
 
   useEffect(() => {
     setLocalNetworks(networks);
   }, [networks]);
 
-  /* -------------------------------- API -------------------------------- */
+  /* ------------------------------- API -------------------------------- */
 
-  const updateNetwork = usePatchData<
-    void,
-    { coinId: string; networkId: string; data: any }
-  >(
-    ({ coinId, networkId }) =>
-      `/network/admin/coins/${coinId}/networks/${networkId}`,
+  // Toggle active
+  const toggleNetwork = usePatchData<void, { networkId: string; data: any }>(
+    ({ networkId }) => `/network/admin/coins/${coinId}/networks/${networkId}`,
     ["coin", coinId]
   );
 
+  // Remove mapping
   const removeNetwork = useDeleteData<void>(
-    ({ coinId, networkId }: any) =>
+    ({ networkId }: { networkId: string }) =>
       `/network/admin/coins/${coinId}/networks/${networkId}`,
     ["coin", coinId]
   );
 
-  const addNetwork = useCreateData<
-    void,
-    { networkId: string; contractAddress?: string }
-  >(`/admin/coins/${coinId}/networks`, ["coin", coinId]);
+  // Add mapping (PATCH as requested)
+  const addNetwork = useCreateData<void>(
+   `/network/admin/coins/${coinId}/networks`,
+    ["coin", coinId]
+  );
 
-  /* -------------------------- Available Networks ------------------------ */
+  /* ------------------------- Available Networks ------------------------ */
 
   const { data: allNetworksData } = useFetchData<{
-    networks: NetworkItem[];
-  }>("/admin/networks", ["admin-networks"]);
+    networks: Network[];
+  }>("/network/list", "admin-networks");
 
   const availableNetworks = useMemo(() => {
-    const linkedIds = new Set(localNetworks.map((n) => n.id));
+    const linkedNetworkIds = new Set(localNetworks.map((n) => n.networkId));
+
     return (allNetworksData?.networks || []).filter(
-      (n) => !linkedIds.has(n.id)
+      (n) => !linkedNetworkIds.has(n.id)
     );
   }, [allNetworksData, localNetworks]);
 
   /* ------------------------------ Handlers ------------------------------ */
 
-  const handleToggle = async (network: NetworkItem) => {
-    try {
-      await updateNetwork.mutateAsync({
-        coinId,
-        networkId: network.id,
-        data: { isActive: !network.isActive },
-      });
-      toast.success("Network status updated");
-      onSuccess?.();
-    } catch {
-      toast.error("Failed to update network");
-    }
-  };
+  // const handleToggle = async (network: CoinNetwork) => {
+  //   try {
+  //     await toggleNetwork.mutateAsync({
+  //       networkId: network.networkId,
+  //       data: { isActive: !network.isActive },
+  //     });
+  //     toast.success("Network status updated");
+  //     onSuccess?.();
+  //     refetchCoin()
+  //   } catch {
+  //     toast.error("Failed to update network");
+  //   }
+  // };
 
-  const handleContractChange = (
-    networkId: string,
-    value: string
-  ) => {
-    setLocalNetworks((prev) =>
-      prev.map((n) =>
-        n.id === networkId ? { ...n, contractAddress: value } : n
-      )
-    );
-  };
-
-  const saveContract = async (network: NetworkItem) => {
-    try {
-      await updateNetwork.mutateAsync({
-        coinId,
-        networkId: network.id,
-        data: { contractAddress: network.contractAddress },
-      });
-      toast.success("Contract address updated");
-      onSuccess?.();
-    } catch {
-      toast.error("Failed to update contract");
-    }
-  };
-
-  const handleRemove = async (network: NetworkItem) => {
+  const handleRemove = async (network: CoinNetwork) => {
     try {
       await removeNetwork.mutateAsync({
-        coinId,
-        networkId: network.id,
+        networkId: network.networkId,
       });
       toast.success("Network removed");
       onSuccess?.();
+      refetchCoin();
     } catch {
       toast.error("Failed to remove network");
     }
@@ -146,13 +125,11 @@ const ManageNetworksDialog = ({
     try {
       await addNetwork.mutateAsync({
         networkId: selectedNetworkId,
-        contractAddress: newContract || undefined,
       });
-
       toast.success("Network added to coin");
       setSelectedNetworkId("");
-      setNewContract("");
       onSuccess?.();
+      refetchCoin();
     } catch {
       toast.error("Failed to add network");
     }
@@ -168,63 +145,44 @@ const ManageNetworksDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Existing Networks */}
+          {/* Existing */}
           {localNetworks.length === 0 && (
             <p className="text-sm text-muted-foreground">
               No networks linked to this coin.
             </p>
           )}
 
-          {localNetworks.map((network) => (
+          {localNetworks.map((item) => (
             <div
-              key={network.id}
-              className="border rounded-lg p-4 space-y-3"
+              key={item.id}
+              className="border rounded-lg p-4 flex items-center justify-between"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{network.name}</p>
-                  {network.type && (
-                    <p className="text-sm text-muted-foreground">
-                      {network.type}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={!!network.isActive}
-                    onCheckedChange={() => handleToggle(network)}
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleRemove(network)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+              <div>
+                <p className="font-medium">{item.network.name}</p>
+                {item.network.type && (
+                  <p className="text-sm text-muted-foreground">
+                    {item.network.type}
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Contract address"
-                  value={network.contractAddress || ""}
-                  onChange={(e) =>
-                    handleContractChange(network.id, e.target.value)
-                  }
-                />
+              <div className="flex items-center gap-3">
+                {/* <Switch
+                  checked={item.isActive}
+                  onCheckedChange={() => handleToggle(item)}
+                /> */}
                 <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => saveContract(network)}
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleRemove(item)}
                 >
-                  Save
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             </div>
           ))}
 
-          {/* Add Network */}
+          {/* Add */}
           {availableNetworks.length > 0 && (
             <div className="border rounded-lg p-4 space-y-3">
               <div className="font-medium flex items-center gap-2">
@@ -233,7 +191,7 @@ const ManageNetworksDialog = ({
               </div>
 
               <select
-                className="w-full border rounded p-2"
+                className="w-full border rounded bg-black p-2"
                 value={selectedNetworkId}
                 onChange={(e) => setSelectedNetworkId(e.target.value)}
               >
@@ -244,12 +202,6 @@ const ManageNetworksDialog = ({
                   </option>
                 ))}
               </select>
-
-              <Input
-                placeholder="Contract address (optional)"
-                value={newContract}
-                onChange={(e) => setNewContract(e.target.value)}
-              />
 
               <Button
                 className="w-full"

@@ -403,29 +403,43 @@ export const deleteCoinNetwork = async (req: Request, res: Response) => {
 export const addCoinNetwork = async (req: Request, res: Response) => {
   try {
     const { coinId } = req.params;
-    const { networkId, contractAddress, isActive = true } = req.body;
+    const { networkId, isActive = true } = req.body;
 
-    // Prevent duplicates
-    const existing = await prisma.coinNetwork.findFirst({
-      where: { coinId, networkId },
+    // 1️⃣ Validate network exists
+    const network = await prisma.network.findUnique({
+      where: { id: networkId },
     });
 
-    if (existing) {
-      return res.status(409).json({
-        error: "Network already linked to coin",
+    if (!network) {
+      return res.status(404).json({
+        error: "Network not found",
       });
     }
 
+    // 2️⃣ Prevent duplicates
+    const exists = await prisma.coinNetwork.findFirst({
+      where: { coinId, networkId },
+    });
+
+    if (exists) {
+      return res.status(409).json({
+        error: "Network already linked to this coin",
+      });
+    }
+
+    // 3️⃣ Create coinNetwork
     const coinNetwork = await prisma.coinNetwork.create({
       data: {
         coinId,
         networkId,
-        contractAddress,
         isActive,
+      },
+      include: {
+        network: true,
       },
     });
 
-    res.status(201).json({
+    res.json({
       success: true,
       message: "Network added to coin",
       network: coinNetwork,
@@ -437,6 +451,7 @@ export const addCoinNetwork = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 
 // export const getAllNetworks = async (req: Request, res: Response) => {

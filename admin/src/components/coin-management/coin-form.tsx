@@ -39,7 +39,7 @@ const CoinForm: React.FC<Props> = ({
     decimals: 18,
   });
 
-  const selectedNetwork = networks.find(
+  const selectedNetwork = networks?.find(
     (n) => n.id === form.networkId
   );
 
