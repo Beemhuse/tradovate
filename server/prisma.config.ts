@@ -8,7 +8,7 @@ export default defineConfig({
   // migrations folder (optional, keep if you use migrations)
   migrations: {
     path: "./prisma/migrations",
-    seed: "ts-node ./prisma/network.seed.ts",
+    seed: "ts-node ./prisma/seed-admin.ts",
   },
 
   // Move the connection URL here (v7)

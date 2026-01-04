@@ -1,8 +1,7 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:18-alpine
+    container_name: tradovate_db
     environment:
       POSTGRES_USER: tradovate
       POSTGRES_PASSWORD: super-strong-password-here
@@ -15,14 +14,19 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: tradovate_redis
     networks:
       - tradovate_net
     restart: unless-stopped
 
   admin_server:
     build: ./server
+    container_name: tradovate_admin_server
     env_file:
       - ./server/.env
+    environment:
+      DATABASE_URL: postgresql://tradovate:super-strong-password-here@tradovate_db:5432/tradovate
+      REDIS_URL: redis://tradovate_redis:6379
     depends_on:
       - db
       - redis
@@ -30,23 +34,24 @@ services:
       - tradovate_net
     ports:
       - "127.0.0.1:4000:4000"
-
     restart: unless-stopped
 
   frontend:
     build: ./frontend
+    container_name: tradovate_frontend
     networks:
       - tradovate_net
     ports:
-    - "127.0.0.1:3000:80"
+      - "127.0.0.1:3000:80"
     restart: unless-stopped
 
   admin_frontend:
     build: ./admin
+    container_name: tradovate_admin_frontend
     networks:
       - tradovate_net
     ports:
-    - "127.0.0.1:3002:80"
+      - "127.0.0.1:3002:80"
     restart: unless-stopped
 
 networks:
