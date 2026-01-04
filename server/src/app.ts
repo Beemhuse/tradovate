@@ -13,8 +13,38 @@ import userTransactionRoutes from './routes/userTransactionRoutes';
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:8080",
+  "http://localhost:8081",
+  "http://127.0.0.1:8080",
+  "http://127.0.0.1:8081",
+  "https://tradovatefutures.com",
+  "https://portal.tradovatefutures.com",
+];
+
+
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow server-to-server & curl
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+    ],
+  })
+);
 app.use(express.json());
 
 // Swagger Setup
