@@ -122,7 +122,7 @@ router.get("/:networkId/usdt", requireRole('ADMIN'), getUSDTByNetwork);
  *       500:
  *         description: Internal server error
  */
-router.get("/", getNetworks);
+router.get("/list", getNetworks);
 
 /**
  * @swagger
@@ -410,7 +410,7 @@ router.delete("/networks/:id", deleteNetwork);
 
 /**
  * @swagger
- * /admin/coins/{coinId}/networks/{networkId}:
+ * /admin/coins/{coinId}/networks:
  *   patch:
  *     summary: Update coin network configuration
  *     description: |

@@ -1,7 +1,7 @@
 import { CookieManager } from "@/utils/cookie-utils";
 
 export const API_URL =
-  import.meta.env.VITE_BASE_U || "http://localhost:3001/api/v1";
+  import.meta.env.VITE_BASE_URL || "http://localhost:3001/api/v1";
 
 // Helper function to get auth headers
 export const getAuthHeaders = (): HeadersInit => {

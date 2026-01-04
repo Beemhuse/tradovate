@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Users, Coins, FileCheck, TrendingUp } from "lucide-react";
 import { useFetchData } from "@/hooks/use-api";
+import { formatDate } from "date-fns";
 
 const AdminDashboard = () => {
   const { data, isLoading, error } = useFetchData(
@@ -58,13 +59,13 @@ const AdminDashboard = () => {
       change: "",
       positive: metrics.pendingKyc === 0,
     },
-    {
-      label: "Trading Volume",
-      value: `$${(metrics.tradingVolume / 1_000_000).toFixed(2)}M`,
-      icon: TrendingUp,
-      change: "",
-      positive: true,
-    },
+    // {
+    //   label: "Trading Volume",
+    //   value: `$${(metrics.tradingVolume / 1_000_000).toFixed(2)}M`,
+    //   icon: TrendingUp,
+    //   change: "",
+    //   positive: true,
+    // },
   ];
 
   return (
@@ -117,7 +118,7 @@ const AdminDashboard = () => {
                 </p>
               )}
 
-              {activity.map((item: any, index: number) => (
+              {activity.slice(0, 5).map((item: any, index: number) => (
                 <div
                   key={index}
                   className="flex items-center justify-between border-b border-border pb-4 last:border-0 last:pb-0"
@@ -129,7 +130,7 @@ const AdminDashboard = () => {
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {item.time}
+                    {formatDate(item.time, 'MM/dd/yyyy')}
                   </span>
                 </div>
               ))}

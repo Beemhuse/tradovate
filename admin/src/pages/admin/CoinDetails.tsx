@@ -42,6 +42,7 @@ const CoinDetailsPage = () => {
     data: coin,
     isLoading,
     isError,
+    refetch
   } = useFetchData<Coin>(`/market/coins/${id}`, ["coin", id]);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -51,9 +52,10 @@ const CoinDetailsPage = () => {
     ({ id }) => `/admin/coins/${id}/toggle`,
     [["coin", id], "admin-coins"]
   );
- const updateCoin = usePatchData<Coin, UpdateCoinPayload>(`/admin/coins/${id}`, [
-    "admin-coins",
-  ]);
+  const updateCoin = usePatchData<Coin, UpdateCoinPayload>(
+    `/admin/coins/${id}`,
+    ["admin-coins"]
+  );
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -130,10 +132,10 @@ const CoinDetailsPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsEditOpen(true)}>
+            {/* <Button variant="outline" onClick={() => setIsEditOpen(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Coin
-            </Button>
+            </Button> */}
 
             <Button
               variant={coin.isActive ? "destructive" : "default"}
@@ -187,9 +189,11 @@ const CoinDetailsPage = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                      Coin ID
+                      Network Address
                     </h3>
-                    <p className="text-sm font-mono">{coin.id}</p>
+                    <p className="text-sm font-mono">
+                      {coin?.networks[0].contractAddress}
+                    </p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2">
@@ -219,19 +223,21 @@ const CoinDetailsPage = () => {
                       >
                         <div className="space-y-1">
                           <div className="font-medium">{network.name}</div>
-                          {network.type && (
+                          {network.network?.type && (
                             <div className="text-sm text-muted-foreground">
-                              Type: {network.type}
+                              Type: {network.network.type}
                             </div>
                           )}
-                          {network.contractAddress && (
+                          {network.network && (
                             <div className="text-sm font-mono flex items-center gap-2">
                               <Wallet className="h-3 w-3" />
-                              {network.contractAddress}
+                              {network.network.name}
                             </div>
                           )}
                         </div>
-                        <Badge variant="outline">Active</Badge>
+                        <Badge variant="outline">
+                          {network.network?.isActive ? "Active" : "Inactive"}
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -302,14 +308,14 @@ const CoinDetailsPage = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button
+                {/* <Button
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => setIsEditOpen(true)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Coin
-                </Button>
+                </Button> */}
 
                 <Button
                   variant="outline"
@@ -325,35 +331,33 @@ const CoinDetailsPage = () => {
         </div>
       </div>
 
-      {coin && (
-  <EditCoinDialog
-    open={isEditOpen}
-    coin={{
-      id: coin.id,
-      name: coin.name,
-      symbol: coin.symbol,
-      icon: coin.iconUrl || "",
-      isActive: !!coin.isActive,
-    }}
-    onOpenChange={setIsEditOpen}
-    onSave={async (data) => {
-      await updateCoin.mutateAsync({ id: data.id, ...data });
-      toast.success("Coin updated");
-      setIsEditOpen(false);
-      // queryClient.invalidateQueries({ queryKey: ["coin", id] });
-    }}
-  />
-)}
+      {/* {coin && (
+        <EditCoinDialog
+          open={isEditOpen}
+          coin={{
+            id: coin.id,
+            name: coin.name,
+            symbol: coin.symbol,
+            icon: coin.iconUrl || "",
+            isActive: !!coin.isActive,
+          }}
+          onOpenChange={setIsEditOpen}
+          onSave={async (data) => {
+            await updateCoin.mutateAsync({ id: data.id, ...data });
+            toast.success("Coin updated");
+            setIsEditOpen(false);
+            // queryClient.invalidateQueries({ queryKey: ["coin", id] });
+          }}
+        />
+      )} */}
 
-<ManageNetworksDialog
-  open={isNetworksOpen}
-  coinId={coin.id}
-  networks={coin.networks || []}
-  onOpenChange={setIsNetworksOpen}
-
-/>
-
-
+      <ManageNetworksDialog
+        open={isNetworksOpen}
+        coinId={coin.id}
+        networks={coin.networks || []}
+        refetchCoin={refetch}
+        onOpenChange={setIsNetworksOpen}
+      />
     </div>
   );
 };
