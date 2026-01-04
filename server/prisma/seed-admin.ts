@@ -20,6 +20,7 @@ async function main() {
   const adminEmails = [
     "admin@tradovatefutures.com",
     "inspire.ig5702@gmail.com",
+"brightawah94@gmail.com"
   ];
 
   console.log("🌱 Seeding admin whitelist...");
