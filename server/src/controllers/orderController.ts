@@ -2,9 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { z, ZodError } from "zod";
-import {
-  fetchPrices,
-} from "../services/marketPriceService";
+import { fetchPrices } from "../services/marketPriceService";
 
 export const placeOrderSchema = z.object({
   coinId: z.string().uuid(),
@@ -61,9 +59,9 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 
     const {
       coinId,
-      networkId,
       direction,
       period,
+      networkId,
       stake,
       entryPrice,
     } = placeTradeSchema.parse(req.body);
@@ -80,32 +78,57 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     const expiresAt = new Date(Date.now() + tradeConfig.seconds * 1000);
 
     const order = await prisma.$transaction(async (tx) => {
-      const wallet = await tx.wallet.findUnique({
+      const wallets = await tx.wallet.findMany({
         where: {
-          userId_coinId_networkId: {
-            userId,
-            coinId,
-            networkId,
-          },
+          userId,
+          // coinId,
+        },
+        orderBy: {
+          balance: "desc",
         },
       });
+console.log("wallets", wallets);
+      if (!wallets.length) {
+        throw new Error("WALLET_NOT_FOUND");
+      }
 
-      if (!wallet) throw new Error("WALLET_NOT_FOUND");
-      if (wallet.balance < stake) throw new Error("INSUFFICIENT_BALANCE");
+      const totalBalance = wallets.reduce(
+        (sum, w) => sum + Number(w.balance),
+        0
+      );
 
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { decrement: stake } },
-      });
+      if (totalBalance < stake) {
+        throw new Error("INSUFFICIENT_BALANCE");
+      }
+
+      // 🔻 Deduct across wallets
+      let remaining = stake;
+
+      for (const wallet of wallets) {
+        if (remaining <= 0) break;
+
+        const deduct = Math.min(Number(wallet.balance), remaining);
+
+        if (deduct > 0) {
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              balance: { decrement: deduct },
+            },
+          });
+
+          remaining -= deduct;
+        }
+      }
 
       return tx.order.create({
         data: {
           userId,
           coinId,
-          networkId,
           direction,
           period,
           stake,
+          networkId,
           entryPrice,
           profitRate: tradeConfig.profitRate,
           expiresAt,
@@ -116,13 +139,6 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 
     return res.json({ success: true, order });
   } catch (err: any) {
-    if (err instanceof ZodError) {
-      return res.status(400).json({
-        error: "Invalid request payload",
-        issues: err.errors,
-      });
-    }
-
     if (err.message === "INSUFFICIENT_BALANCE") {
       return res.status(400).json({ error: "Insufficient wallet balance" });
     }
@@ -135,8 +151,6 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: "Trade placement failed" });
   }
 };
-
-
 
 // const settleTrade = async (orderId: string) => {
 //   const order = await prisma.order.findUnique({
