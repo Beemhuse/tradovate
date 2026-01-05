@@ -25,6 +25,7 @@ export default function initAxios() {
   axios.interceptors.response.use(
     (response) => response,
     async (error) => {
+      console.log("error", error)
       if (error?.response?.status === 401) {
         // Handle unauthorized access
         if (typeof window !== "undefined") {
