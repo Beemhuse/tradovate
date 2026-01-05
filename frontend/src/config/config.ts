@@ -12,7 +12,6 @@ export default function initAxios() {
   axios.defaults.withCredentials = false;
 
   const accessToken = CookieManager.get("travodate-token");
-  console.log(accessToken)
 
   // Set authorization header if token exists (using CookieManager)
   if (typeof window !== "undefined") {
@@ -85,10 +84,10 @@ export const clearAuthToken = () => {
 
 export const getAuthToken = (): string | null => {
   return CookieManager.get("travodate-token");
-};
+}
+
 export const getAuthUser = (): string | null => {
   return CookieManager.get("travodate-user");
 };
 
-// Initialize axios when this module is loaded
 initAxios();

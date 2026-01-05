@@ -119,12 +119,12 @@ const Wallet = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {assets?.map((wallet) => {
+                  {assets?.map((wallet, index) => {
                     const symbol = wallet.coin?.symbol || "";
                     const usdtValue = calculateUSDTValue(symbol, Number(wallet.balance));
                     return (
                       <tr
-                        key={wallet.coinId}
+                        key={wallet.coinId + `${index}`}
                         className="border-b border-border hover:bg-secondary/50 transition-colors"
                       >
                         <td className="py-4 px-4">

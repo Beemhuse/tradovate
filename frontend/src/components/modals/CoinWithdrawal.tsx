@@ -91,8 +91,8 @@ const CoinWithdrawal = ({
                   <SelectValue placeholder="Select coin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {coins?.map((coin) => (
-                    <SelectItem key={coin.coinId} value={coin.coinId}>
+                  {coins?.map((coin, index) => (
+                    <SelectItem key={coin.coinId + index} value={coin.coinId}>
                         <div className="flex items-center gap-2">
                             <img src={coin?.coin?.iconUrl} alt={coin?.coin?.name} className="w-6 h-6" />
                             <span>{coin?.coin?.symbol}</span>
