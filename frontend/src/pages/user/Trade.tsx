@@ -27,11 +27,13 @@ const TradePage = () => {
   // Fetch user assets for balance
   const { data: assetData } = useFetchData(COINS.ASSETS, "assets");
   const assets = assetData?.assets || [];
+  
+  const pair: any = data?.pair;
+  
   const usdtBalance =
-    assets.find((a: any) => a.coin?.symbol === "USDT")?.balance || 0;
+    assets.find((a: any) => a.coin?.id === pair?.baseCoin?.id)?.balance || 0;
 
 
-  const pair = data?.pair;
 
   /** 2️⃣ Live price via WebSocket */
   const livePrice = useLivePrice(pair?.wsSymbol?.toLowerCase() ?? "");

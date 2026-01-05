@@ -63,6 +63,7 @@ const AddCoins = ({
     return coin;
   }, [coinList, selectedCoinToAdd]);
 
+
   const coinData = useMemo(() => {
     if (createdWallet && createdWallet.coinId === selectedCoinToAdd) {
       return createdWallet;
@@ -84,7 +85,6 @@ const AddCoins = ({
       coinId: selectedCoinData?.id,
       networkId: networkId,
     };
-    console.log("payload", payload);
 
     createCoin(payload, {
       onSuccess: (data) => {
@@ -92,7 +92,7 @@ const AddCoins = ({
           title: "Coin wallet created",
           description: "Coin wallet created successfully!",
         });
-        setCreatedWallet((data as any)?.data);
+        setCreatedWallet((data as any)?.wallet);
         setIsDeposite(true);
         setIsFundWallet(false);
         refetch();
@@ -125,7 +125,13 @@ const AddCoins = ({
             " deposited successfully!, wait for admin approval",
         });
         refetch();
-        setIsDeposite(true);
+        setIsDeposite(false);
+        setAmount(null)
+        setNetworkId("")
+        setSelectedCoinToAdd("")
+        setCreatedWallet(null)
+        setIsFundWallet(false)
+        setAddCoinOpen(false)
       },
       onError: (error) => {
         toast({
@@ -192,8 +198,8 @@ const AddCoins = ({
                 <SelectContent>
                   {selectedCoinData?.networks?.map((network) => (
                     <SelectItem
-                      key={network?.networkId}
-                      value={network?.networkId}
+                      key={network?.network?.id}
+                      value={network?.network?.id}
                     >
                       <span>{network?.network?.name}</span>
                     </SelectItem>

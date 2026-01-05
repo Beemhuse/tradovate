@@ -93,6 +93,14 @@ const OrderPanel = ({
         <span>{symbol}</span>
       </div>
 
+      {/* Available Balance */}
+      <div className="flex justify-between text-sm">
+        <span className="text-muted-foreground">Available Balance</span>
+        <span className="text-success font-medium">
+          {availableBalance.toFixed(2)}
+        </span>
+      </div>
+
       {/* Price */}
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Price</span>

@@ -9,11 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowDownToLine, ArrowUpFromLine, DollarSign, WalletCards, Eye, EyeOff, Copy } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWallet, useInitializeWallets } from "@/hooks/useWallet";
+import { useInitializeWallets } from "@/hooks/useWallet";
 import { useCoins } from "@/hooks/useCoins";
 import { useCryptoPrice } from "@/hooks/useCryptoPrice";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import AddCoins from "@/components/modals/CreateWalets";
 import { useFetchData } from "@/hooks/use-api";
 import { COINS } from "@/hooks/apiEndpoint";
@@ -25,10 +23,8 @@ const Wallet = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [addCoinOpen, setAddCoinOpen] = useState(false);
-  const { toast } = useToast();
   
   const { user, isLoading: authLoading } = useAuth();
-  // const { data: wallets, isLoading: walletsLoading } = useWallet();
   const { data: coins } = useCoins();
   const initializeWallets = useInitializeWallets();
   
@@ -36,15 +32,8 @@ const Wallet = () => {
 
   const assets = assetData?.assets
 
-
-  console.log("assets", assets);
-
-  // const assets = []
-
   const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
   const prices = useCryptoPrice(coinSymbols);
-
-  // console.log("prices", prices);
 
   useEffect(() => {
     if (user && coins && coins.length > 0) {
@@ -130,12 +119,12 @@ const Wallet = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {assets?.map((wallet) => {
+                  {assets?.map((wallet, index) => {
                     const symbol = wallet.coin?.symbol || "";
                     const usdtValue = calculateUSDTValue(symbol, Number(wallet.balance));
                     return (
                       <tr
-                        key={wallet.coinId}
+                        key={wallet.coinId + `${index}`}
                         className="border-b border-border hover:bg-secondary/50 transition-colors"
                       >
                         <td className="py-4 px-4">
