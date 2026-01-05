@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCreateData } from "@/hooks/use-api";
 import clsx from "clsx";
-import { toast } from "sonner";
 import { useToast } from "@/hooks/use-toast";
 
 type Props = {
@@ -33,21 +32,22 @@ const OrderPanel = ({
 }: Props) => {
   const [stake, setStake] = useState<number>(30);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(30);
-  const [selectedPeriod, setSelectedPeriod] =
-    useState<(typeof TRADE_PERIODS)[number]>(TRADE_PERIODS[0]);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    (typeof TRADE_PERIODS)[number]
+  >(TRADE_PERIODS[0]);
   const [loading, setLoading] = useState(false);
-  
-    const { toast } = useToast();
+
+  const { toast } = useToast();
 
   const { mutate } = useCreateData("/market/order", ["user-trades"]);
 
   const placeTrade = (direction: Direction) => {
     if (!stake || stake <= 0) {
       toast({
-            title: "Trade Failed",
-            description: "Enter a valid amount",
-            variant: "destructive",
-          });
+        title: "Trade Failed",
+        description: "Enter a valid amount",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -56,11 +56,11 @@ const OrderPanel = ({
     mutate(
       {
         coinId,
-        // networkId,
-        type: direction === "BULLISH" ? "BUY" : "SELL",
-        // period: selectedPeriod.period,
-        amount:stake,
-        price: currentPrice,
+        networkId,
+        direction,
+        period: selectedPeriod.period,
+        stake,
+        entryPrice: currentPrice,
       },
       {
         onSuccess: () => {
@@ -73,7 +73,10 @@ const OrderPanel = ({
         onError: (err: any) => {
           toast({
             title: "Trade Failed",
-            description: (err as any)?.response?.data?.message || (err as any)?.response?.data?.error || (err as any)?.response?.data || err?.message || "Something went wrong",
+            description:
+              err?.response?.data?.error ||
+              err?.response?.data?.message ||
+              "Something went wrong",
             variant: "destructive",
           });
           setLoading(false);

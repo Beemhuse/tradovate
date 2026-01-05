@@ -1,12 +1,10 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import {
   fetchPrices,
-  getMarketPriceForCoin,
 } from "../services/marketPriceService";
-import { enforceFinancialAccess } from "../utils/accessGuard";
 
 export const placeOrderSchema = z.object({
   coinId: z.string().uuid(),
@@ -52,9 +50,14 @@ export const getMarketPrices = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch market prices" });
   }
 };
+
 export const placeOrder = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = req.user.userId;
 
     const {
       coinId,
@@ -62,7 +65,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       direction,
       period,
       stake,
-      entryPrice, // 👈 price passed from frontend
+      entryPrice,
     } = placeTradeSchema.parse(req.body);
 
     if (stake <= 0) {
@@ -74,14 +77,9 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: "Invalid trade period" });
     }
 
-    const expiresAt = new Date(
-      Date.now() + tradeConfig.seconds * 1000
-    );
+    const expiresAt = new Date(Date.now() + tradeConfig.seconds * 1000);
 
     const order = await prisma.$transaction(async (tx) => {
-      /* ===========================
-         Fetch wallet (LOCKED)
-      ============================ */
       const wallet = await tx.wallet.findUnique({
         where: {
           userId_coinId_networkId: {
@@ -92,32 +90,14 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      if (!wallet) {
-        throw new Error("WALLET_NOT_FOUND");
-      }
+      if (!wallet) throw new Error("WALLET_NOT_FOUND");
+      if (wallet.balance < stake) throw new Error("INSUFFICIENT_BALANCE");
 
-      /* ===========================
-         ❌ BLOCK INSUFFICIENT FUNDS
-      ============================ */
-      if (wallet.balance < stake) {
-        throw new Error("INSUFFICIENT_BALANCE");
-      }
-
-      /* ===========================
-         Deduct balance
-      ============================ */
       await tx.wallet.update({
         where: { id: wallet.id },
-        data: {
-          balance: {
-            decrement: stake,
-          },
-        },
+        data: { balance: { decrement: stake } },
       });
 
-      /* ===========================
-         Create order
-      ============================ */
       return tx.order.create({
         data: {
           userId,
@@ -134,29 +114,28 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       });
     });
 
-    return res.json({
-      success: true,
-      order,
-    });
+    return res.json({ success: true, order });
   } catch (err: any) {
-    if (err.message === "INSUFFICIENT_BALANCE") {
+    if (err instanceof ZodError) {
       return res.status(400).json({
-        error: "Insufficient wallet balance",
+        error: "Invalid request payload",
+        issues: err.errors,
       });
+    }
+
+    if (err.message === "INSUFFICIENT_BALANCE") {
+      return res.status(400).json({ error: "Insufficient wallet balance" });
     }
 
     if (err.message === "WALLET_NOT_FOUND") {
-      return res.status(400).json({
-        error: "Wallet not found for this coin and network",
-      });
+      return res.status(400).json({ error: "Wallet not found" });
     }
 
-    console.error("placeOrder error", err);
-    return res.status(500).json({
-      error: "Trade placement failed",
-    });
+    console.error("placeOrder error:", err);
+    return res.status(500).json({ error: "Trade placement failed" });
   }
 };
+
 
 
 // const settleTrade = async (orderId: string) => {

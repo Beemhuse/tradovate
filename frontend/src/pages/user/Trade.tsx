@@ -30,7 +30,6 @@ const TradePage = () => {
   const usdtBalance =
     assets.find((a: any) => a.coin?.symbol === "USDT")?.balance || 0;
 
-  console.log("pairedData", data);
 
   const pair = data?.pair;
 
