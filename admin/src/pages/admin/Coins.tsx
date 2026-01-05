@@ -2,20 +2,22 @@ import React, { useState, useEffect } from "react";
 import CoinCard from "@/components/coin-management/coin-card";
 import CoinTable from "@/components/coin-management/coin-table";
 import DeleteConfirmationModal from "@/components/coin-management/delete-confirmation-modal";
+import EditCoinDialog from "@/components/coin-management/edit-coin-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useFetchData,
   useCreateData,
   useDeleteData,
-  usePatchData,
+  useUpdateData,
 } from "@/hooks/use-api";
+import { HARDCODED_NETWORKS } from "@/constants/networks";
 import {
   Coin,
   CreateCoinPayload,
   UpdateCoinPayload,
   Network,
 } from "@/types/coins";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import CoinForm from "@/components/coin-management/coin-form";
@@ -27,15 +29,16 @@ const AdminCoinsPage: React.FC = () => {
     success: boolean;
     count: number;
     networks: Network[];
-  }>("/network", "admin-networks");
-  const allNetworks = networksData?.networks;
+  }>("/admin/networks", "admin-networks");
+  const allNetworks = networksData?.networks || HARDCODED_NETWORKS;
+
   const {
     data: coinsData,
     isLoading,
     isError,
     refetch,
   } = useFetchData<{ success: boolean; count: number; coins: Coin[] }>(
-    "/admin/coins?includeInactive=true",
+    "/admin/coins",
     "admin-coins"
   );
   const coins = coinsData?.coins || [];
@@ -44,18 +47,13 @@ const AdminCoinsPage: React.FC = () => {
     "admin-coins",
     "/market/coins",
   ]);
-  const updateCoin = usePatchData<Coin, UpdateCoinPayload>("/admin/coins", [
+  const updateCoin = useUpdateData<Coin, UpdateCoinPayload>("/admin/coins", [
     "admin-coins",
   ]);
-  const toggleCoin = usePatchData<
-    void,
-    { id: string | number; toggleNetworks?: boolean }
-  >(
-    ({ id, toggleNetworks = true }) =>
-      `/admin/coins/${id}/toggle?toggleNetworks=${toggleNetworks}`,
+  const deactivateCoin = useDeleteData<void>(
+    (id: string | number) => `/admin/coins/${id}/deactivate`,
     ["admin-coins"]
   );
-
   const deleteCoin = useDeleteData<void>(
     (id: string | number) => `/admin/coins/${id}?force=true`,
     ["admin-coins"]
@@ -102,28 +100,22 @@ const AdminCoinsPage: React.FC = () => {
       toast.error("Failed to update coin");
     }
   };
+
   const handleDeleteConfirm = async () => {
     if (!coinToDelete) return;
-
     try {
       if (coinToDelete._count?.wallets || coinToDelete._count?.orders) {
-        await toggleCoin.mutateAsync({
-          id: coinToDelete.id,
-          toggleNetworks: true,
-        });
-        toast.success(
-          coinToDelete.isActive ? "Coin deactivated" : "Coin activated"
-        );
+        await deactivateCoin.mutateAsync(coinToDelete.id);
+        toast.success("Coin deactivated");
       } else {
         await deleteCoin.mutateAsync(coinToDelete.id);
         toast.success("Coin deleted");
       }
-
       setIsDeleteOpen(false);
       setCoinToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["admin-coins"] });
     } catch (err: any) {
-      toast.error("Failed to update coin");
+      toast.error("Failed to delete/deactivate coin");
     }
   };
 
@@ -143,7 +135,7 @@ const AdminCoinsPage: React.FC = () => {
     );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">                                            
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -155,7 +147,7 @@ const AdminCoinsPage: React.FC = () => {
               <select
                 value={activeTab}
                 onChange={(e) => setActiveTab(e.target.value as any)}
-                className="p-2 border bg-black rounded"
+                className="p-2 border rounded text-black"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -171,9 +163,9 @@ const AdminCoinsPage: React.FC = () => {
           <CoinTable
             coins={filteredCoins}
             onToggleStatus={async (coin) =>
-              await toggleCoin.mutateAsync({
+              await updateCoin.mutateAsync({
                 id: coin.id,
-                toggleNetworks: true,
+                data: { isActive: !coin.isActive },
               })
             }
             onEdit={(coin) => {
@@ -189,16 +181,21 @@ const AdminCoinsPage: React.FC = () => {
 
         {/* Add Coin Dialog */}
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <CoinForm
-            networks={allNetworks}
-            onCancel={() => setIsAddOpen(false)}
-            onSubmit={handleCreate}
-            isSubmitting={createCoin.isPending}
-          />
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Coin</DialogTitle>
+            </DialogHeader>
+            <CoinForm
+              networks={allNetworks}
+              onCancel={() => setIsAddOpen(false)}
+              onSubmit={handleCreate}
+              isSubmitting={createCoin.isPending}
+            />
+          </DialogContent>
         </Dialog>
 
         {/* Edit Dialog */}
-        {/* {editingCoin && (
+        {editingCoin && (
           <EditCoinDialog
             open={isEditOpen}
             coin={{
@@ -212,7 +209,7 @@ const AdminCoinsPage: React.FC = () => {
             onSave={(data) => handleEditSave({ id: data.id, ...data })}
             isLoading={updateCoin.isPending}
           />
-        )} */}
+        )}
 
         {/* Delete Confirmation */}
         <DeleteConfirmationModal
@@ -236,7 +233,7 @@ const AdminCoinsPage: React.FC = () => {
             !!coinToDelete?.networks && coinToDelete.networks.length > 0
           }
           networkCount={coinToDelete?.networks?.length || 0}
-          isLoading={deleteCoin.isPending || toggleCoin.isPending}
+          isLoading={deleteCoin.isPending || deactivateCoin.isPending}
         />
       </div>
     </div>
