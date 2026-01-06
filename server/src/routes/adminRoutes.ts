@@ -15,6 +15,8 @@ import {
   // deactivateCoin,
   suspendUser,
   toggleCoinStatus,
+  deactivateCoin,
+  reactivateCoin,
 } from "../controllers/adminController";
 
 const router = Router();
@@ -188,7 +190,7 @@ router.patch("/coins/:id", updateCoin);
 
 /**
  * @swagger
- * /admin/coins/{id}/toggle:
+ * /admin/coins/toggle-coins:
  *   patch:
  *     summary: Toggle coin active status
  *     description: |
@@ -261,7 +263,7 @@ router.patch("/coins/:id", updateCoin);
  *         description: Failed to toggle coin status
  */
 
-router.patch("/coins/:id/toggle", toggleCoinStatus);
+router.patch("/toggle/coins/status", toggleCoinStatus);
 
 /**
  * @swagger
@@ -299,7 +301,7 @@ router.patch("/coins/:id/toggle", toggleCoinStatus);
  *       404:
  *         description: Coin not found
  */
-router.delete("/coins/:id", deleteCoin);
+router.delete("/coins/:id/delete", deleteCoin);
 
 // =============== COIN-NETWORK LINK MANAGEMENT ===============
 
@@ -657,7 +659,66 @@ router.post("/wallet/update", updateUserWallet);
  *       500:
  *         description: Server error while updating suspension status
  */
+/**
+ * @route   PATCH /admin/coins/:id/deactivate
+ */
+/**
+ * @swagger
+ * /admin/coins/{id}/deactivate:
+ *   patch:
+ *     summary: Deactivate a coin
+ *     description: Deactivates a coin only if at least one user wallet exists for it.
+ *     tags:
+ *       - Coins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Coin deactivated successfully
+ *       400:
+ *         description: Coin has no wallets or already inactive
+ *       404:
+ *         description: Coin not found
+ *       500:
+ *         description: Server error
+ */
 
+router.patch("/coins/:id/deactivate", deactivateCoin);
+
+/**
+ * @route   PATCH /admin/coins/:id/reactivate
+ */
+/**
+ * @swagger
+ * /admin/coins/{id}/reactivate:
+ *   patch:
+ *     summary: Reactivate a coin
+ *     description: Reactivates a previously deactivated coin.
+ *     tags:
+ *       - Coins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Coin reactivated successfully
+ *       400:
+ *         description: Coin already active
+ *       404:
+ *         description: Coin not found
+ *       500:
+ *         description: Server error
+ */
+
+router.patch("/:id/reactivate", reactivateCoin);
 router.patch("/users/:id/suspend", suspendUser);
+
 
 export default router;

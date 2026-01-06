@@ -10,6 +10,7 @@ type Coin = {
   symbol: string;
   iconUrl?: string | null;
   isActive?: boolean;
+  hideDelete?: boolean;
   networks?: Array<{ contractAddress?: string }>;
 };
 
@@ -18,6 +19,7 @@ interface CoinTableProps {
   onToggleStatus: (coin: Coin) => void;
   onEdit: (coin: Coin) => void;
   onDelete: (coin: Coin) => void;
+  hideDelete?: boolean;
 }
 
 const CoinTable = ({ coins, onToggleStatus, onEdit, onDelete }: CoinTableProps) => {
@@ -120,7 +122,7 @@ const CoinTable = ({ coins, onToggleStatus, onEdit, onDelete }: CoinTableProps) 
                       <ToggleLeft className="h-4 w-4 text-muted-foreground" />
                     )}
                   </Button>
-                  <Button
+                  {/* <Button
                     size="sm"
                     variant="ghost"
                     className="text-danger"
@@ -130,7 +132,7 @@ const CoinTable = ({ coins, onToggleStatus, onEdit, onDelete }: CoinTableProps) 
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </Button> */}
                 </div>
               </td>
             </tr>
