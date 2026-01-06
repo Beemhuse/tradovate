@@ -26,6 +26,7 @@ router.use(authenticateToken, requireRole("ADMIN"));
 
 // =============== COIN MANAGEMENT ROUTES ===============
 
+
 /**
  * @swagger
  * /admin/coins:

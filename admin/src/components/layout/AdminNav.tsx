@@ -25,6 +25,7 @@ const AdminNav = () => {
     { to: "/admin/kyc", icon: FileCheck, label: "KYC" },
     { to: "/admin/transactions", icon: Receipt, label: "Transactions" },
     { to: "/admin/trading-pairs", icon: ArrowLeftRight, label: "Pairs" },
+    { to: "/admin/certificates", icon: FileCheck, label: "Certificates" },
     // { to: "/support", icon: MessageSquare, label: "Support" },
   ];
 

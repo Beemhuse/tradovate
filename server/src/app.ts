@@ -10,6 +10,7 @@ import networkRoutes from './routes/networkRoutes';
 import kycRoutes from './routes/kycRoutes';
 import adminTransactionRoutes from './routes/adminTransactionRoutes';
 import userTransactionRoutes from './routes/userTransactionRoutes';
+import certificateRoutes from './routes/adminCertRoutes';
 
 const app = express();
 
@@ -92,6 +93,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Routes
 app.use('/api/v1/admin', dashboardRoutes);
+app.use('/api/v1/certificates', certificateRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/market', marketRoutes);

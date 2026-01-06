@@ -25,6 +25,7 @@ import AdminTransactions from "./pages/admin/Transactions";
 import AdminTradingPairs from "./pages/admin/TradingPairs";
 import AdminSupport from "./pages/admin/Support";
 import AdminLayout from "./components/layout/AdminLayout";
+import AdminUploadCertificatesPage from "./pages/admin/Certificates";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             {/* ================= ADMIN (PROTECTED) ================= */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="certificates" element={<AdminUploadCertificatesPage />} />
               <Route path="coins" element={<AdminCoins />} />
               <Route path="coins/:id" element={<CoinDetailsPage />} />
               <Route path="users" element={<AdminUsers />} />

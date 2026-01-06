@@ -93,7 +93,9 @@ model User {
   suspendedAt     DateTime?
   suspendedReason String?
   suspendedBy     String?
+  certificates    Certificate[]
 }
+
 model MarketPair {
   id          String @id @default(uuid())
   baseCoinId  String
@@ -112,8 +114,6 @@ model MarketPair {
 
   @@unique([baseCoinId, quoteCoinId, networkId])
 }
-  
-
 
 model Kyc {
   id         String    @id @default(uuid())
@@ -165,28 +165,35 @@ model Coin {
 
   marketPairsAsBase  MarketPair[] @relation("BaseCoin")
   marketPairsAsQuote MarketPair[] @relation("QuoteCoin")
+}
 
+model Certificate {
+  id         String   @id @default(uuid())
+  image      String // encrypted filename
+  uploadedBy String // admin id
+  createdAt  DateTime @default(now())
+
+  uploadedByUser User @relation(fields: [uploadedBy], references: [id])
 }
 
 model Network {
-  id          String   @id @default(uuid())
-  slug        String?  @unique   
+  id          String  @id @default(uuid())
+  slug        String? @unique
   name        String
   type        String?
   chainId     String?
   icon        String?
   description String?
-  isActive    Boolean  @default(true)
+  isActive    Boolean @default(true)
 
   coins       CoinNetwork[]
   wallets     Wallet[]
   orders      Order[]
   marketPairs MarketPair[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime?          
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
 }
-
 
 model CoinNetwork {
   id              String  @id @default(uuid())
