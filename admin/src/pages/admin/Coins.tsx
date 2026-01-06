@@ -1,14 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 import CoinCard from "@/components/coin-management/coin-card";
 import CoinTable from "@/components/coin-management/coin-table";
-import DeleteConfirmationModal from "@/components/coin-management/delete-confirmation-modal";
+import CoinForm from "@/components/coin-management/coin-form";
 import EditCoinDialog from "@/components/coin-management/edit-coin-dialog";
-import { useQueryClient } from "@tanstack/react-query";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 import {
   useFetchData,
   useCreateData,
-  useDeleteData,
   useUpdateData,
+  usePatchData,
 } from "@/hooks/use-api";
 import { HARDCODED_NETWORKS } from "@/constants/networks";
 import {
@@ -17,19 +28,22 @@ import {
   UpdateCoinPayload,
   Network,
 } from "@/types/coins";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import CoinForm from "@/components/coin-management/coin-form";
 
 const AdminCoinsPage: React.FC = () => {
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingCoin, setEditingCoin] = useState<Coin | null>(null);
+
+  /* ---------------- API ---------------- */
+
   const { data: networksData } = useFetchData<{
     success: boolean;
-    count: number;
     networks: Network[];
   }>("/admin/networks", "admin-networks");
+
   const allNetworks = networksData?.networks || HARDCODED_NETWORKS;
 
   const {
@@ -37,149 +51,135 @@ const AdminCoinsPage: React.FC = () => {
     isLoading,
     isError,
     refetch,
-  } = useFetchData<{ success: boolean; count: number; coins: Coin[] }>(
+  } = useFetchData<{ success: boolean; coins: Coin[] }>(
     "/admin/coins",
     "admin-coins"
   );
+
   const coins = coinsData?.coins || [];
 
   const createCoin = useCreateData<Coin, CreateCoinPayload>("/admin/coins", [
     "admin-coins",
     "/market/coins",
   ]);
+
   const updateCoin = useUpdateData<Coin, UpdateCoinPayload>("/admin/coins", [
     "admin-coins",
   ]);
-  const deactivateCoin = useDeleteData<void>(
-    (id: string | number) => `/admin/coins/${id}/deactivate`,
-    ["admin-coins"]
-  );
-  const deleteCoin = useDeleteData<void>(
-    (id: string | number) => `/admin/coins/${id}?force=true`,
-    ["admin-coins"]
-  );
-
-  // UI state
-  const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingCoin, setEditingCoin] = useState<Coin | null>(null);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [coinToDelete, setCoinToDelete] = useState<Coin | null>(null);
+  const toggleCoinStatus = usePatchData<
+    void,
+    { coinId: string; toggleNetworks?: boolean }
+  >("/admin/toggle/coins/status", ["admin-coins"]);
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["admin-coins"] });
-  }, [activeTab, queryClient]);
+  }, [activeTab]);
 
   const filteredCoins = coins.filter(
-    (c) => !!c.isActive === (activeTab === "active")
+    (coin) => !!coin.isActive === (activeTab === "active")
   );
+
+  /* ---------------- ACTIONS ---------------- */
 
   const handleCreate = async (payload: CreateCoinPayload) => {
     try {
       await createCoin.mutateAsync(payload);
-      toast.success(
-        payload.networkName ? "Coin created and linked" : "Coin created"
-      );
+      toast.success("Coin created");
       setIsAddOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["admin-coins"] });
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to create coin");
-      console.error(err);
+      toast.error(err?.response?.data?.error || "Create failed");
     }
   };
 
-  const handleEditSave = async (data: UpdateCoinPayload) => {
+  const handleEditSave = async (payload: UpdateCoinPayload) => {
     try {
-      await updateCoin.mutateAsync(data);
+      await updateCoin.mutateAsync(payload);
       toast.success("Coin updated");
       setIsEditOpen(false);
       setEditingCoin(null);
-      queryClient.invalidateQueries({ queryKey: ["admin-coins"] });
-    } catch (err: any) {
-      toast.error("Failed to update coin");
+    } catch {
+      toast.error("Update failed");
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!coinToDelete) return;
-    try {
-      if (coinToDelete._count?.wallets || coinToDelete._count?.orders) {
-        await deactivateCoin.mutateAsync(coinToDelete.id);
-        toast.success("Coin deactivated");
-      } else {
-        await deleteCoin.mutateAsync(coinToDelete.id);
-        toast.success("Coin deleted");
-      }
-      setIsDeleteOpen(false);
-      setCoinToDelete(null);
-      queryClient.invalidateQueries({ queryKey: ["admin-coins"] });
-    } catch (err: any) {
-      toast.error("Failed to delete/deactivate coin");
-    }
-  };
+  /* ---------------- RENDER ---------------- */
 
-  if (isLoading)
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">Loading...</div>
-      </div>
-    );
+  if (isLoading) return <div className="p-8">Loading...</div>;
   if (isError)
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          Error loading coins <button onClick={() => refetch()}>Retry</button>
-        </div>
+      <div className="p-8">
+        Failed to load coins <button onClick={() => refetch()}>Retry</button>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-background">                                            
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Coin Management</h1>
             <p className="text-muted-foreground">Total: {coins.length}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div>
-              <select
-                value={activeTab}
-                onChange={(e) => setActiveTab(e.target.value as any)}
-                className="p-2 border rounded text-black"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <Button onClick={() => setIsAddOpen(true)}>Add New Coin</Button>
+
+          <div className="flex gap-3 items-center">
+            <select
+              value={activeTab}
+              onChange={(e) =>
+                setActiveTab(e.target.value as "active" | "inactive")
+              }
+              className="p-2 border rounded text-black"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            <Button onClick={() => setIsAddOpen(true)}>Add Coin</Button>
           </div>
         </div>
 
-        <CoinCard
-          title={`${activeTab === "active" ? "Active" : "Inactive"} Coins`}
-        >
-          <CoinTable
-            coins={filteredCoins}
-            onToggleStatus={async (coin) =>
-              await updateCoin.mutateAsync({
-                id: coin.id,
-                data: { isActive: !coin.isActive },
-              })
-            }
-            onEdit={(coin) => {
-              setEditingCoin(coin);
-              setIsEditOpen(true);
-            }}
-            onDelete={(coin) => {
-              setCoinToDelete(coin);
-              setIsDeleteOpen(true);
-            }}
-          />
-        </CoinCard>
+        {/* ACTIVE */}
+        {activeTab === "active" && (
+          <CoinCard title="Active Coins">
+            <CoinTable
+              coins={filteredCoins}
+              onEdit={(coin) => {
+                setEditingCoin(coin);
+                setIsEditOpen(true);
+              }}
+              onToggleStatus={async (coin) => {
+                await toggleCoinStatus.mutateAsync({
+                  coinId: coin.id,
+                  toggleNetworks: true,
+                });
+                toast.success("Coin deactivated");
+              }}
+              toggleLabel="Deactivate"
+              hideDelete
+            />
+          </CoinCard>
+        )}
 
-        {/* Add Coin Dialog */}
+        {/* INACTIVE */}
+        {activeTab === "inactive" && (
+          <CoinCard title="Inactive Coins">
+            <CoinTable
+              coins={filteredCoins}
+              hideEdit
+              hideDelete
+              onToggleStatus={async (coin) => {
+                await toggleCoinStatus.mutateAsync({
+                  id: coin.id,
+                  toggleNetworks: true,
+                });
+                toast.success("Coin activated");
+              }}
+              toggleLabel="Activate"
+            />
+          </CoinCard>
+        )}
+
+        {/* ADD */}
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogContent>
             <DialogHeader>
@@ -194,7 +194,7 @@ const AdminCoinsPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Dialog */}
+        {/* EDIT */}
         {editingCoin && (
           <EditCoinDialog
             open={isEditOpen}
@@ -210,31 +210,6 @@ const AdminCoinsPage: React.FC = () => {
             isLoading={updateCoin.isPending}
           />
         )}
-
-        {/* Delete Confirmation */}
-        <DeleteConfirmationModal
-          open={isDeleteOpen}
-          onOpenChange={setIsDeleteOpen}
-          onConfirm={handleDeleteConfirm}
-          title={
-            coinToDelete?._count?.wallets || coinToDelete?._count?.orders
-              ? "Deactivate Coin"
-              : "Delete Coin"
-          }
-          description={
-            coinToDelete?._count?.wallets || coinToDelete?._count?.orders
-              ? "This coin has active wallets or orders. It will be deactivated."
-              : "Permanently delete this coin."
-          }
-          itemName={
-            coinToDelete ? `${coinToDelete.name} (${coinToDelete.symbol})` : ""
-          }
-          hasNetworks={
-            !!coinToDelete?.networks && coinToDelete.networks.length > 0
-          }
-          networkCount={coinToDelete?.networks?.length || 0}
-          isLoading={deleteCoin.isPending || deactivateCoin.isPending}
-        />
       </div>
     </div>
   );

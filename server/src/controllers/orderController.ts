@@ -78,16 +78,18 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     const expiresAt = new Date(Date.now() + tradeConfig.seconds * 1000);
 
     const order = await prisma.$transaction(async (tx) => {
+      // ✅ Only wallets on THIS coin + THIS network
       const wallets = await tx.wallet.findMany({
         where: {
           userId,
-          // coinId,
+          coinId,
+          networkId,
         },
         orderBy: {
           balance: "desc",
         },
       });
-console.log("wallets", wallets);
+
       if (!wallets.length) {
         throw new Error("WALLET_NOT_FOUND");
       }
@@ -101,13 +103,16 @@ console.log("wallets", wallets);
         throw new Error("INSUFFICIENT_BALANCE");
       }
 
-      // 🔻 Deduct across wallets
+      // 🔻 Deduct across wallets on this network
       let remaining = stake;
 
       for (const wallet of wallets) {
         if (remaining <= 0) break;
 
-        const deduct = Math.min(Number(wallet.balance), remaining);
+        const deduct = Math.min(
+          Number(wallet.balance),
+          remaining
+        );
 
         if (deduct > 0) {
           await tx.wallet.update({
@@ -125,10 +130,10 @@ console.log("wallets", wallets);
         data: {
           userId,
           coinId,
+          networkId,
           direction,
           period,
           stake,
-          networkId,
           entryPrice,
           profitRate: tradeConfig.profitRate,
           expiresAt,

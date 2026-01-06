@@ -151,6 +151,7 @@ const Wallet = () => {
                 <tbody>
                   {assets?.map((wallet, index) => {
                     const symbol = wallet.coin?.symbol || "";
+      // coupon_code: appliedCoupon?.code || null,
                     const usdtValue = calculateUSDTValue(symbol, Number(wallet.balance));
                     return (
                       <tr

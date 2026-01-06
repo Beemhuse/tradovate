@@ -325,18 +325,125 @@ export const updateCoin = async (req: Request, res: Response) => {
   }
 };
 
-export const toggleCoinStatus = async (req: Request, res: Response) => {
+/**
+ * Deactivate a coin if it has at least one wallet created by a user
+ */
+export const deactivateCoin = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { toggleNetworks = "true" } = req.query;
 
-    // 1️⃣ Check if coin exists
     const coin = await prisma.coin.findUnique({
       where: { id },
       include: {
-        networks: {
-          include: { network: true },
-        },
+        wallets: { select: { id: true } },
+      },
+    });
+
+    if (!coin) {
+      return res.status(404).json({
+        error: "Coin not found",
+      });
+    }
+
+    /**
+     * CASE 1:
+     * No wallets → Safe to DELETE coin
+     */
+    if (coin.wallets.length === 0) {
+      await prisma.coin.delete({
+        where: { id },
+      });
+
+      return res.json({
+        success: true,
+        message: "Coin deleted successfully (no wallets existed)",
+      });
+    }
+
+    /**
+     * CASE 2:
+     * Wallets exist → Deactivate coin
+     */
+    if (!coin.isActive) {
+      return res.status(400).json({
+        error: "Coin already inactive",
+      });
+    }
+
+    const updatedCoin = await prisma.coin.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    res.json({
+      success: true,
+      message: "Coin deactivated successfully",
+      coin: updatedCoin,
+    });
+  } catch (error) {
+    console.error("Deactivate/Delete coin error:", error);
+    res.status(500).json({
+      error: "Failed to process coin action",
+    });
+  }
+};
+
+/**
+ * Reactivate a previously deactivated coin
+ */
+export const reactivateCoin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const coin = await prisma.coin.findUnique({
+      where: { id },
+    });
+
+    if (!coin) {
+      return res.status(404).json({
+        error: "Coin not found",
+      });
+    }
+
+    if (coin.isActive) {
+      return res.status(400).json({
+        error: "Coin already active",
+      });
+    }
+
+    const updatedCoin = await prisma.coin.update({
+      where: { id },
+      data: { isActive: true },
+    });
+
+    res.json({
+      success: true,
+      message: "Coin reactivated successfully",
+      coin: updatedCoin,
+    });
+  } catch (error) {
+    console.error("Reactivate coin error:", error);
+    res.status(500).json({
+      error: "Failed to reactivate coin",
+    });
+  }
+};
+
+export const toggleCoinStatus = async (req: Request, res: Response) => {
+  try {
+    const { coinId, toggleNetworks = true } = req.body;
+console.log(coinId, toggleNetworks);
+    if (!coinId) {
+      return res.status(400).json({
+        error: "coinId is required",
+      });
+    }
+
+    // 1️⃣ Check if coin exists
+    const coin = await prisma.coin.findUnique({
+      where: { id: coinId },
+      include: {
+        networks: true,
         _count: {
           select: {
             wallets: true,
@@ -350,23 +457,22 @@ export const toggleCoinStatus = async (req: Request, res: Response) => {
     if (!coin) {
       return res.status(404).json({
         error: "Coin not found",
-        details: `Coin with ID ${id} does not exist`,
       });
     }
 
     const newStatus = !coin.isActive;
 
-    // 2️⃣ Transaction for consistency
+    // 2️⃣ Atomic toggle
     const updatedCoin = await prisma.$transaction(async (tx) => {
       const updated = await tx.coin.update({
-        where: { id },
+        where: { id: coinId },
         data: { isActive: newStatus },
       });
 
-      // 3️⃣ Optionally toggle all network associations
-      if (toggleNetworks === "true") {
+      // 3️⃣ Optionally toggle coin networks
+      if (toggleNetworks) {
         await tx.coinNetwork.updateMany({
-          where: { coinId: id },
+          where: { coinId },
           data: { isActive: newStatus },
         });
       }
@@ -377,25 +483,22 @@ export const toggleCoinStatus = async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: `Coin ${newStatus ? "activated" : "deactivated"} successfully`,
-      details: {
-        coin: coin.name,
-        symbol: coin.symbol,
-        isActive: newStatus,
+      data: {
+        id: updatedCoin.id,
+        isActive: updatedCoin.isActive,
         walletsAffected: coin._count.wallets,
         ordersAffected: coin._count.orders,
         networksAffected: coin._count.networks,
-        networksToggled: toggleNetworks === "true",
+        networksToggled: toggleNetworks,
       },
     });
   } catch (error) {
     console.error("Toggle coin status error:", error);
     res.status(500).json({
       error: "Failed to toggle coin status",
-      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
-
 
 export const deleteCoin = async (req: Request, res: Response) => {
   try {
