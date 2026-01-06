@@ -16,6 +16,7 @@ export const COINS = {
     CREATE: '/market/wallet',
     DEPOSIT: '/market/deposit',
     WITHDRAW: '/market/withdraw',
+    BANK_WITHDRAW: '/market/withdraw/bank',
 }
 
 export const MARKET_PAIR = {

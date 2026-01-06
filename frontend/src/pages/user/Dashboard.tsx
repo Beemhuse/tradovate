@@ -11,17 +11,25 @@ import {
   ChartNoAxesCombined,
 } from "lucide-react";
 import { useCryptoPrice } from "@/hooks/useCryptoPrice";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFetchData } from "@/hooks/use-api";
 import { COINS, MARKET_PAIR } from "@/hooks/apiEndpoint";
 import CoinDeposit from "@/components/modals/CoinDeposit";
 import CoinWithdrawal from "@/components/modals/CoinWithdrawal";
+import BankWithdrawal from "@/components/modals/BankWithdrawal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isLoading: userLoading } = useAuth();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [bankWithdrawOpen, setBankWithdrawOpen] = useState(false);
 
   const {
     data: assetData,
@@ -67,8 +75,6 @@ const Dashboard = () => {
 
   const sortAssets = assets?.sort((a, b) => b.balance - a.balance);
 
-  console.log("sortAssets", sortAssets);
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-8">
@@ -81,23 +87,44 @@ const Dashboard = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Button
                 variant="outline"
-                className="h-24 flex-col gap-2"
+                className="h-24 gap-2 justify-start"
                 onClick={() => setDepositOpen(true)}
               >
                 <ArrowDownToLine className="h-6 w-6" />
                 <span>Deposit</span>
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-24 w-full gap-2 justify-start"
+                  >
+                    <ArrowUpFromLine className="h-6 w-6" />
+                    <span>Withdraw</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[300px]">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setWithdrawOpen(true);
+                      setBankWithdrawOpen(false);
+                    }}  
+                  >
+                    Crypto Currency
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setBankWithdrawOpen(true);
+                      setWithdrawOpen(false);
+                    }}
+                  >
+                    Bank
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
-                className="h-24 flex-col gap-2"
-                onClick={() => setWithdrawOpen(true)}
-              >
-                <ArrowUpFromLine className="h-6 w-6" />
-                <span>Withdraw</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex-col gap-2"
+                className="h-24 gap-2 justify-start "
                 onClick={() => navigate("/market")}
               >
                 <Repeat className="h-6 w-6" />
@@ -168,16 +195,15 @@ const Dashboard = () => {
                       <tr
                         key={pair?.id}
                         className="border-b border-border hover:bg-secondary/50 transition-colors cursor-pointer"
-                        // onClick={() => navigate("/contract")}
+                      // onClick={() => navigate("/contract")}
                       >
                         <td className="py-3 px-4 font-medium">
                           {priceData?.symbol}/USDT
                         </td>
 
                         <td
-                          className={`text-left py-3 px-4 ${
-                            priceData?.positive ? "text-success" : "text-danger"
-                          }`}
+                          className={`text-left py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
+                            }`}
                         >
                           <ChartNoAxesCombined />
                         </td>
@@ -185,9 +211,8 @@ const Dashboard = () => {
                           ${Number(priceData?.price).toLocaleString() || "..."}
                         </td>
                         <td
-                          className={`text-right py-3 px-4 ${
-                            priceData?.positive ? "text-success" : "text-danger"
-                          }`}
+                          className={`text-right py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
+                            }`}
                         >
                           {priceData?.positive ? "+" : ""}
                           {priceData?.changePercent24h}%
@@ -215,6 +240,15 @@ const Dashboard = () => {
       <CoinWithdrawal
         withdrawOpen={withdrawOpen}
         setWithdrawOpen={setWithdrawOpen}
+        coins={assets}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
+
+      {/* Bank Withdraw Dialog */}
+      <BankWithdrawal
+        withdrawOpen={bankWithdrawOpen}
+        setWithdrawOpen={setBankWithdrawOpen}
         coins={assets}
         refetch={refetch}
         isLoading={isLoading}

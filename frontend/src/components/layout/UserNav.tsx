@@ -18,6 +18,7 @@ const UserNav = () => {
     { to: "/contract", icon: FileText, label: "Contract" },
     { to: "/wallet", icon: Wallet, label: "Wallet" },
     { to: "/kyc", icon: FileCheck, label: "KYC" },
+    { to: "/transactions", icon: FileCheck, label: "Transactions" },
     { to: "/support", icon: MessageSquare, label: "Support" },
   ];
 

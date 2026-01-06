@@ -121,7 +121,7 @@ const AdminTransactions = () => {
                   <tbody>
                     {filteredTransactions.map((tx: any) => (
                       <tr key={tx.id} className="border-b border-border hover:bg-secondary/50">
-                        <td className="py-4 px-4 capitalize">{tx.type}</td>
+                        <td className="py-4 px-4 capitalize">{tx.type?.replace(/_/g, " ")}</td>
                         <td className="py-4 px-4">
                           <div>
                             <div className="font-medium">{tx.userEmail}</div>

@@ -25,7 +25,7 @@ export default function initAxios() {
     (response) => response,
     async (error) => {
       console.log("error", error)
-      if (error?.response?.status === 401) {
+      if (error?.response?.status === 401 || error?.response?.data?.message?.includes("invalid token")) {
         // Handle unauthorized access
         if (typeof window !== "undefined") {
           // Clear the auth token cookie

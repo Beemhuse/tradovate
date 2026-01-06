@@ -17,17 +17,25 @@ import { useFetchData } from "@/hooks/use-api";
 import { COINS } from "@/hooks/apiEndpoint";
 import CoinDeposit from "@/components/modals/CoinDeposit";
 import CoinWithdrawal from "@/components/modals/CoinWithdrawal";
+import BankWithdrawal from "@/components/modals/BankWithdrawal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Wallet = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [bankWithdrawOpen, setBankWithdrawOpen] = useState(false);
   const [addCoinOpen, setAddCoinOpen] = useState(false);
-  
+
   const { user, isLoading: authLoading } = useAuth();
   const { data: coins } = useCoins();
   const initializeWallets = useInitializeWallets();
-  
+
   const { data: assetData, refetch, isLoading } = useFetchData(COINS.ASSETS, "assets")
 
   const assets = assetData?.assets
@@ -55,13 +63,13 @@ const Wallet = () => {
     );
   }
 
-  
+
   const totalBalance = assets?.reduce((sum, coin) => {
-      const symbol = coin.symbol || "";
-      return sum + Number(coin.balance);
+    const symbol = coin.symbol || "";
+    return sum + Number(coin.balance);
   }, 0) || 0;
 
-      
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-6">
@@ -86,13 +94,35 @@ const Wallet = () => {
               </p>
               <div className="flex gap-3 flex-wrap">
                 <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setDepositOpen(true)}>
-                  <ArrowDownToLine className="h-4 w-4 mr-2"/>
+                  <ArrowDownToLine className="h-4 w-4 mr-2" />
                   Deposit
                 </Button>
-                <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setWithdrawOpen(true)}>
-                  <ArrowUpFromLine className="h-4 w-4 mr-2" />
-                  Withdraw
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex-1 min-w-[120px]">
+                      <ArrowUpFromLine className="h-4 w-4 mr-2" />
+                      Withdraw
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[200px]">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setWithdrawOpen(true);
+                        setBankWithdrawOpen(false);
+                      }}
+                    >
+                      Crypto Currency
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setBankWithdrawOpen(true);
+                        setWithdrawOpen(false);
+                      }}
+                    >
+                      Bank
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setAddCoinOpen(true)}>
                   <WalletCards className="h-4 w-4 mr-2" />
                   Add coin to wallet
@@ -102,7 +132,7 @@ const Wallet = () => {
           </CardContent>
         </Card>
 
-        {/* Assets Table */}  
+        {/* Assets Table */}
         <Card>
           <CardHeader>
             <CardTitle>My Assets</CardTitle>
@@ -159,7 +189,7 @@ const Wallet = () => {
       </div>
 
       {/* Deposit Dialog */}
-      <CoinDeposit 
+      <CoinDeposit
         addCoinOpen={depositOpen}
         setAddCoinOpen={setDepositOpen}
         assets={assets}
@@ -168,9 +198,18 @@ const Wallet = () => {
       />
 
       {/* Withdraw Dialog */}
-      <CoinWithdrawal 
+      <CoinWithdrawal
         withdrawOpen={withdrawOpen}
         setWithdrawOpen={setWithdrawOpen}
+        coins={assets}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
+
+      {/* Bank Withdraw Dialog */}
+      <BankWithdrawal
+        withdrawOpen={bankWithdrawOpen}
+        setWithdrawOpen={setBankWithdrawOpen}
         coins={assets}
         refetch={refetch}
         isLoading={isLoading}
@@ -185,7 +224,7 @@ const Wallet = () => {
         refetch={refetch}
         isLoading={isLoading}
       />
-      
+
     </div>
   );
 };

@@ -38,7 +38,7 @@ const CoinWithdrawal = ({
     }, 0) || 0;
 
     const selectedCoinData = useMemo(() => {
-        const coin = coins?.find((coin) => coin.coinId === selectedCoin);
+        const coin = coins?.find((coin) => coin.walletId === selectedCoin);
         return coin;
     }, [coins, selectedCoin]);
     const handleWithdraw = async () => {
@@ -55,7 +55,7 @@ const CoinWithdrawal = ({
           return;
         }
         const payload = {
-            walletId: selectedCoinData?.id,
+            walletId: selectedCoinData?.walletId,
             amount: +withdrawAmount,
             toAddress: withdrawAddress,
         }    
@@ -92,7 +92,7 @@ const CoinWithdrawal = ({
                 </SelectTrigger>
                 <SelectContent>
                   {coins?.map((coin, index) => (
-                    <SelectItem key={coin.coinId + index} value={coin.coinId}>
+                    <SelectItem key={coin.walletId + index} value={coin.walletId}>
                         <div className="flex items-center gap-2">
                             <img src={coin?.coin?.iconUrl} alt={coin?.coin?.name} className="w-6 h-6" />
                             <span>{coin?.coin?.symbol}</span>
