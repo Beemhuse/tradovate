@@ -9,6 +9,7 @@ import jwt from "jsonwebtoken";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "brightawah94@gmail.com";
 
 const signupSchema = z.object({
+  fullName: z.string(),
   email: z.string().email(),
   password: z.string().min(6),
 });
@@ -51,7 +52,7 @@ const generateAndSendOtp = async (email: string) => {
 
 export const signup = async (req: Request, res: Response) => {
   try {
-    const { email, password } = signupSchema.parse(req.body);
+    const { fullName, email, password } = signupSchema.parse(req.body);
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser)
@@ -63,6 +64,7 @@ export const signup = async (req: Request, res: Response) => {
 
     await prisma.user.create({
       data: {
+        fullName,
         email,
         password: hashedPassword,
         role,
@@ -197,8 +199,13 @@ export const login = async (req: Request, res: Response) => {
       }
     }
 
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role);
-    res.json({ accessToken, refreshToken, user });
+    const { accessToken, refreshToken } = generateTokens(
+      user.id,
+      user.role,
+      user.tokenVersion
+    );
+
+    res.json({ accessToken, refreshToken });
   } catch (error) {
     if (error instanceof z.ZodError)
       return res.status(400).json({ error: error.errors });
@@ -232,7 +239,10 @@ export const resetPassword = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { email },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 }, // 🔥 invalidate all sessions
+      },
     });
 
     await prisma.otp.delete({ where: { id: validOtp.id } });
@@ -260,52 +270,23 @@ export const resendOtp = async (req: Request, res: Response) => {
   }
 };
 
-export const logout = async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
-    if (!token) return res.status(200).json({ message: "Logged out" });
-
-    // Verify token signature and get expiration
-    // We use jwt.verify (not verifyToken util) to ensure we get the exp claim and catch invalid signatures
-    const secret = process.env.JWT_SECRET || "default_secret";
-
-    try {
-      const decoded = jwt.verify(token, secret) as jwt.JwtPayload;
-
-      if (decoded && decoded.exp) {
-        const expiresAt = new Date(decoded.exp * 1000);
-
-        // Check if already blacklisted to avoid unique constraint error
-        const exists = await prisma.blacklistedToken.findUnique({
-          where: { token },
-        });
-        if (!exists) {
-          await prisma.blacklistedToken.create({
-            data: { token, expiresAt },
-          });
-        }
-      }
-    } catch (err) {
-      // Token invalid or expired. If expired, it's effectively logged out.
-      // If invalid signature, we ignore it.
-    }
-
-    res.json({ message: "Logged out successfully" });
-  } catch (error) {
-    console.error("Logout error", error);
-    res.status(500).json({ error: "Logout failed" });
-  }
+export const logout = async (_req: Request, res: Response) => {
+  // 🔐 Logout is client-side:
+  // - frontend deletes accessToken
+  // - frontend deletes refreshToken
+  return res.status(200).json({
+    message: "Logged out successfully",
+  });
 };
 
 // Local request type that includes user from your auth middleware
 type AuthRequest = Request & {
-  user?: { id: string; role?: string; email?: string };
+  user?: { userId: string; role?: string; email?: string };
 };
 
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     // include related data you want to expose
@@ -333,5 +314,83 @@ export const getMe = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error("getMe error:", error);
     return res.status(500).json({ error: "Failed to fetch user" });
+  }
+};
+
+export const updateMe = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { fullName } = req.body;
+
+    if (!fullName || typeof fullName !== "string") {
+      return res.status(400).json({
+        error: "fullName is required",
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        fullName: fullName.trim(),
+      },
+      include: {
+        wallets: {
+          include: { coin: true },
+        },
+        transactions: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+        kyc: true,
+      },
+    });
+
+    // 🧼 Remove sensitive fields
+    const { password, ...sanitized } = updatedUser as any;
+
+    return res.json(sanitized);
+  } catch (error) {
+    console.error("updateMe error:", error);
+    return res.status(500).json({ error: "Failed to update user" });
+  }
+};
+
+export const forceChangePassword = async (req: Request, res: Response) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({
+        error: "Password must be at least 8 characters",
+      });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        tokenVersion: {
+          increment: 1, // 🔥 INVALIDATES ALL TOKENS
+        },
+      },
+    });
+
+    return res.json({
+      message: "Password changed successfully. Please log in again.",
+    });
+  } catch (error) {
+    console.error("forceChangePassword error:", error);
+    return res.status(500).json({ error: "Password reset failed" });
   }
 };

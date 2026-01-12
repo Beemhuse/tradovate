@@ -9,6 +9,8 @@ import {
   resendOtp,
   logout,
   getMe,
+  forceChangePassword,
+  updateMe,
 } from "../controllers/authController";
 import { authenticateToken } from "../middlewares/authMiddleware";
 
@@ -26,8 +28,10 @@ const router = Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password]
+ *             required: [fullName, email, password]
  *             properties:
+ *               fullName:
+ *                 type: string
  *               email:
  *                 type: string
  *               password:
@@ -259,5 +263,114 @@ router.post("/logout", logout);
  *                       type: string
  */
 router.get("/me", authenticateToken, getMe);
+
+/**
+ * @swagger
+ * /users/me:
+ *   patch:
+ *     summary: Update authenticated user's profile
+ *     description: >
+ *       Updates the authenticated user's profile information.
+ *       Only `fullName` can be updated. Email and password are not editable.
+ *     tags:
+ *       - User
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: John Doe
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 fullName:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ *                 wallets:
+ *                   type: array
+ *                 transactions:
+ *                   type: array
+ *                 kyc:
+ *                   type: object
+ *       400:
+ *         description: Invalid request payload
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to update user
+ */
+router.patch("/me", authenticateToken, updateMe);
+
+/**
+ * @swagger
+ * /force-change-password:
+ *   post:
+ *     summary: Force change a user's password (Admin only)
+ *     description: >
+ *       Forces a password change for a user and invalidates all active sessions
+ *       by incrementing the user's token version.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 example: StrongPassword123
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password changed successfully. Please log in again.
+ *       400:
+ *         description: Invalid password or request body
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Admin only)
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Password reset failed
+ */
+router.post("/force-change-password", authenticateToken, forceChangePassword);
 
 export default router;

@@ -76,12 +76,14 @@ enum TradeResult {
 model User {
   id         String    @id @default(uuid())
   email      String    @unique
+  fullName   String?    
   password   String?
   isVerified Boolean   @default(false)
   role       Role      @default(USER)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   kycStatus  KycStatus @default(PENDING)
+  tokenVersion Int      @default(0) // 👈 IMPORTANT
 
   kyc          Kyc?
   wallets      Wallet[]
