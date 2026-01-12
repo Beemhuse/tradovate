@@ -137,7 +137,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           entryPrice,
           profitRate: tradeConfig.profitRate,
           expiresAt,
-          status: "PENDING",
+          status: "SETTLED",
         },
       });
     });
