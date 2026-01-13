@@ -1,5 +1,3 @@
-import MiniSparkline from "./marketLine";
-
 type Props = {
   pair: any;
   live?: {
