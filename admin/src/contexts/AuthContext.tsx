@@ -7,7 +7,6 @@ import {
 } from "react";
 import {
   setAuthToken,
-  setAuthUser,
   clearAuthToken,
   getAuthToken,
   getStoredUser,
@@ -15,7 +14,6 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import {
   User,
-  UserRole,
   AuthResponse,
   AuthContextType,
   SignupRequest,
@@ -71,7 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Computed values
   const isAuthenticated = !!user;
-  const isAdmin = user?.role === UserRole.ADMIN;
 
   // Initialize auth state from cookies
   useEffect(() => {
@@ -94,20 +91,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data: LoginRequest = { email, password };
       const response = await loginMutation.mutateAsync(data);
 
-      // Verify user is admin
-      if (response.user.role !== UserRole.ADMIN) {
-        throw new Error("Access denied. Admin credentials required.");
-      }
-
       // Store tokens and user
       setAuthToken(response.accessToken);
-      setAuthUser(response.user);
-      setUser(response.user);
 
-      toast({
-        title: "Success",
-        description: "Logged in successfully",
-      });
+      // toast({
+      //   title: "Success",
+      //   description: "Logged in successfully",
+      // });
     } catch (error: any) {
       toast({
         title: "Login Failed",
@@ -255,8 +245,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         isAuthenticated,
-        isAdmin,
         isLoading,
         login,
         signup,

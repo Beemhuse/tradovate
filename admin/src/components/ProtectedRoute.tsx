@@ -1,36 +1,45 @@
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFetchData } from "@/hooks/use-api";
+import { useEffect } from "react";
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
+const ProtectedRoute = () => {
+  const { user, setUser } = useAuth();
 
-/**
- * ProtectedRoute Component
- * Wraps routes that require authentication
- * Redirects to login if user is not authenticated
- */
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const {
+    data,
+    isLoading,
+    isError,
+  } = useFetchData("/auth/me", "auth-me");
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // 🧠 Hydrate user safely
+  useEffect(() => {
+    if (data && !user) {
+      setUser(data);
+    }
+  }, [data, user, setUser]);
+
+  // ⏳ Wait for auth bootstrap
+  if (isLoading || (!user && !isError)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
+      <div className="h-screen flex items-center justify-center">
+        Loading...
       </div>
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  // ❌ Not logged in / token invalid
+  if (isError || !user) {
+    return <Navigate to="/" replace />;
   }
 
-  // Render protected content
-  return <>{children}</>;
+  // ❌ Logged in but NOT admin
+  if (user.role !== "ADMIN") {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // ✅ Admin allowed
+  return <Outlet />;
 };
+
+export default ProtectedRoute;

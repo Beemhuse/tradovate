@@ -13,7 +13,7 @@ interface AdminRouteProps {
  * Redirects to unauthorized if authenticated but not admin
  */
 export const AdminRoute = ({ children }: AdminRouteProps) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -30,11 +30,6 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
-  }
-
-  // Redirect to unauthorized if not admin
-  if (!isAdmin) {
-    return <Navigate to="/unauthorized" replace />;
   }
 
   // Render admin content

@@ -26,6 +26,7 @@ import AdminTradingPairs from "./pages/admin/TradingPairs";
 import AdminSupport from "./pages/admin/Support";
 import AdminLayout from "./components/layout/AdminLayout";
 import AdminUploadCertificatesPage from "./pages/admin/Certificates";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -43,17 +44,21 @@ const App = () => (
             <Route path="/verify" element={<VerifyEmail />} />
 
             {/* ================= ADMIN (PROTECTED) ================= */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="certificates" element={<AdminUploadCertificatesPage />} />
-              <Route path="coins" element={<AdminCoins />} />
-              <Route path="coins/:id" element={<CoinDetailsPage />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="users/:id" element={<UserDetail />} />
-              <Route path="kyc" element={<AdminKYC />} />
-              <Route path="transactions" element={<AdminTransactions />} />
-              <Route path="trading-pairs" element={<AdminTradingPairs />} />
-              {/* <Route path="support" element={<AdminSupport />} /> */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route
+                  path="certificates"
+                  element={<AdminUploadCertificatesPage />}
+                />
+                <Route path="coins" element={<AdminCoins />} />
+                <Route path="coins/:id" element={<CoinDetailsPage />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="users/:id" element={<UserDetail />} />
+                <Route path="kyc" element={<AdminKYC />} />
+                <Route path="transactions" element={<AdminTransactions />} />
+                <Route path="trading-pairs" element={<AdminTradingPairs />} />
+              </Route>
             </Route>
 
             {/* ================= ERRORS ================= */}

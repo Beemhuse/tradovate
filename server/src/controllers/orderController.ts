@@ -20,24 +20,13 @@ export const TRADE_PERIODS = {
   M15: { seconds: 900, profitRate: 1.5 },
 } as const;
 
+
 export const placeTradeSchema = z.object({
-  coinId: z.string().uuid("Invalid coinId"),
-  networkId: z.string().uuid("Invalid networkId"),
-
-  direction: z.enum(["BULLISH", "BEARISH"], {
-    required_error: "Trade direction is required",
-  }),
-
-  period: z.enum(["S30", "M1", "M5", "M15"], {
-    required_error: "Trade period is required",
-  }),
-
-  stake: z
-    .number()
-    .positive("Stake must be greater than 0")
-    .max(1_000_000, "Stake too large"),
+  tradeConfigId: z.string().uuid(),
+  stake: z.number().positive(),
   entryPrice: z.number().positive(),
 });
+
 
 export const getMarketPrices = async (req: Request, res: Response) => {
   try {
@@ -56,70 +45,106 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.user.userId;
+    const { tradeConfigId, stake, entryPrice } =
+      placeTradeSchema.parse(req.body);
 
-    const {
-      coinId,
-      direction,
-      period,
-      networkId,
-      stake,
-      entryPrice,
-    } = placeTradeSchema.parse(req.body);
+    /* ============================
+       Load trade config + pair
+    ============================ */
+    const tradeConfig = await prisma.tradeConfig.findUnique({
+      where: { id: tradeConfigId },
+      include: {
+        marketPair: {
+          include: {
+            quoteCoin: true,
+            network: true,
+          },
+        },
+      },
+    });
 
-    if (stake <= 0) {
-      return res.status(400).json({ error: "Invalid stake amount" });
+    if (!tradeConfig || !tradeConfig.isActive) {
+      return res.status(400).json({ error: "Invalid trade configuration" });
     }
 
-    const tradeConfig = TRADE_PERIODS[period];
-    if (!tradeConfig) {
+    const pair = tradeConfig.marketPair;
+
+    if (!pair.isActive) {
+      return res.status(400).json({ error: "Trading pair is inactive" });
+    }
+
+    if (pair.quoteCoin.symbol !== "USDT") {
+      return res.status(400).json({
+        error: "Trades can only be settled using USDT",
+      });
+    }
+
+    /* ============================
+       Stake validation
+    ============================ */
+    if (
+      stake < Number(tradeConfig.minStake) ||
+      stake > Number(tradeConfig.maxStake)
+    ) {
+      return res.status(400).json({
+        error: `Stake must be between ${tradeConfig.minStake} and ${tradeConfig.maxStake}`,
+      });
+    }
+
+    /* ============================
+       Expiry calculation
+    ============================ */
+    const PERIOD_SECONDS: Record<string, number> = {
+      S30: 30,
+      M1: 60,
+      M5: 300,
+      M15: 900,
+    };
+
+    const seconds = PERIOD_SECONDS[tradeConfig.period];
+    if (!seconds) {
       return res.status(400).json({ error: "Invalid trade period" });
     }
 
-    const expiresAt = new Date(Date.now() + tradeConfig.seconds * 1000);
+    const expiresAt = new Date(Date.now() + seconds * 1000);
 
+    /* ============================
+       Atomic transaction
+    ============================ */
     const order = await prisma.$transaction(async (tx) => {
-      // ✅ Only wallets on THIS coin + THIS network
-      const wallets = await tx.wallet.findMany({
+      const usdtWallets = await tx.wallet.findMany({
         where: {
           userId,
-          coinId,
-          networkId,
+          coin: { symbol: "USDT" },
+          networkId: pair.networkId,
         },
-        orderBy: {
-          balance: "desc",
-        },
+        orderBy: { balance: "desc" },
       });
 
-      if (!wallets.length) {
-        throw new Error("WALLET_NOT_FOUND");
+      if (!usdtWallets.length) {
+        throw new Error("USDT_WALLET_NOT_FOUND");
       }
 
-      const totalBalance = wallets.reduce(
+      const totalBalance = usdtWallets.reduce(
         (sum, w) => sum + Number(w.balance),
         0
       );
 
       if (totalBalance < stake) {
-        throw new Error("INSUFFICIENT_BALANCE");
+        throw new Error("INSUFFICIENT_USDT");
       }
 
-      // 🔻 Deduct across wallets on this network
       let remaining = stake;
 
-      for (const wallet of wallets) {
+      for (const wallet of usdtWallets) {
         if (remaining <= 0) break;
 
-        const deduct = Math.min(
-          Number(wallet.balance),
-          remaining
-        );
+        const deduct = Math.min(Number(wallet.balance), remaining);
 
         if (deduct > 0) {
           await tx.wallet.update({
             where: { id: wallet.id },
-            data: {
-              balance: { decrement: deduct },
-            },
+            data: { balance: { decrement: deduct } },
           });
 
           remaining -= deduct;
@@ -129,33 +154,36 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       return tx.order.create({
         data: {
           userId,
-          coinId,
-          networkId,
-          direction,
-          period,
+          marketPairId: pair.id,
+          tradeConfigId: tradeConfig.id,
           stake,
           entryPrice,
           profitRate: tradeConfig.profitRate,
           expiresAt,
-          status: "SETTLED",
+          status: "PENDING",
         },
       });
     });
 
     return res.json({ success: true, order });
   } catch (err: any) {
-    if (err.message === "INSUFFICIENT_BALANCE") {
-      return res.status(400).json({ error: "Insufficient wallet balance" });
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: err.errors });
     }
 
-    if (err.message === "WALLET_NOT_FOUND") {
-      return res.status(400).json({ error: "Wallet not found" });
+    if (err.message === "USDT_WALLET_NOT_FOUND") {
+      return res.status(400).json({ error: "USDT wallet not found" });
+    }
+
+    if (err.message === "INSUFFICIENT_USDT") {
+      return res.status(400).json({ error: "Insufficient USDT balance" });
     }
 
     console.error("placeOrder error:", err);
     return res.status(500).json({ error: "Trade placement failed" });
   }
 };
+
 
 // const settleTrade = async (orderId: string) => {
 //   const order = await prisma.order.findUnique({
@@ -202,11 +230,21 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 export const getUserOrders = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
+
     const orders = await prisma.order.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
-      include: { coin: true },
+      include: {
+        marketPair: {
+          include: {
+            baseCoin: true,
+            quoteCoin: true,
+          },
+        },
+        tradeConfig: true,
+      },
     });
+
     res.json(orders);
   } catch (error) {
     console.error("getUserOrders error:", error);

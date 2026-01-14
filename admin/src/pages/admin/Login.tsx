@@ -22,13 +22,13 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, user, isAdmin } = useAuth();
+  const { login, user } = useAuth();
 
   useEffect(() => {
-    if (user && isAdmin) {
+    if (user) {
       navigate("/admin/dashboard");
     }
-  }, [user, isAdmin, navigate]);
+  }, [user, navigate]);
 
   // Password validation
   const hasUpperCase = /[A-Z]/.test(password);
@@ -54,8 +54,6 @@ const AdminLogin = () => {
     try {
       await login(email, password);
 
-      // The login function in AuthContext already checks for admin role
-      // and will throw an error if the user is not an admin
       toast({
         title: "Admin Login Successful",
         description: "Welcome to the admin dashboard",

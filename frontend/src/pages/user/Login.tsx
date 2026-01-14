@@ -3,7 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateData } from "@/hooks/use-api";
@@ -25,7 +32,7 @@ const UserLogin = () => {
   //   }
   // }, [user, navigate]);
 
-  const { mutate, isPending } = useCreateData(AUTH.LOGIN, ["login"])
+  const { mutate, isPending } = useCreateData(AUTH.LOGIN, ["login"]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,31 +40,34 @@ const UserLogin = () => {
 
     const payLoad = {
       email,
-      password
-    }
+      password,
+    };
 
-    mutate( payLoad ,
-      {
-        onSuccess: (res) => {
-          toast({
-            title: "Login",
-            description: "Welcome back!",
-          });
-          setCookies(res?.accessToken, res?.refreshToken);
-          navigate("/dashboard");
-          setLoading(isPending);
-        },
-        onError: (error) => {
-          console.log("error data", error)
-          toast({
-            title: "Login Failed",
-            description: (error as any)?.response?.data?.message || (error as any)?.response?.data?.error || (error as any)?.response?.data || error?.message || "Something went wrong",
-            variant: "destructive",
-          });
-          setLoading(isPending);
-        },
-      }
-    );
+    mutate(payLoad, {
+      onSuccess: (res) => {
+        toast({
+          title: "Login",
+          description: "Welcome back!",
+        });
+        setCookies(res?.accessToken, res?.refreshToken);
+        navigate("/dashboard");
+        setLoading(isPending);
+      },
+      onError: (error) => {
+        console.log("error data", error);
+        toast({
+          title: "Login Failed",
+          description:
+            (error as any)?.response?.data?.message ||
+            (error as any)?.response?.data?.error ||
+            (error as any)?.response?.data ||
+            error?.message ||
+            "Something went wrong",
+          variant: "destructive",
+        });
+        setLoading(isPending);
+      },
+    });
   };
 
   return (
@@ -65,7 +75,9 @@ const UserLogin = () => {
       <Card className="w-full max-w-md flex flex-col">
         <TradovateLogo />
         <CardHeader className="space-y-1 pt-0">
-          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Welcome Back
+          </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
@@ -99,12 +111,19 @@ const UserLogin = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-primary hover:underline"
+              >
                 Forgot password?
               </Link>
             </div>
@@ -126,4 +145,4 @@ const UserLogin = () => {
   );
 };
 
-export default UserLogin
+export default UserLogin;

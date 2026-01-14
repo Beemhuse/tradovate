@@ -2,6 +2,7 @@
  * Authentication Types
  * Type definitions for authentication and user management
  */
+import { Dispatch, SetStateAction } from "react";
 
 // User roles enum matching backend
 export enum UserRole {
@@ -63,9 +64,8 @@ export interface ResendOtpRequest {
 
 // Auth state in context
 export interface AuthState {
-  user: User | null;
+  user?: User | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
   isLoading: boolean;
 }
 
@@ -83,4 +83,5 @@ export interface AuthContextType extends AuthState {
   ) => Promise<void>;
   resendOtp: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  setUser: Dispatch<SetStateAction<User | null>>; // ✅ correct
 }

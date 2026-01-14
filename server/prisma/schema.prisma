@@ -74,16 +74,16 @@ enum TradeResult {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  email      String    @unique
-  fullName   String?    
-  password   String?
-  isVerified Boolean   @default(false)
-  role       Role      @default(USER)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  kycStatus  KycStatus @default(PENDING)
-  tokenVersion Int      @default(0) // 👈 IMPORTANT
+  id           String    @id @default(uuid())
+  email        String    @unique
+  fullName     String?
+  password     String?
+  isVerified   Boolean   @default(false)
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  kycStatus    KycStatus @default(PENDING)
+  tokenVersion Int       @default(0) // 👈 IMPORTANT
 
   kyc          Kyc?
   wallets      Wallet[]
@@ -112,7 +112,8 @@ model MarketPair {
   quoteCoin Coin    @relation("QuoteCoin", fields: [quoteCoinId], references: [id])
   network   Network @relation(fields: [networkId], references: [id])
 
-  orders Order[]
+  orders       Order[]
+  tradeConfigs TradeConfig[]
 
   @@unique([baseCoinId, quoteCoinId, networkId])
 }
@@ -256,19 +257,14 @@ model Transaction {
 }
 
 model Order {
-  id        String @id @default(uuid())
-  userId    String
-  coinId    String
-  networkId String
+  id            String @id @default(uuid())
+  userId        String
+  marketPairId  String
+  tradeConfigId String
 
-  pairId String? // 👈 FK
-
-  direction TradeDirection
-  period    TradePeriod
-
-  stake      Float
-  entryPrice Float
-  profitRate Float
+  stake      Decimal
+  entryPrice Decimal
+  profitRate Decimal
 
   expiresAt DateTime
   settledAt DateTime?
@@ -277,9 +273,34 @@ model Order {
 
   createdAt DateTime @default(now())
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  coin    Coin    @relation(fields: [coinId], references: [id], onDelete: Cascade)
-  network Network @relation(fields: [networkId], references: [id])
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketPair  MarketPair  @relation(fields: [marketPairId], references: [id], onDelete: Cascade)
+  tradeConfig TradeConfig @relation(fields: [tradeConfigId], references: [id])
+  coin        Coin?       @relation(fields: [coinId], references: [id])
+  coinId      String?
+  network     Network?    @relation(fields: [networkId], references: [id])
+  networkId   String?
 
-  pair MarketPair? @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([marketPairId])
+  @@index([tradeConfigId])
+}
+
+model TradeConfig {
+  id           String @id @default(uuid())
+  marketPairId String
+
+  period    TradePeriod
+  direction TradeDirection
+
+  minStake   Decimal
+  maxStake   Decimal
+  profitRate Decimal
+
+  isActive Boolean @default(true)
+
+  marketPair MarketPair @relation(fields: [marketPairId], references: [id])
+  orders     Order[]
+
+  @@unique([marketPairId, period, direction])
 }

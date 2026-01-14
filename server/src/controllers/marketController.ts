@@ -3,9 +3,15 @@ import { prisma } from "../utils/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/authMiddleware";
 
-export const createPairSchema = z.object({
+const createPairSchema = z.object({
   baseCoinNetworkId: z.string().uuid(),
   quoteCoinNetworkId: z.string().uuid(),
+
+  period: z.enum(["S30", "M1", "M5", "M15"]),
+  direction: z.enum(["BULLISH", "BEARISH"]),
+  minStake: z.number().positive(),
+  maxStake: z.number().positive(),
+  profitRate: z.number().positive(),
   isActive: z.boolean().optional(),
 });
 
@@ -14,12 +20,23 @@ const updatePairSchema = z.object({
 });
 export const createPair = async (req: Request, res: Response) => {
   try {
-    const { baseCoinNetworkId, quoteCoinNetworkId } =
-      createPairSchema.parse(req.body);
+    const {
+      baseCoinNetworkId,
+      quoteCoinNetworkId,
+      period,
+      direction,
+      minStake,
+      maxStake,
+      profitRate,
+      isActive,
+    } = createPairSchema.parse(req.body);
 
-    /* ===========================
-       Load coin-networks
-    ============================ */
+    if (minStake >= maxStake) {
+      return res.status(400).json({
+        error: "minStake must be less than maxStake",
+      });
+    }
+
     const [base, quote] = await Promise.all([
       prisma.coinNetwork.findUnique({
         where: { id: baseCoinNetworkId },
@@ -39,25 +56,18 @@ export const createPair = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid quote coin" });
     }
 
-    /* ===========================
-       Enforce same network
-    ============================ */
     if (base.networkId !== quote.networkId) {
       return res.status(400).json({
         error: "Base and quote must be on the same network",
       });
     }
 
-    /* ===========================
-       Enforce market rules
-    ============================ */
     if (base.coinId === quote.coinId) {
       return res.status(400).json({
         error: "Base and quote cannot be the same asset",
       });
     }
 
-    // 🔥 CRITICAL RULE
     if (quote.coin.symbol !== "USDT") {
       return res.status(400).json({
         error: "Only USDT is allowed as quote currency",
@@ -70,62 +80,85 @@ export const createPair = async (req: Request, res: Response) => {
       });
     }
 
-    /* ===========================
-       Build symbols
-    ============================ */
     const symbol = `${base.coin.symbol}/${quote.coin.symbol}`;
     const wsSymbol = `${base.coin.symbol}${quote.coin.symbol}`.toLowerCase();
 
-    /* ===========================
-       DUPLICATE CHECK (EXACT)
-    ============================ */
-    const existingPair = await prisma.marketPair.findUnique({
-      where: {
-        baseCoinId_quoteCoinId_networkId: {
-          baseCoinId: base.coinId,
-          quoteCoinId: quote.coinId,
-          networkId: base.networkId,
+    const result = await prisma.$transaction(async (tx) => {
+      let pair = await tx.marketPair.findUnique({
+        where: {
+          baseCoinId_quoteCoinId_networkId: {
+            baseCoinId: base.coinId,
+            quoteCoinId: quote.coinId,
+            networkId: base.networkId,
+          },
         },
-      },
-    });
-
-    if (existingPair) {
-      const updated = await prisma.marketPair.update({
-        where: { id: existingPair.id },
-        data: { isActive: true },
       });
 
-      return res.status(200).json({
-        success: true,
-        pair: updated,
-        message: "Pair already existed and was reactivated",
-      });
-    }
+      if (!pair) {
+        pair = await tx.marketPair.create({
+          data: {
+            baseCoinId: base.coinId,
+            quoteCoinId: quote.coinId,
+            networkId: base.networkId,
+            symbol,
+            wsSymbol,
+            isActive: true,
+          },
+        });
+      } else if (!pair.isActive) {
+        pair = await tx.marketPair.update({
+          where: { id: pair.id },
+          data: { isActive: true },
+        });
+      }
 
-    /* ===========================
-       Create pair
-    ============================ */
-    const pair = await prisma.marketPair.create({
-      data: {
-        baseCoinId: base.coinId,
-        quoteCoinId: quote.coinId,
-        networkId: base.networkId,
-        symbol,
-        wsSymbol,
-        isActive: true,
-      },
+      const existingConfig = await tx.tradeConfig.findUnique({
+        where: {
+          marketPairId_period_direction: {
+            marketPairId: pair.id,
+            period,
+            direction,
+          },
+        },
+      });
+
+      if (existingConfig) {
+        throw new Error("CONFIG_ALREADY_EXISTS");
+      }
+
+      const config = await tx.tradeConfig.create({
+        data: {
+          marketPairId: pair.id,
+          period,
+          direction,
+          minStake,
+          maxStake,
+          profitRate,
+          isActive: isActive ?? true, // 👈 added
+        },
+      });
+
+      return { pair, config };
     });
 
     return res.status(201).json({
       success: true,
-      pair,
+      pair: result.pair,
+      config: result.config,
+      message: "Trading pair and config created successfully",
     });
   } catch (err: any) {
     console.error("createPair error:", err);
 
+    if (err.message === "CONFIG_ALREADY_EXISTS") {
+      return res.status(409).json({
+        error: "This trading configuration already exists for the pair",
+      });
+    }
+
     if (err.code === "P2002") {
       return res.status(409).json({
-        error: "Trading pair already exists",
+        error: "Duplicate trading pair",
       });
     }
 
@@ -134,7 +167,6 @@ export const createPair = async (req: Request, res: Response) => {
     });
   }
 };
-
 
 export const updatePair = async (req: Request, res: Response) => {
   try {
@@ -253,7 +285,7 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
-console.log("Fetching pair by ID:", id, "for user:", userId);
+    console.log("Fetching pair by ID:", id, "for user:", userId);
     /* ===========================
        Fetch market pair
     ============================ */
