@@ -238,6 +238,8 @@ const AdminTradingPairs = () => {
   }, [pairs]);
 
   const handleCreatePair = (formData: CreatePairFormData) => {
+      console.log("CREATE PAIR PAYLOAD:", formData); // 👈 ADD THIS
+
     createPair(formData, {
       onSuccess: (res) => {
         toast({

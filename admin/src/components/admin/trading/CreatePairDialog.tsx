@@ -33,9 +33,16 @@ const CreatePairDialog = ({
   onCreatePair,
   isLoading,
 }: Props) => {
-  const [baseCoinNetworkId, setBaseCoinNetworkId] = useState<string | null>(null);
+  const [baseCoinNetworkId, setBaseCoinNetworkId] = useState<string | null>(
+    null
+  );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState("");
+  const [period, setPeriod] = useState<"S30" | "M1" | "M5" | "M15">("M1");
+  const [direction, setDirection] = useState<"BULLISH" | "BEARISH">("BULLISH");
+  const [minStake, setMinStake] = useState("");
+  const [maxStake, setMaxStake] = useState("");
+  const [profitRate, setProfitRate] = useState("");
 
   /* ---------------------------------------------
    * Fast lookup
@@ -57,9 +64,7 @@ const CreatePairDialog = ({
     success: boolean;
     usdt: any | null;
   }>(
-    selectedBase
-      ? `/network/${selectedBase.network.id}/usdt`
-      : null,
+    selectedBase ? `/network/${selectedBase.network.id}/usdt` : null,
     selectedBase ? `usdt-${selectedBase.network.id}` : null
   );
 
@@ -76,9 +81,21 @@ const CreatePairDialog = ({
       return;
     }
 
+    if (!minStake || !maxStake || !profitRate) {
+      setError("Please fill all trade configuration fields");
+      return;
+    }
+
     onCreatePair({
       baseCoinNetworkId: selectedBase.id,
       quoteCoinNetworkId: usdtCoinNetwork.id,
+
+      period,
+      direction,
+      minStake: Number(minStake),
+      maxStake: Number(maxStake),
+      profitRate: Number(profitRate),
+      isActive: true,
     });
   };
 
@@ -142,9 +159,7 @@ const CreatePairDialog = ({
                           className="px-3 py-2 hover:bg-accent cursor-pointer flex justify-between"
                         >
                           <span>{cn.symbol}</span>
-                          <Badge variant="outline">
-                            {cn.network.name}
-                          </Badge>
+                          <Badge variant="outline">{cn.network.name}</Badge>
                         </div>
                       ))}
                   </div>
@@ -199,6 +214,76 @@ const CreatePairDialog = ({
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Separator />
+        </div>
+        {/* ---------------- TRADE CONFIG ---------------- */}
+        <div className="space-y-3">
+          <Label>Trade Configuration</Label>
+
+          {/* Period */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Period</Label>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as any)}
+                className="w-full border bg-black rounded-md px-2 py-1"
+              >
+                <option value="S30">30 Seconds</option>
+                <option value="M1">1 Minute</option>
+                <option value="M5">5 Minutes</option>
+                <option value="M15">15 Minutes</option>
+              </select>
+            </div>
+
+            {/* Direction */}
+            <div>
+              <Label className="text-xs">Direction</Label>
+              <select
+                value={direction}
+                onChange={(e) => setDirection(e.target.value as any)}
+                className="w-full border bg-black rounded-md px-2 py-1"
+              >
+                <option value="BULLISH">Bullish</option>
+                <option value="BEARISH">Bearish</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Stakes */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Min Stake (USDT)</Label>
+              <input
+                type="number"
+                value={minStake}
+                onChange={(e) => setMinStake(e.target.value)}
+                className="w-full border bg-black rounded-md px-2 py-1"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Max Stake (USDT)</Label>
+              <input
+                type="number"
+                value={maxStake}
+                onChange={(e) => setMaxStake(e.target.value)}
+                className="w-full border bg-black rounded-md px-2 py-1"
+              />
+            </div>
+          </div>
+
+          {/* Profit Rate */}
+          <div>
+            <Label className="text-xs">Profit Rate</Label>
+            <input
+              type="number"
+              step="0.01"
+              value={profitRate}
+              onChange={(e) => setProfitRate(e.target.value)}
+              className="w-full border bg-black rounded-md px-2 py-1"
+              placeholder="e.g. 0.85"
+            />
+          </div>
         </div>
 
         <DialogFooter>

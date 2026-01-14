@@ -86,6 +86,7 @@ const AdminCoinsPage: React.FC = () => {
       await createCoin.mutateAsync(payload);
       toast.success("Coin created");
       setIsAddOpen(false);
+      refetch()
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Create failed");
     }

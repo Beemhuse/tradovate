@@ -37,14 +37,19 @@ export interface AdminTradingPairsProps {
   // Props if needed for parent component
 }
 
+// ./types.ts
 export interface CreatePairFormData {
   baseCoinNetworkId: string;
   quoteCoinNetworkId: string;
-  networkId?: string;
-  pricePrecision?: number;
-  quantityPrecision?: number;
-  minTradeAmount?: number;
+
+  period: "S30" | "M1" | "M5" | "M15";
+  direction: "BULLISH" | "BEARISH";
+  minStake: number;
+  maxStake: number;
+  profitRate: number;
+  isActive?: boolean;
 }
+
 
 export interface Network {
   id: string;
