@@ -3,15 +3,13 @@ import { Home, TrendingUp, Wallet, FileText, LogOut, FileCheck, MessageSquare } 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCreateData } from "@/hooks/use-api";
-import { AUTH } from "@/hooks/apiEndpoint";
 import { useToast } from "@/hooks/use-toast";
 
 const UserNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { removeUser, user } = useAuth();
-
+console.log("UserNav user:", user);
   const navItems = [
     { to: "/dashboard", icon: Home, label: "Home" },
     { to: "/market", icon: TrendingUp, label: "Market" },
@@ -22,37 +20,27 @@ const UserNav = () => {
     { to: "/support", icon: MessageSquare, label: "Support" },
   ];
 
-  const { mutate: logout, isPending } = useCreateData(AUTH.LOGOUT, ["logout"]);
+  // const { mutate: logout, isPending } = useCreateData(AUTH.LOGOUT, ["logout"]);
   const { toast } = useToast();
 
-  const handleLogout = async () => {
-    logout({}, {
-      onSuccess: () => {
-        // Clear all cookies
-        document.cookie.split(";").forEach((cookie) => {
-          document.cookie = cookie
-            .replace(/^ +/, "")
-            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
-        // Clear local storage
-        localStorage.clear();
-        removeUser();
-        navigate("/");
-        toast({
-          title: "Success",
-          description: "Logged out successfully",
-          variant: "default",
-        });
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: (error as any)?.response?.data?.message || (error as any)?.response?.data?.error || (error as any)?.response?.data || error?.message || "Something went wrong",
-          variant: "destructive",
-        });
-      }
+const handleLogout = () => {
+  try {
+    removeUser();            // clears cookies + state
+    navigate("/", { replace: true });
+
+    toast({
+      title: "Success",
+      description: "Logged out successfully",
     });
-  };
+  } catch (error) {
+    console.error("Logout error:", error);
+    toast({
+      title: "Error",
+      description: "Failed to log out. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
 
   return (
     <nav className="bg-card border-b border-border">
@@ -83,9 +71,9 @@ const UserNav = () => {
           </div>
 
           {/* Logout Button */}
-          <Button variant="outline" size="sm" className="hidden md:flex" onClick={handleLogout} disabled={isPending}>
+          <Button variant="outline" size="sm" className="hidden md:flex" onClick={handleLogout} >
             <LogOut className="h-4 w-4 mr-2" />
-            {isPending ? "Logging out..." : "Logout"}
+            Logout
           </Button>
         </div>
 

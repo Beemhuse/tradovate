@@ -17,7 +17,7 @@ const UserLogin = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setUser, user, setLoading, setCookies } = useAuth();
+  const { setLoading, setCookies } = useAuth();
 
   // useEffect(() => {
   //   if (user) {
@@ -46,9 +46,6 @@ const UserLogin = () => {
           setCookies(res?.accessToken, res?.refreshToken);
           navigate("/dashboard");
           setLoading(isPending);
-          const userData = res?.user;
-          delete userData.password;
-          setUser(userData)
         },
         onError: (error) => {
           console.log("error data", error)
