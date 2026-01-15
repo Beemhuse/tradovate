@@ -24,7 +24,7 @@ const UserLogin = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setLoading, setCookies } = useAuth();
+  const { setLoading, setCookies, setUser } = useAuth();
 
   // useEffect(() => {
   //   if (user) {

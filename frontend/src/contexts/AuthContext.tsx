@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { CookieManager } from "@/utils/cookie-utils";
 import { setAuthToken } from "@/config/config";
 
@@ -22,7 +22,8 @@ export const useAuth = () => {
   }, []);
 
   /* ---------------- User ---------------- */
-  const setUser = (user: any) => {
+  const setUser = useCallback((user: any) => {
+    if (!user) return;
     CookieManager.set("tradovate-user", JSON.stringify(user), {
       expires: 7,
       path: "/",
@@ -31,18 +32,31 @@ export const useAuth = () => {
     });
 
     setUserState(user);
-  };
+  }, []);
 
-  const removeUser = () => {
+  const removeUser = useCallback(() => {
+    // Clear all cookies
+    const cookies = document.cookie.split(";");
+
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+    }
+
+    // Clear local storage
+    localStorage.clear();
+
     CookieManager.delete("tradovate-user");
     CookieManager.delete("tradovate-refresh-token");
 
     setAuthToken(null); // clear axios header
     setUserState(null);
-  };
+  }, []);
 
   /* ---------------- Tokens ---------------- */
-  const setCookies = (accessToken: string, refreshToken: string) => {
+  const setCookies = useCallback((accessToken: string, refreshToken: string) => {
     setAuthToken(accessToken);
 
     CookieManager.set("tradovate-refresh-token", refreshToken, {
@@ -51,7 +65,7 @@ export const useAuth = () => {
       sameSite: "Strict",
       secure: process.env.NODE_ENV === "production",
     });
-  };
+  }, []);
 
   return {
     user,
