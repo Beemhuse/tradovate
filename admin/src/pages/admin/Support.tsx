@@ -29,7 +29,6 @@ import {
 import { useAllTickets, useReplyTicket } from "@/hooks/useSupportTickets";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useFetchData, useCreateData } from "@/hooks/use-api";
 
 const AdminSupport = () => {
@@ -95,31 +94,14 @@ const AdminSupport = () => {
       await replyTicket.mutateAsync({
         id: selectedTicket.id,
         adminReply: reply.trim(),
-        adminId: user?.id || "",
         status: closeTicket ? "closed" : "open",
       });
 
-      // Send email notification
-      const userEmail = selectedTicket.profiles?.email;
-      if (userEmail) {
-        await supabase.functions.invoke("send-notification", {
-          body: {
-            to: userEmail,
-            type: "support_reply",
-            data: { subject: selectedTicket.subject },
-          },
-        });
-      }
-
-      toast({ title: closeTicket ? "Ticket closed with reply" : "Reply sent" });
-      setSelectedTicket(null);
+      toast({ title: "Reply sent successfully" });
       setReply("");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      setSelectedTicket(null);
+    } catch (error) {
+      toast({ title: "Failed to send reply", variant: "destructive" });
     }
   };
 
@@ -143,7 +125,6 @@ const AdminSupport = () => {
 
   return (
     <div className="min-h-screen bg-background">
-
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">Support & Settings</h1>

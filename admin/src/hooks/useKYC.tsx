@@ -1,130 +1,50 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useFetchData, useCreateData, usePatchData } from "./use-api";
 
 export interface KYCDocument {
   id: string;
-  user_id: string;
-  document_type: string;
-  document_url: string;
+  userId: string;
   status: string;
-  rejection_reason: string | null;
-  reviewed_by: string | null;
-  created_at: string;
-  updated_at: string;
+  frontImage: string;
+  backImage: string;
+  reason: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    fullName: string | null;
+    email: string | null;
+  };
 }
 
 export const useUserKYC = () => {
-  const { user } = useAuth();
-
-  return useQuery({
-    queryKey: ["kyc", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from("kyc_documents")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as KYCDocument[];
-    },
-    enabled: !!user,
-  });
+  const { data, ...rest } = useFetchData<{
+    success: boolean;
+    kyc: KYCDocument;
+  }>("/api/v1/kyc/me", "kyc-me");
+  return {
+    data: data?.kyc ? [data.kyc] : [],
+    ...rest,
+  };
 };
 
 export const useAllKYC = () => {
-  return useQuery({
-    queryKey: ["all-kyc"],
-    queryFn: async () => {
-      // First get all KYC documents
-      const { data: kycData, error: kycError } = await supabase
-        .from("kyc_documents")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (kycError) throw kycError;
-
-      // Get all user profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email");
-      if (profilesError) throw profilesError;
-
-      // Join manually
-      return kycData.map((doc) => ({
-        ...doc,
-        profiles: profiles.find((p) => p.user_id === doc.user_id) || null,
-      }));
-    },
-  });
+  const { data, ...rest } = useFetchData<{
+    success: boolean;
+    kycs: KYCDocument[];
+  }>("/api/v1/kyc/admin/list", "all-kyc");
+  return {
+    data: data?.kycs || [],
+    ...rest,
+  };
 };
 
 export const useSubmitKYC = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ documentType, file }: { documentType: string; file: File }) => {
-      if (!user) throw new Error("No user");
-
-      // Upload file to storage
-      const filePath = `${user.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("kyc-documents")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("kyc-documents")
-        .getPublicUrl(filePath);
-
-      // Insert KYC document record
-      const { error } = await supabase.from("kyc_documents").insert({
-        user_id: user.id,
-        document_type: documentType,
-        document_url: urlData.publicUrl,
-        status: "pending",
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["kyc"] });
-    },
-  });
+  return useCreateData<any, FormData>("/api/v1/kyc", ["kyc-me"], true);
 };
 
 export const useUpdateKYCStatus = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      status,
-      rejectionReason,
-      reviewedBy,
-    }: {
-      id: string;
-      status: "approved" | "rejected";
-      rejectionReason?: string;
-      reviewedBy: string;
-    }) => {
-      const { error } = await supabase
-        .from("kyc_documents")
-        .update({
-          status,
-          rejection_reason: rejectionReason || null,
-          reviewed_by: reviewedBy,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["all-kyc"] });
-    },
-  });
+  return usePatchData<any, { status: string; reason?: string }>(
+    (id: string) => `/api/v1/kyc/admin/${id}/status`,
+    ["all-kyc"]
+  );
 };

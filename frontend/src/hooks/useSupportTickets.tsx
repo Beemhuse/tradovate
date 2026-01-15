@@ -1,89 +1,62 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useFetchData,
+  useCreateData,
+  useUpdateData,
+  usePatchData,
+} from "./use-api";
+import { SUPPORT } from "./apiEndpoint";
 
 export interface SupportTicket {
   id: string;
-  user_id: string;
+  userId: string;
   subject: string;
   message: string;
   status: string;
-  admin_reply: string | null;
-  admin_id: string | null;
-  created_at: string;
-  updated_at: string;
-  profiles?: {
-    full_name: string | null;
+  adminReply: string | null;
+  adminId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    fullName: string | null;
     email: string | null;
   };
 }
 
 export const useUserTickets = () => {
-  const { user } = useAuth();
-
-  return useQuery({
-    queryKey: ["tickets", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from("support_tickets")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as SupportTicket[];
-    },
-    enabled: !!user,
-  });
+  const { data, ...rest } = useFetchData<{
+    success: boolean;
+    tickets: SupportTicket[];
+  }>(SUPPORT.TICKETS, "tickets");
+  return {
+    data: data?.tickets || [],
+    ...rest,
+  };
 };
 
 export const useAllTickets = () => {
-  return useQuery({
-    queryKey: ["all-tickets"],
-    queryFn: async () => {
-      // First get all tickets
-      const { data: ticketData, error: ticketError } = await supabase
-        .from("support_tickets")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (ticketError) throw ticketError;
-
-      // Get all user profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email");
-      if (profilesError) throw profilesError;
-
-      // Join manually
-      return ticketData.map((ticket) => ({
-        ...ticket,
-        profiles: profiles.find((p) => p.user_id === ticket.user_id) || null,
-      })) as SupportTicket[];
-    },
-  });
+  const { data, ...rest } = useFetchData<{
+    success: boolean;
+    tickets: SupportTicket[];
+  }>(SUPPORT.ALL_TICKETS, "all-tickets");
+  return {
+    data: data?.tickets || [],
+    ...rest,
+  };
 };
 
 export const useCreateTicket = () => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const createTicketMutation = useCreateData<
+    any,
+    { subject: string; message: string }
+  >(SUPPORT.TICKETS, ["tickets"]);
 
-  return useMutation({
-    mutationFn: async ({ subject, message }: { subject: string; message: string }) => {
-      if (!user) throw new Error("No user");
-
-      const { error } = await supabase.from("support_tickets").insert({
-        user_id: user.id,
-        subject,
-        message,
-        status: "open",
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-    },
-  });
+  return {
+    mutate: (vars: { subject: string; message: string }) =>
+      createTicketMutation.mutate(vars),
+    ...createTicketMutation,
+  };
 };
 
 export const useReplyTicket = () => {
@@ -93,28 +66,30 @@ export const useReplyTicket = () => {
     mutationFn: async ({
       id,
       adminReply,
-      adminId,
       status,
     }: {
       id: string;
       adminReply: string;
-      adminId: string;
       status: "open" | "closed";
     }) => {
-      const { error } = await supabase
-        .from("support_tickets")
-        .update({
-          admin_reply: adminReply,
-          admin_id: adminId,
-          status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      // We use a custom fetch or patch from use-api pattern
+      // But use-api usePatchData takes endpoint and queryKey
+      // Let's use it properly
+      // SUPPORT.REPLY is a function, usePatchData handles function endpoints?
+      // In use-api.ts: export const usePatchData = <T = any, D = any>(endpoint: Endpoint, queryKey: QueryKey) => { ... }
+      // Endpoint = string | ((id: string | number) => string);
+      // So yes.
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-tickets"] });
     },
   });
+};
+
+// Re-implementing useReplyTicket using usePatchData
+export const useReplyTicketApi = () => {
+  return usePatchData<any, { adminReply: string; status: string }>(
+    SUPPORT.REPLY as any, // It's (id) => url
+    ["all-tickets"]
+  );
 };

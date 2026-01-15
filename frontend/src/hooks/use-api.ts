@@ -21,7 +21,7 @@ import initAxios from "@/config/config";
 
 type Endpoint = string | ((id: string | number) => string);
 
-initAxios()
+initAxios();
 /* -------------------------------------------
  * FETCH DATA (GET)
  * ------------------------------------------ */
@@ -80,10 +80,12 @@ export const useUpdateData = <T = any, D = any>(
   queryKey: QueryKey
 ) => {
   const queryClient = useQueryClient();
-  return useMutation<AxiosResponse<T>, AxiosError, D>({
+  return useMutation<T, AxiosError, D>({
     mutationFn: async (newData: D) => {
-      const response = await updateData(endpoint, newData);
-      return response.data;
+      const finalEndpoint =
+        typeof endpoint === "function" ? (endpoint as any)(newData) : endpoint;
+      const response = await updateData(finalEndpoint, newData);
+      return response.data || response;
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey });
@@ -116,8 +118,10 @@ export const usePatchData = <T = any, D = any>(
 
   return useMutation<T, AxiosError, D>({
     mutationFn: async (newData: D) => {
-      const response = await patchData(endpoint, newData);
-      return response.data;
+      const finalEndpoint =
+        typeof endpoint === "function" ? (endpoint as any)(newData) : endpoint;
+      const response = await patchData(finalEndpoint, newData);
+      return response.data || response;
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey });
