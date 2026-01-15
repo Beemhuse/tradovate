@@ -273,7 +273,7 @@ export const adminGetOrders = async (req: Request, res: Response) => {
         orderBy: { createdAt: "desc" },
         include: {
           user: {
-            select: { id: true, email: true },
+            select: { id: true, email: true, fullName: true },
           },
           marketPair: {
             include: {

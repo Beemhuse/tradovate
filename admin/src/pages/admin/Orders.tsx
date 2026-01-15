@@ -125,7 +125,8 @@ const AdminOrders = () => {
                       >
                         <td className="py-4 px-6">
                           <div className="text-sm font-medium">
-                            {order.user?.email}
+                            <p>{order.user?.fullName}</p>
+                            <p>{order.user?.email}</p>
                           </div>
                           <div className="text-xs text-muted-foreground font-mono">
                             {order.id.split("-")[0]}
