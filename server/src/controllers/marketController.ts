@@ -285,29 +285,42 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
-    console.log("Fetching pair by ID:", id, "for user:", userId);
+
     /* ===========================
-       Fetch market pair
+       Fetch market pair + configs
     ============================ */
     const pair = await prisma.marketPair.findUnique({
       where: { id },
       include: {
-        // network: {
-        //   select: { id: true, name: true },
-        // },
+        network: {
+          select: { id: true, name: true },
+        },
         baseCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },
         },
         quoteCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },
         },
+        tradeConfigs: {
+          where: { isActive: true },
+          orderBy: { period: "asc" },
+          select: {
+            id: true,
+            period: true,
+            direction: true,
+            minStake: true,
+            maxStake: true,
+            profitRate: true,
+            isActive: true,
+          },
+        },
       },
     });
 
-    if (!pair) {
+    if (!pair || !pair.isActive) {
       return res.status(404).json({
         success: false,
-        error: "Market pair not found",
+        error: "Market pair not found or inactive",
       });
     }
 
@@ -326,13 +339,12 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
     }
 
     /* ===========================
-       Fetch BASE COIN wallet
-       (coinId + networkId)
+       Fetch USDT wallet (same network)
     ============================ */
-    const wallet = await prisma.wallet.findFirst({
+    const usdtWallet = await prisma.wallet.findFirst({
       where: {
         userId,
-        coinId: pair.baseCoinId,
+        coin: { symbol: "USDT" },
         networkId: pair.networkId,
       },
       select: {
@@ -345,9 +357,9 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
       success: true,
       pair,
       wallet: {
-        exists: Boolean(wallet),
-        walletId: wallet?.id ?? null,
-        balance: wallet?.balance ?? 0,
+        exists: Boolean(usdtWallet),
+        walletId: usdtWallet?.id ?? null,
+        balance: usdtWallet?.balance ?? 0,
       },
     });
   } catch (err) {
