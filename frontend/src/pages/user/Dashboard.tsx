@@ -39,23 +39,19 @@ const Dashboard = () => {
 
   const assets = assetData?.assets;
 
+  
   const {
     data: cryptoPairsData,
     isLoading: cryptoPairsLoading,
     error: cryptoPairsError,
   } = useFetchData(MARKET_PAIR.LIST, "market-pairs");
-
+  
   const cryptoPairs = cryptoPairsData?.pairs || [];
   const baseCoins =
-    cryptoPairs?.map((asset) => asset?.symbol?.split("/")[0]) || [];
-
+  cryptoPairs?.map((asset) => asset?.symbol?.split("/")[0]) || [];
+  
+  console.log("cryptoPairs", cryptoPairs);
   const prices = useCryptoPrice(baseCoins);
-
-  useEffect(() => {
-    if (!userLoading && !user) {
-      navigate("/");
-    }
-  }, [user, userLoading, navigate]);
 
   if (isLoading || userLoading) {
     return (
@@ -122,6 +118,14 @@ const Dashboard = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button
+                variant="outline"
+                className="h-24 gap-2 justify-start "
+                onClick={() => navigate("/market")}
+              >
+                <DollarSign className="h-6 w-6" />
+                <span>Buy</span>
+              </Button>
               <Button
                 variant="outline"
                 className="h-24 gap-2 justify-start "
@@ -195,7 +199,7 @@ const Dashboard = () => {
                       <tr
                         key={pair?.id}
                         className="border-b border-border hover:bg-secondary/50 transition-colors cursor-pointer"
-                      // onClick={() => navigate("/contract")}
+                        onClick={() => navigate(`/market/?pair=${pair?.id}`)}
                       >
                         <td className="py-3 px-4 font-medium">
                           {priceData?.symbol}/USDT

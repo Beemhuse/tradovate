@@ -19,6 +19,7 @@ import Market from "./pages/user/Market/Market";
 import TransactionsRoute from "./pages/user/Transaction";
 import UserKYC from "./pages/user/KYC";
 import UserSupport from "./pages/user/Support";
+import UserCertificatesPage from "./pages/user/Certificates";
 import NotFound from "./pages/NotFound";
 import PublicRoute from "./components/PublicRoutes";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/contract/:id" element={<TradePage />} />
               <Route path="/kyc" element={<UserKYC />} />
               <Route path="/support" element={<UserSupport />} />
+              <Route path="/certificates" element={<UserCertificatesPage />} />
             </Route>
           </Route>
 

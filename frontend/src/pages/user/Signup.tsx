@@ -70,7 +70,7 @@ const UserSignup = () => {
     const payLoad = {
       email: formData.email,
       password: formData.password,
-      // full_name: formData.fullName, 
+      fullName: formData.fullName, 
     };
     
 
