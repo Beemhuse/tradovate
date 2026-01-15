@@ -83,6 +83,7 @@ export const getAssets = async (req: AuthRequest, res: Response) => {
             ? {
                 id: wallet.network.id,
                 name: wallet.network.name,
+                icon: wallet.network.icon,
               }
             : null,
 
@@ -651,19 +652,13 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
-export const getWalletConversions = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getWalletConversions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
 
     const toSymbol = (req.query.to as string)?.toUpperCase() || "USDT";
     const fromSymbol = (req.query.coin as string)?.toUpperCase();
-    const amountParam = req.query.amount
-      ? Number(req.query.amount)
-      : undefined;
+    const amountParam = req.query.amount ? Number(req.query.amount) : undefined;
 
     if (amountParam !== undefined && amountParam <= 0) {
       return res.status(400).json({

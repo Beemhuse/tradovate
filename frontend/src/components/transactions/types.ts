@@ -15,6 +15,7 @@ export interface Network {
   id: string;
   name: string;
   type: string;
+  explorerUrl?: string;
 }
 
 export interface MarketPair {
@@ -31,41 +32,34 @@ export interface Wallet {
 }
 
 export enum TradeDirection {
-  UP = 'UP',
-  DOWN = 'DOWN'
+  BULLISH = "BULLISH",
+  BEARISH = "BEARISH",
 }
 
 export enum TradePeriod {
-  M1 = 'M1', // 1 minute
-  M5 = 'M5', // 5 minutes
-  M15 = 'M15', // 15 minutes
-  H1 = 'H1', // 1 hour
-  H4 = 'H4', // 4 hours
-  D1 = 'D1'  // 1 day
+  S30 = "S30",
+  M1 = "M1",
+  M5 = "M5",
+  M15 = "M15",
 }
 
 export enum TradeResult {
-  WON = 'WON',
-  LOST = 'LOST',
-  DRAW = 'DRAW'
+  WIN = "WIN",
+  LOSS = "LOSS",
+  DRAW = "DRAW",
 }
 
 export enum TradeStatus {
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  SETTLED = 'SETTLED',
-  CANCELLED = 'CANCELLED',
-  EXPIRED = 'EXPIRED'
+  PENDING = "PENDING",
+  SETTLED = "SETTLED",
 }
 
 export interface Order {
   id: string;
   userId: string;
-  coinId: string;
-  networkId: string;
-  pairId?: string;
+  marketPairId: string;
+  tradeConfigId: string;
   direction: TradeDirection;
-  period: TradePeriod;
   stake: number;
   entryPrice: number;
   profitRate: number;
@@ -74,37 +68,43 @@ export interface Order {
   result?: TradeResult;
   status: TradeStatus;
   createdAt: string;
-  user: User;
-  coin: Coin;
-  network: Network;
-  pair?: MarketPair;
-  currentPrice?: number; // For real-time updates
-  pnl?: number; // Profit & Loss
+  user?: User;
+  marketPair: MarketPair & {
+    baseCoin: Coin;
+    quoteCoin: Coin;
+    network: Network;
+  };
+  tradeConfig: {
+    id: string;
+    period: TradePeriod;
+    profitRate: number;
+  };
+  pnl?: number; // Calculated on frontend
 }
 
 export enum TransactionType {
-  DEPOSIT = 'DEPOSIT',
-  WITHDRAWAL = 'WITHDRAWAL',
-  TRADE = 'TRADE',
-  BONUS = 'BONUS',
-  REFERRAL = 'REFERRAL',
-  WITHDRAWAL_FEE = 'WITHDRAWAL_FEE',
-  OTHER = 'OTHER'
+  DEPOSIT = "DEPOSIT",
+  WITHDRAWAL = "WITHDRAWAL",
+  TRADE_OPEN = "TRADE_OPEN",
+  TRADE_CLOSE = "TRADE_CLOSE",
+  TRADE_WIN = "TRADE_WIN",
+  TRADE_PROFIT = "TRADE_PROFIT",
+  BONUS = "BONUS",
+  FEE = "FEE",
+  ADMIN_ADJUST = "ADMIN_ADJUST",
 }
 
 export enum TransactionStatus {
-  PENDING = 'PENDING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  CANCELLED = 'CANCELLED',
-  PROCESSING = 'PROCESSING',
-  REJECTED = 'REJECTED'
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  REJECTED = "REJECTED",
 }
 
 export enum AdminAction {
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  NONE = 'NONE'
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  NONE = "NONE",
 }
 
 export interface Transaction {
@@ -150,27 +150,28 @@ export interface OrdersResponse {
   totalLosses: number;
 }
 
-export interface Filters {
+export interface TransactionFilters {
   search?: string;
-  type?: TransactionType | 'ALL';
-  status?: TransactionStatus | 'ALL';
-  period?: 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
+  type?: TransactionType | "ALL";
+  status?: TransactionStatus | "ALL";
+  period?: "TODAY" | "WEEK" | "MONTH" | "YEAR" | "ALL";
   startDate?: string;
   endDate?: string;
-  sortBy?: 'date' | 'amount' | 'type';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "date" | "amount" | "type";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface OrderFilters {
-  status?: TradeStatus | 'ALL';
-  result?: TradeResult | 'ALL';
-  period?: TradePeriod | 'ALL';
-  direction?: TradeDirection | 'ALL';
+  search?: string;
+  status?: TradeStatus | "ALL";
+  result?: TradeResult | "ALL";
+  period?: TradePeriod | "ALL";
+  direction?: TradeDirection | "ALL";
   startDate?: string;
   endDate?: string;
   pairId?: string;
-  sortBy?: 'date' | 'stake' | 'profit';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "date" | "stake" | "profit";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface Stats {

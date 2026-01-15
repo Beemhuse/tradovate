@@ -3,11 +3,30 @@ import { useNavigate } from "react-router-dom";
 import UserNav from "@/components/layout/UserNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDownToLine, ArrowUpFromLine, DollarSign, WalletCards, Eye, EyeOff, Copy } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  DollarSign,
+  WalletCards,
+  Eye,
+  EyeOff,
+  Copy,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInitializeWallets } from "@/hooks/useWallet";
 import { useCoins } from "@/hooks/useCoins";
@@ -36,9 +55,13 @@ const Wallet = () => {
   const { data: coins } = useCoins();
   const initializeWallets = useInitializeWallets();
 
-  const { data: assetData, refetch, isLoading } = useFetchData(COINS.ASSETS, "assets")
+  const {
+    data: assetData,
+    refetch,
+    isLoading,
+  } = useFetchData(COINS.ASSETS, "assets");
 
-  const assets = assetData?.assets
+  const assets = assetData?.assets;
 
   const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
   const prices = useCryptoPrice(coinSymbols);
@@ -63,12 +86,11 @@ const Wallet = () => {
     );
   }
 
-
-  const totalBalance = assets?.reduce((sum, coin) => {
-    const symbol = coin.symbol || "";
-    return sum + Number(coin.balance);
-  }, 0) || 0;
-
+  const totalBalance =
+    assets?.reduce((sum, coin) => {
+      const symbol = coin.symbol || "";
+      return sum + Number(coin.balance);
+    }, 0) || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,16 +106,27 @@ const Wallet = () => {
                   size="sm"
                   onClick={() => setShowBalance(!showBalance)}
                 >
-                  {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showBalance ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
               <p className="text-4xl font-bold">
                 {showBalance
-                  ? `$${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ? `$${totalBalance.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
                   : "••••••"}
               </p>
               <div className="flex gap-3 flex-wrap">
-                <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setDepositOpen(true)}>
+                <Button
+                  variant="outline"
+                  className="flex-1 min-w-[120px]"
+                  onClick={() => setDepositOpen(true)}
+                >
                   <ArrowDownToLine className="h-4 w-4 mr-2" />
                   Deposit
                 </Button>
@@ -123,7 +156,11 @@ const Wallet = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="outline" className="flex-1 min-w-[120px]" onClick={() => setAddCoinOpen(true)}>
+                <Button
+                  variant="outline"
+                  className="flex-1 min-w-[120px]"
+                  onClick={() => setAddCoinOpen(true)}
+                >
                   <WalletCards className="h-4 w-4 mr-2" />
                   Add coin to wallet
                 </Button>
@@ -151,8 +188,11 @@ const Wallet = () => {
                 <tbody>
                   {assets?.map((wallet, index) => {
                     const symbol = wallet.coin?.symbol || "";
-      // coupon_code: appliedCoupon?.code || null,
-                    const usdtValue = calculateUSDTValue(symbol, Number(wallet.balance));
+                    // coupon_code: appliedCoupon?.code || null,
+                    const usdtValue = calculateUSDTValue(
+                      symbol,
+                      Number(wallet.balance)
+                    );
                     return (
                       <tr
                         key={wallet.coinId + `${index}`}
@@ -160,24 +200,44 @@ const Wallet = () => {
                       >
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <img src={wallet.coin?.iconUrl || symbol[0]} />
+                            <div className="h-10 w-10 border border-border rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                              {wallet.coin?.iconUrl ? (
+                                <img
+                                  src={wallet.coin.iconUrl}
+                                  alt={symbol}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-primary font-bold">
+                                  {symbol[0]}
+                                </span>
+                              )}
                             </div>
                             <div>
                               <p className="font-medium">{wallet.coin?.name}</p>
-                              <p className="text-sm text-muted-foreground">{symbol}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {symbol}
+                              </p>
                             </div>
                           </div>
                         </td>
                         <td className="text-right py-4 px-4 font-mono">
-                          {showBalance ? Number(wallet.balance).toFixed(2) : "••••"}
+                          {showBalance
+                            ? Number(wallet.balance).toFixed(2)
+                            : "••••"}
                         </td>
                         <td className="text-right py-4 px-4 font-mono text-muted-foreground">
-                          {showBalance ? (Number(wallet.locked_balance) ? Number(wallet.locked_balance).toFixed(8) : "0.0") : "••••"}
+                          {showBalance
+                            ? Number(wallet.locked_balance)
+                              ? Number(wallet.locked_balance).toFixed(8)
+                              : "0.0"
+                            : "••••"}
                         </td>
                         <td className="text-right py-4 px-4 font-semibold text-success">
                           {/* {showBalance ? `$${usdtValue.toFixed(2)}` : "••••••"} */}
-                          {showBalance ? `$${Number(wallet.balance)}` : "••••••"}
+                          {showBalance
+                            ? `$${Number(wallet.balance)}`
+                            : "••••••"}
                         </td>
                       </tr>
                     );
@@ -225,7 +285,6 @@ const Wallet = () => {
         refetch={refetch}
         isLoading={isLoading}
       />
-
     </div>
   );
 };

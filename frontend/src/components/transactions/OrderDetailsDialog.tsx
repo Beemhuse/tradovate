@@ -8,16 +8,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
-  DollarSign, 
-  Percent, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  DollarSign,
+  Percent,
   Calendar,
   ExternalLink,
   Copy,
-  Download
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Order } from "./types";
@@ -30,7 +30,11 @@ interface OrderDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogProps) => {
+const OrderDetailsDialog = ({
+  order,
+  open,
+  onOpenChange,
+}: OrderDetailsDialogProps) => {
   const { toast } = useToast();
 
   if (!order) return null;
@@ -52,11 +56,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
     });
   };
 
-  const pnl = order.pnl || 0;
-  const pnlPercentage = order.entryPrice ? (pnl / order.entryPrice) * 100 : 0;
-  const timeLeft = order.status === 'RUNNING' 
-    ? Math.max(0, new Date(order.expiresAt).getTime() - new Date().getTime())
-    : 0;
+  const pnl =
+    order.result === "WIN"
+      ? Number(order.stake) * Number(order.profitRate)
+      : order.result === "LOSS"
+      ? -Number(order.stake)
+      : 0;
+  const pnlPercentage = Number(order.profitRate) * 100;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,20 +71,19 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
           <DialogTitle className="flex items-center justify-between">
             <span>Order Details</span>
             <Badge
-              variant={order.status === 'SETTLED' ? "default" : "secondary"}
+              variant={order.status === "SETTLED" ? "default" : "secondary"}
               className={cn(
-                order.status === 'SETTLED' ? "bg-green-100 text-green-800" :
-                order.status === 'RUNNING' ? "bg-blue-100 text-blue-800" :
-                order.status === 'PENDING' ? "bg-yellow-100 text-yellow-800" :
-                "bg-gray-100 text-gray-800"
+                order.status === "SETTLED"
+                  ? "bg-green-100 text-green-800"
+                  : order.status === "PENDING"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-gray-100 text-gray-800"
               )}
             >
               {order.status}
             </Badge>
           </DialogTitle>
-          <DialogDescription>
-            Order ID: {order.id}
-          </DialogDescription>
+          <DialogDescription>Order ID: {order.id}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -87,30 +92,31 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
             <div className="space-y-2">
               <div className="text-sm text-muted-foreground">Coin</div>
               <div className="flex items-center gap-2">
-                {order.coin.iconUrl && (
-                  <img 
-                    src={order.coin.iconUrl} 
-                    alt={order.coin.symbol}
+                {order.marketPair.baseCoin.iconUrl && (
+                  <img
+                    src={order.marketPair.baseCoin.iconUrl}
+                    alt={order.marketPair.baseCoin.symbol}
                     className="w-6 h-6 rounded-full"
                   />
                 )}
                 <div>
-                  <div className="font-semibold">{order.coin.symbol}</div>
-                  <div className="text-sm text-muted-foreground">{order.coin.name}</div>
+                  <div className="font-semibold">
+                    {order.marketPair.baseCoin.symbol}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {order.marketPair.baseCoin.name}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="text-sm text-muted-foreground">Pair</div>
-              <div className="font-semibold">
-                {order.pair?.symbol || "Spot"}
+              <div className="font-semibold">{order.marketPair.symbol}</div>
+              <div className="text-sm text-muted-foreground">
+                {order.marketPair.baseCoin.name}/
+                {order.marketPair.quoteCoin.name}
               </div>
-              {order.pair && (
-                <div className="text-sm text-muted-foreground">
-                  {order.pair.baseCoin.name}/{order.pair.quoteCoin.name}
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -120,15 +126,16 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
                   variant="outline"
                   className={cn(
                     "flex items-center gap-1",
-                    order.direction === 'UP' 
+                    order.direction === "BULLISH"
                       ? "bg-green-500/10 text-green-700 border-green-500/30"
                       : "bg-red-500/10 text-red-700 border-red-500/30"
                   )}
                 >
-                  {order.direction === 'UP' 
-                    ? <TrendingUp className="h-3 w-3" />
-                    : <TrendingDown className="h-3 w-3" />
-                  }
+                  {order.direction === "BULLISH" ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
                   {order.direction}
                 </Badge>
               </div>
@@ -136,15 +143,15 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
 
             <div className="space-y-2">
               <div className="text-sm text-muted-foreground">Period</div>
-              <div className="font-semibold">
-                {order.period}
-              </div>
+              <div className="font-semibold">{order.tradeConfig.period}</div>
               <div className="text-sm text-muted-foreground">
-                {order.period === 'M1' ? '1 Minute' :
-                 order.period === 'M5' ? '5 Minutes' :
-                 order.period === 'M15' ? '15 Minutes' :
-                 order.period === 'H1' ? '1 Hour' :
-                 order.period === 'H4' ? '4 Hours' : '1 Day'}
+                {order.tradeConfig.period === "S30"
+                  ? "30 Seconds"
+                  : order.tradeConfig.period === "M1"
+                  ? "1 Minute"
+                  : order.tradeConfig.period === "M5"
+                  ? "5 Minutes"
+                  : "15 Minutes"}
               </div>
             </div>
           </div>
@@ -157,14 +164,19 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
               <div className="text-sm text-muted-foreground">Stake Amount</div>
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-green-600" />
-                <span className="font-semibold">${order.stake.toFixed(2)}</span>
+                <span className="font-semibold">
+                  ${Number(order.stake).toFixed(2)}
+                </span>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="text-sm text-muted-foreground">Entry Price</div>
               <div className="font-semibold">
-                ${order.entryPrice.toFixed(order.coin.symbol === 'BTC' ? 2 : 4)}
+                $
+                {Number(order.entryPrice).toFixed(
+                  order.marketPair.baseCoin.symbol === "BTC" ? 2 : 4
+                )}
               </div>
             </div>
 
@@ -173,44 +185,59 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
               <div className="flex items-center gap-2">
                 <Percent className="h-4 w-4 text-blue-600" />
                 <span className="font-semibold">
-                  {(order.profitRate * 100).toFixed(1)}%
+                  {(Number(order.profitRate) * 100).toFixed(1)}%
                 </span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">Potential Payout</div>
+              <div className="text-sm text-muted-foreground">
+                Potential Payout
+              </div>
               <div className="font-semibold">
-                ${(order.stake * (1 + order.profitRate)).toFixed(2)}
+                $
+                {(Number(order.stake) * (1 + Number(order.profitRate))).toFixed(
+                  2
+                )}
               </div>
             </div>
           </div>
 
-          {order.status === 'SETTLED' && order.result && (
+          {order.status === "SETTLED" && order.result && (
             <>
               <Separator />
               <div className="space-y-2">
                 <div className="text-sm text-muted-foreground">Result</div>
-                <div className={cn(
-                  "font-bold text-lg",
-                  order.result === 'WON' ? "text-green-600" : 
-                  order.result === 'LOST' ? "text-red-600" : 
-                  "text-gray-600"
-                )}>
-                  {order.result === 'WON' ? '🎉 YOU WON!' : 
-                   order.result === 'LOST' ? '😞 You Lost' : 
-                   '🤝 Draw'}
+                <div
+                  className={cn(
+                    "font-bold text-lg",
+                    order.result === "WIN"
+                      ? "text-green-600"
+                      : order.result === "LOSS"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  )}
+                >
+                  {order.result === "WIN"
+                    ? "🎉 YOU WON!"
+                    : order.result === "LOSS"
+                    ? "😞 You Lost"
+                    : "🤝 Draw"}
                 </div>
-                <div className={cn(
-                  "text-2xl font-bold",
-                  order.result === 'WON' ? "text-green-600" : 
-                  order.result === 'LOST' ? "text-red-600" : 
-                  "text-gray-600"
-                )}>
-                  {order.result === 'WON' ? '+' : order.result === 'LOST' ? '-' : ''}
-                  ${Math.abs(pnl).toFixed(2)}
+                <div
+                  className={cn(
+                    "text-2xl font-bold",
+                    order.result === "WIN"
+                      ? "text-green-600"
+                      : order.result === "LOSS"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  )}
+                >
+                  {order.result === "WIN" ? "+" : "-"}$
+                  {Math.abs(pnl).toFixed(2)}
                   <span className="text-lg ml-2">
-                    ({order.result === 'WON' ? '+' : order.result === 'LOST' ? '-' : ''}
+                    ({order.result === "WIN" ? "+" : "-"}
                     {Math.abs(pnlPercentage).toFixed(1)}%)
                   </span>
                 </div>
@@ -266,12 +293,16 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-muted-foreground">Network</div>
-                <div className="font-medium">{order.network.name}</div>
+                <div className="font-medium">
+                  {order.marketPair.network.name}
+                </div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Order ID</div>
                 <div className="flex items-center gap-2">
-                  <code className="text-sm font-mono">{order.id.slice(0, 16)}...</code>
+                  <code className="text-sm font-mono">
+                    {order.id.slice(0, 16)}...
+                  </code>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -287,16 +318,11 @@ const OrderDetailsDialog = ({ order, open, onOpenChange }: OrderDetailsDialogPro
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleDownloadReceipt}
-          >
+          <Button variant="outline" onClick={handleDownloadReceipt}>
             <Download className="h-4 w-4 mr-2" />
             Download Receipt
           </Button>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </div>
       </DialogContent>
     </Dialog>

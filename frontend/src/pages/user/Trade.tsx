@@ -27,13 +27,11 @@ const TradePage = () => {
   // Fetch user assets for balance
   const { data: assetData } = useFetchData(COINS.ASSETS, "assets");
   const assets = assetData?.assets || [];
-  
+
   const pair: any = data?.pair;
-  
+
   const usdtBalance =
     assets.find((a: any) => a.coin?.id === pair?.baseCoin?.id)?.balance || 0;
-
-
 
   /** 2️⃣ Live price via WebSocket */
   const livePrice = useLivePrice(pair?.wsSymbol?.toLowerCase() ?? "");
@@ -64,9 +62,8 @@ const TradePage = () => {
             {/* 🧾 Order panel */}
             <div className="w-full md:w-1/2 lg:w-1/3">
               <OrderPanel
-                coinId={pair.baseCoinId}
+                marketPairId={pair.id}
                 symbol={pair.symbol}
-                networkId={pair.networkId}
                 currentPrice={livePrice}
                 availableBalance={Number(usdtBalance)}
               />

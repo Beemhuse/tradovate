@@ -1,4 +1,12 @@
-import { TrendingUp, Network, Edit, ExternalLink, Trash2, CheckCircle, PauseCircle } from "lucide-react";
+import {
+  TrendingUp,
+  Network,
+  Edit,
+  ExternalLink,
+  Trash2,
+  CheckCircle,
+  PauseCircle,
+} from "lucide-react";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { TradingPair } from "./types";
 import { Info } from "lucide-react";
@@ -24,16 +37,30 @@ interface PairRowProps {
   isPatching: boolean;
 }
 
-const PairRow = ({ pair, onEdit, onToggle, onDelete, isPatching }: PairRowProps) => {
+const PairRow = ({
+  pair,
+  onEdit,
+  onToggle,
+  onDelete,
+  isPatching,
+}: PairRowProps) => {
   return (
     <TableRow className="hover:bg-muted/50 group">
       <TableCell>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-              <span className="font-bold text-primary">
-                {pair.symbol?.split("/")[0]?.charAt(0)}
-              </span>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center overflow-hidden">
+              {pair.baseCoin?.iconUrl ? (
+                <img
+                  src={pair.baseCoin.iconUrl}
+                  alt={pair.baseCoin.symbol}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-bold text-primary">
+                  {pair.symbol?.split("/")[0]?.charAt(0)}
+                </span>
+              )}
             </div>
             <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500/20 border-2 border-background flex items-center justify-center">
               <span className="text-[10px] font-bold text-green-600">$</span>
@@ -54,14 +81,22 @@ const PairRow = ({ pair, onEdit, onToggle, onDelete, isPatching }: PairRowProps)
               </TooltipProvider>
             </div>
             <div className="text-sm text-muted-foreground">
-              {pair.baseCoin?.coin?.name}
+              {pair.baseCoin?.name}
             </div>
           </div>
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className="font-normal">
-          <Network className="h-3 w-3 mr-1" />
+        <Badge variant="outline" className="font-normal gap-1">
+          {pair.network?.icon ? (
+            <img
+              src={pair.network.icon}
+              alt={pair.network.name}
+              className="h-3 w-3"
+            />
+          ) : (
+            <Network className="h-3 w-3" />
+          )}
           {pair.network?.name}
         </Badge>
       </TableCell>

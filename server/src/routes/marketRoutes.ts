@@ -1,9 +1,28 @@
-import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middlewares/authMiddleware';
-import { getCoins, getCoin } from '../controllers/coinController';
-import { getAssets, createWallet, requestDeposit, requestWithdraw, getTransactions, requestBankWithdraw, getWalletConversions } from '../controllers/walletController';
-import { getMarketPrices, placeOrder, getUserOrders } from '../controllers/orderController';
-import { adminGetPairs, createPair, getPairById, getPairs, updatePair } from '../controllers/marketController';
+import { Router } from "express";
+import { authenticateToken, requireRole } from "../middlewares/authMiddleware";
+import { getCoins, getCoin } from "../controllers/coinController";
+import {
+  getAssets,
+  createWallet,
+  requestDeposit,
+  requestWithdraw,
+  getTransactions,
+  requestBankWithdraw,
+  getWalletConversions,
+} from "../controllers/walletController";
+import {
+  getMarketPrices,
+  placeOrder,
+  getUserOrders,
+} from "../controllers/orderController";
+import {
+  adminGetPairs,
+  createPair,
+  deletePair,
+  getPairById,
+  getPairs,
+  updatePair,
+} from "../controllers/marketController";
 
 const router = Router();
 
@@ -17,7 +36,7 @@ const router = Router();
  *       200:
  *         description: List of coins
  */
-router.get('/coins', getCoins); // Public
+router.get("/coins", getCoins); // Public
 
 /**
  * @swagger
@@ -43,7 +62,7 @@ router.get('/coins', getCoins); // Public
  *         description: Server error
  */
 
-router.get('/coins/:id', getCoin); // Public - single coin details
+router.get("/coins/:id", getCoin); // Public - single coin details
 
 /**
  * @swagger
@@ -191,7 +210,6 @@ router.get("/pairs/:id", authenticateToken, getPairById);
 
 router.get("/admin-pairs", adminGetPairs);
 
-
 /**
  * @swagger
  * /market/pairs:
@@ -274,11 +292,39 @@ router.post("/pairs", authenticateToken, requireRole("ADMIN"), createPair);
  */
 
 // Admin only
-router.patch(
+router.patch("/pairs/:id", authenticateToken, requireRole("ADMIN"), updatePair);
+
+/**
+ * @swagger
+ * /market/pairs/{id}:
+ *   delete:
+ *     summary: Delete a trading pair
+ *     description: Permanently remove a trading pair and its configurations. Admin only.
+ *     tags: [Market - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Trading pair deleted successfully
+ *       404:
+ *         description: Trading pair not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.delete(
   "/pairs/:id",
   authenticateToken,
   requireRole("ADMIN"),
-  updatePair
+  deletePair
 );
 
 /**
@@ -291,7 +337,7 @@ router.patch(
  *       200:
  *         description: Live prices
  */
-router.get('/prices', getMarketPrices); // Public
+router.get("/prices", getMarketPrices); // Public
 
 // Wallet Routes
 router.use(authenticateToken);
@@ -308,7 +354,7 @@ router.use(authenticateToken);
  *       200:
  *         description: User assets
  */
-router.get('/assets', getAssets);
+router.get("/assets", getAssets);
 
 /**
  * @swagger
@@ -333,7 +379,7 @@ router.get('/assets', getAssets);
  *       200:
  *         description: Wallet details
  */
-router.post('/wallet', createWallet);
+router.post("/wallet", createWallet);
 
 /**
  * @swagger
@@ -358,7 +404,7 @@ router.post('/wallet', createWallet);
  *       200:
  *         description: Deposit requested
  */
-router.post('/deposit', requestDeposit);
+router.post("/deposit", requestDeposit);
 
 /**
  * @swagger
@@ -385,7 +431,7 @@ router.post('/deposit', requestDeposit);
  *       200:
  *         description: Withdrawal requested
  */
-router.post('/withdraw', requestWithdraw);
+router.post("/withdraw", requestWithdraw);
 
 /**
  * @swagger
@@ -474,9 +520,9 @@ router.post('/withdraw', requestWithdraw);
  *       500:
  *         description: Server error while processing the request.
  */
-router.post('/withdraw/bank', requestBankWithdraw);
+router.post("/withdraw/bank", requestBankWithdraw);
 
-router.get('/transactions', getTransactions);
+router.get("/transactions", getTransactions);
 
 /**
  * @swagger
@@ -506,7 +552,7 @@ router.get('/transactions', getTransactions);
  *       200:
  *         description: Order placed
  */
-router.post('/order', placeOrder);
+router.post("/order", placeOrder);
 
 /**
  * @swagger
@@ -520,7 +566,7 @@ router.post('/order', placeOrder);
  *       200:
  *         description: User orders
  */
-router.get('/orders', getUserOrders);
+router.get("/orders", getUserOrders);
 /**
  * @swagger
  * /market/conversion:
@@ -529,10 +575,10 @@ router.get('/orders', getUserOrders);
  *     description: >
  *       Converts user wallet balances using live market prices.
  *       The endpoint supports two modes:
- *       
+ *
  *       **Portfolio mode (default):**
  *       - Converts the full balance of all wallets owned by the user.
- *       
+ *
  *       **Single-coin mode:**
  *       - Converts a specified amount of a specific coin owned by the user.
  *       - Requires both `coin` and `amount` query parameters.

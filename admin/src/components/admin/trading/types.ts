@@ -1,22 +1,22 @@
 export interface Coin {
   id: string;
-  coin: {
-    symbol: string;
-    name: string;
-  };
-  network: {
-    id: string;
-    name: string;
-  };
+  symbol: string;
+  name: string;
+  iconUrl?: string;
 }
 
 export interface TradingPair {
   id: string;
   symbol: string;
   wsSymbol: string;
+  isActive: boolean;
+  network: {
+    id: string;
+    name: string;
+    icon?: string;
+  };
   baseCoin: Coin;
   quoteCoin: Coin;
-  isActive: boolean;
   lastPrice?: number;
   priceChangePercent?: number;
   volume24h?: number;
@@ -41,20 +41,15 @@ export interface AdminTradingPairsProps {
 export interface CreatePairFormData {
   baseCoinNetworkId: string;
   quoteCoinNetworkId: string;
-
-  period: "S30" | "M1" | "M5" | "M15";
-  direction: "BULLISH" | "BEARISH";
   minStake: number;
   maxStake: number;
-  profitRate: number;
   isActive?: boolean;
 }
-
 
 export interface Network {
   id: string;
   name: string;
-  type: 'Native' | 'EVM' | 'TRC' | 'BEP' | 'Other';
+  type: "Native" | "EVM" | "TRC" | "BEP" | "Other";
   isActive: boolean;
   rpcUrl?: string;
   explorerUrl?: string;

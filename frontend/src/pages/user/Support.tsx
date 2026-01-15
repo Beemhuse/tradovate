@@ -1,17 +1,26 @@
 import { useState } from "react";
 import UserNav from "@/components/layout/UserNav";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, Send, MessageCircle } from "lucide-react";
+import { Phone, Mail, Send, MessageCircle, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useFetchData } from "@/hooks/use-api";
 
 const UserSupport = () => {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const { toast } = useToast();
+
+  const { data: contactData } = useFetchData("/contact", "contact-info");
 
   const handleEmailSubmit = () => {
     if (!subject.trim() || !message.trim()) {
@@ -19,8 +28,10 @@ const UserSupport = () => {
       return;
     }
 
-    const email = "tradovatef@gmail.com";
-    const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    const email = contactData?.email || "tradovatef@gmail.com";
+    const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(message)}`;
 
     // Open the default email client
     window.location.href = mailtoLink;
@@ -34,24 +45,46 @@ const UserSupport = () => {
     {
       icon: Phone,
       label: "Phone Call",
-      value: "+1 (585) 609-0385",
-      action: () => window.location.href = "tel:+15856090385",
-      color: "bg-blue-500/10 text-blue-500"
+      value: contactData?.phone || "+1 (585) 609-0385",
+      action: () =>
+        (window.location.href = `tel:${contactData?.phone || "+15856090385"}`),
+      color: "bg-blue-500/10 text-blue-500",
+      show: !!contactData?.phone || true,
     },
     {
-      icon: MessageCircle, // WhatsApp usually represented by message/chat icon or brand icon if available
+      icon: MessageCircle,
       label: "WhatsApp",
-      value: "+1 (585) 609-0385",
-      action: () => window.open("https://wa.me/15856090385", "_blank"),
-      color: "bg-green-500/10 text-green-500"
+      value: contactData?.whatsapp || "+1 (585) 609-0385",
+      action: () =>
+        window.open(
+          `https://wa.me/${(contactData?.whatsapp || "15856090385").replace(
+            /[^0-9]/g,
+            ""
+          )}`,
+          "_blank"
+        ),
+      color: "bg-green-500/10 text-green-500",
+      show: !!contactData?.whatsapp || true,
     },
     {
       icon: Mail,
       label: "Email Support",
-      value: "tradovatef@gmail.com",
-      action: () => window.location.href = "mailto:tradovatef@gmail.com",
-      color: "bg-orange-500/10 text-orange-500"
-    }
+      value: contactData?.email || "tradovatef@gmail.com",
+      action: () =>
+        (window.location.href = `mailto:${
+          contactData?.email || "tradovatef@gmail.com"
+        }`),
+      color: "bg-orange-500/10 text-orange-500",
+      show: !!contactData?.email || true,
+    },
+    {
+      icon: MapPin,
+      label: "Visit Us",
+      value: contactData?.address || "Available on request",
+      action: () => {},
+      color: "bg-purple-500/10 text-purple-500",
+      show: !!contactData?.address,
+    },
   ];
 
   return (
@@ -65,19 +98,27 @@ const UserSupport = () => {
 
         <div className="flex flex-col md:flex-row gap-3 w-full">
           <div className="grid md:grid-cols-1 gap-6 w-full md:w-1/3">
-            {contactOptions.map((option, index) => (
-              <Card key={index} className="hover:bg-secondary/50 transition-colors cursor-pointer" onClick={option.action}>
-                <CardContent className="pt-6 flex items-center text-center gap-4">
-                  <div className={`p-4 rounded-full ${option.color}`}>
-                    <option.icon className="h-8 w-8" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{option.label}</h3>
-                    <p className="text-sm text-muted-foreground">{option.value}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {contactOptions
+              .filter((o) => o.show)
+              .map((option, index) => (
+                <Card
+                  key={index}
+                  className="hover:bg-secondary/50 transition-colors cursor-pointer"
+                  onClick={option.action}
+                >
+                  <CardContent className="pt-6 flex items-center text-center gap-4">
+                    <div className={`p-4 rounded-full ${option.color}`}>
+                      <option.icon className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{option.label}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {option.value}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
           </div>
 
           <div className="w-full">
@@ -108,10 +149,7 @@ const UserSupport = () => {
                   />
                 </div>
 
-                <Button
-                  className="w-full"
-                  onClick={handleEmailSubmit}
-                >
+                <Button className="w-full" onClick={handleEmailSubmit}>
                   <Send className="h-4 w-4 mr-2" />
                   Open Email Client
                 </Button>

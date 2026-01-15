@@ -6,12 +6,8 @@ import { AuthRequest } from "../middlewares/authMiddleware";
 const createPairSchema = z.object({
   baseCoinNetworkId: z.string().uuid(),
   quoteCoinNetworkId: z.string().uuid(),
-
-  period: z.enum(["S30", "M1", "M5", "M15"]),
-  direction: z.enum(["BULLISH", "BEARISH"]),
   minStake: z.number().positive(),
   maxStake: z.number().positive(),
-  profitRate: z.number().positive(),
   isActive: z.boolean().optional(),
 });
 
@@ -23,11 +19,8 @@ export const createPair = async (req: Request, res: Response) => {
     const {
       baseCoinNetworkId,
       quoteCoinNetworkId,
-      period,
-      direction,
       minStake,
       maxStake,
-      profitRate,
       isActive,
     } = createPairSchema.parse(req.body);
 
@@ -83,6 +76,14 @@ export const createPair = async (req: Request, res: Response) => {
     const symbol = `${base.coin.symbol}/${quote.coin.symbol}`;
     const wsSymbol = `${base.coin.symbol}${quote.coin.symbol}`.toLowerCase();
 
+    // Default periods setup
+    const periods = [
+      { period: "S30", profitRate: 0.8 },
+      { period: "M1", profitRate: 0.9 },
+      { period: "M5", profitRate: 1.2 },
+      { period: "M15", profitRate: 1.5 },
+    ] as const;
+
     const result = await prisma.$transaction(async (tx) => {
       let pair = await tx.marketPair.findUnique({
         where: {
@@ -112,54 +113,47 @@ export const createPair = async (req: Request, res: Response) => {
         });
       }
 
-      const existingConfig = await tx.tradeConfig.findUnique({
-        where: {
-          marketPairId_period_direction: {
-            marketPairId: pair.id,
-            period,
-            direction,
+      // Create Configs for ALL periods
+      const createdConfigs = [];
+      for (const p of periods) {
+        const existingConfig = await tx.tradeConfig.findUnique({
+          where: {
+            marketPairId_period: {
+              marketPairId: pair.id,
+              period: p.period,
+            },
           },
-        },
-      });
+        });
 
-      if (existingConfig) {
-        throw new Error("CONFIG_ALREADY_EXISTS");
+        if (!existingConfig) {
+          const config = await tx.tradeConfig.create({
+            data: {
+              marketPairId: pair.id,
+              period: p.period,
+              minStake,
+              maxStake,
+              profitRate: p.profitRate, // Use default rates
+              isActive: isActive ?? true,
+            },
+          });
+          createdConfigs.push(config);
+        }
       }
 
-      const config = await tx.tradeConfig.create({
-        data: {
-          marketPairId: pair.id,
-          period,
-          direction,
-          minStake,
-          maxStake,
-          profitRate,
-          isActive: isActive ?? true, // 👈 added
-        },
-      });
-
-      return { pair, config };
+      return { pair, configs: createdConfigs };
     });
 
     return res.status(201).json({
       success: true,
       pair: result.pair,
-      config: result.config,
-      message: "Trading pair and config created successfully",
+      configs: result.configs,
+      message: "Trading pair and configs created successfully",
     });
   } catch (err: any) {
     console.error("createPair error:", err);
 
-    if (err.message === "CONFIG_ALREADY_EXISTS") {
-      return res.status(409).json({
-        error: "This trading configuration already exists for the pair",
-      });
-    }
-
-    if (err.code === "P2002") {
-      return res.status(409).json({
-        error: "Duplicate trading pair",
-      });
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors });
     }
 
     return res.status(500).json({
@@ -227,6 +221,9 @@ export const getPairs = async (req: Request, res: Response) => {
         id: true,
         symbol: true,
         networkId: true, // ✅ added
+        network: {
+          select: { id: true, name: true, icon: true },
+        },
         baseCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },
         },
@@ -293,7 +290,7 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
       where: { id },
       include: {
         network: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, icon: true },
         },
         baseCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },
@@ -307,7 +304,7 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             period: true,
-            direction: true,
+            // direction: true,
             minStake: true,
             maxStake: true,
             profitRate: true,
@@ -367,6 +364,46 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({
       success: false,
       error: "Failed to fetch market pair",
+    });
+  }
+};
+export const deletePair = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // 1️⃣ Check if pair exists
+    const pair = await prisma.marketPair.findUnique({
+      where: { id },
+    });
+
+    if (!pair) {
+      return res.status(404).json({
+        success: false,
+        error: "Market pair not found",
+      });
+    }
+
+    // 2️⃣ Delete associated TradeConfigs and then the Pair
+    // We do this in a transaction to be safe
+    await prisma.$transaction([
+      prisma.tradeConfig.deleteMany({
+        where: { marketPairId: id },
+      }),
+      prisma.marketPair.delete({
+        where: { id },
+      }),
+    ]);
+
+    return res.json({
+      success: true,
+      message: "Market pair and associated configs deleted successfully",
+    });
+  } catch (err: any) {
+    console.error("deletePair error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete market pair",
+      details: err.message,
     });
   }
 };

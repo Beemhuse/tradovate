@@ -38,11 +38,8 @@ const CreatePairDialog = ({
   );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState("");
-  const [period, setPeriod] = useState<"S30" | "M1" | "M5" | "M15">("M1");
-  const [direction, setDirection] = useState<"BULLISH" | "BEARISH">("BULLISH");
   const [minStake, setMinStake] = useState("");
   const [maxStake, setMaxStake] = useState("");
-  const [profitRate, setProfitRate] = useState("");
 
   /* ---------------------------------------------
    * Fast lookup
@@ -81,7 +78,7 @@ const CreatePairDialog = ({
       return;
     }
 
-    if (!minStake || !maxStake || !profitRate) {
+    if (!minStake || !maxStake) {
       setError("Please fill all trade configuration fields");
       return;
     }
@@ -89,12 +86,8 @@ const CreatePairDialog = ({
     onCreatePair({
       baseCoinNetworkId: selectedBase.id,
       quoteCoinNetworkId: usdtCoinNetwork.id,
-
-      period,
-      direction,
       minStake: Number(minStake),
       maxStake: Number(maxStake),
-      profitRate: Number(profitRate),
       isActive: true,
     });
   };
@@ -219,36 +212,6 @@ const CreatePairDialog = ({
         <div className="space-y-3">
           <Label>Trade Configuration</Label>
 
-          {/* Period */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">Period</Label>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as any)}
-                className="w-full border bg-black rounded-md px-2 py-1"
-              >
-                <option value="S30">30 Seconds</option>
-                <option value="M1">1 Minute</option>
-                <option value="M5">5 Minutes</option>
-                <option value="M15">15 Minutes</option>
-              </select>
-            </div>
-
-            {/* Direction */}
-            <div>
-              <Label className="text-xs">Direction</Label>
-              <select
-                value={direction}
-                onChange={(e) => setDirection(e.target.value as any)}
-                className="w-full border bg-black rounded-md px-2 py-1"
-              >
-                <option value="BULLISH">Bullish</option>
-                <option value="BEARISH">Bearish</option>
-              </select>
-            </div>
-          </div>
-
           {/* Stakes */}
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -270,19 +233,6 @@ const CreatePairDialog = ({
                 className="w-full border bg-black rounded-md px-2 py-1"
               />
             </div>
-          </div>
-
-          {/* Profit Rate */}
-          <div>
-            <Label className="text-xs">Profit Rate</Label>
-            <input
-              type="number"
-              step="0.01"
-              value={profitRate}
-              onChange={(e) => setProfitRate(e.target.value)}
-              className="w-full border bg-black rounded-md px-2 py-1"
-              placeholder="e.g. 0.85"
-            />
           </div>
         </div>
 

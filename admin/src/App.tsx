@@ -24,6 +24,7 @@ import AdminKYC from "./pages/admin/KYC";
 import AdminTransactions from "./pages/admin/Transactions";
 import AdminTradingPairs from "./pages/admin/TradingPairs";
 import AdminSupport from "./pages/admin/Support";
+import AdminOrders from "./pages/admin/Orders";
 import AdminLayout from "./components/layout/AdminLayout";
 import AdminUploadCertificatesPage from "./pages/admin/Certificates";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -58,6 +59,8 @@ const App = () => (
                 <Route path="kyc" element={<AdminKYC />} />
                 <Route path="transactions" element={<AdminTransactions />} />
                 <Route path="trading-pairs" element={<AdminTradingPairs />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="support" element={<AdminSupport />} />
               </Route>
             </Route>
 

@@ -11,6 +11,7 @@ import kycRoutes from "./routes/kycRoutes";
 import adminTransactionRoutes from "./routes/adminTransactionRoutes";
 import userTransactionRoutes from "./routes/userTransactionRoutes";
 import certificateRoutes from "./routes/adminCertRoutes";
+import contactRoutes from "./routes/contactRoutes";
 
 const app = express();
 
@@ -99,6 +100,7 @@ app.use("/api/v1/network", networkRoutes);
 app.use("/api/v1/kyc", kycRoutes);
 app.use("/api/v1/admin/transactions", adminTransactionRoutes);
 app.use("/api/v1/user/transactions", userTransactionRoutes);
+app.use("/api/v1/contact", contactRoutes);
 
 // Health Check
 app.get("/health", (req, res) => {

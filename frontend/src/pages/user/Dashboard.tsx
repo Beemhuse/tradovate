@@ -39,17 +39,16 @@ const Dashboard = () => {
 
   const assets = assetData?.assets;
 
-  
   const {
     data: cryptoPairsData,
     isLoading: cryptoPairsLoading,
     error: cryptoPairsError,
   } = useFetchData(MARKET_PAIR.LIST, "market-pairs");
-  
+
   const cryptoPairs = cryptoPairsData?.pairs || [];
   const baseCoins =
-  cryptoPairs?.map((asset) => asset?.symbol?.split("/")[0]) || [];
-  
+    cryptoPairs?.map((asset) => asset?.symbol?.split("/")[0]) || [];
+
   console.log("cryptoPairs", cryptoPairs);
   const prices = useCryptoPrice(baseCoins);
 
@@ -104,7 +103,7 @@ const Dashboard = () => {
                     onClick={() => {
                       setWithdrawOpen(true);
                       setBankWithdrawOpen(false);
-                    }}  
+                    }}
                   >
                     Crypto Currency
                   </DropdownMenuItem>
@@ -157,14 +156,24 @@ const Dashboard = () => {
                           {coin?.coin?.symbol}
                         </p>
                       </div>
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-primary font-bold">
-                          {coin?.coin?.name[0]}
-                        </span>
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {coin?.coin?.iconUrl ? (
+                          <img
+                            src={coin.coin.iconUrl}
+                            alt={coin.coin.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-primary font-bold">
+                            {coin?.coin?.name[0]}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-2xl font-bold">${Number(coin?.balance).toLocaleString()}</p>
+                      <p className="text-2xl font-bold">
+                        ${Number(coin?.balance).toLocaleString()}
+                      </p>
                       <p className={true ? "text-success" : "text-danger"}>
                         +{2.01}%
                       </p>
@@ -206,8 +215,9 @@ const Dashboard = () => {
                         </td>
 
                         <td
-                          className={`text-left py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
-                            }`}
+                          className={`text-left py-3 px-4 ${
+                            priceData?.positive ? "text-success" : "text-danger"
+                          }`}
                         >
                           <ChartNoAxesCombined />
                         </td>
@@ -215,8 +225,9 @@ const Dashboard = () => {
                           ${Number(priceData?.price).toLocaleString() || "..."}
                         </td>
                         <td
-                          className={`text-right py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
-                            }`}
+                          className={`text-right py-3 px-4 ${
+                            priceData?.positive ? "text-success" : "text-danger"
+                          }`}
                         >
                           {priceData?.positive ? "+" : ""}
                           {priceData?.changePercent24h}%

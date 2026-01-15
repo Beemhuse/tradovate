@@ -5,8 +5,7 @@ import clsx from "clsx";
 import { useToast } from "@/hooks/use-toast";
 
 type Props = {
-  coinId: string;
-  networkId: string;
+  marketPairId: string; // 👈 New Prop
   symbol: string;
   currentPrice: number;
   availableBalance: number;
@@ -24,8 +23,7 @@ const TRADE_PERIODS = [
 ] as const;
 
 const OrderPanel = ({
-  coinId,
-  networkId,
+  marketPairId,
   symbol,
   currentPrice,
   availableBalance,
@@ -55,10 +53,9 @@ const OrderPanel = ({
 
     mutate(
       {
-        coinId,
-        networkId,
-        direction,
+        marketPairId,
         period: selectedPeriod.period,
+        direction,
         stake,
         entryPrice: currentPrice,
       },

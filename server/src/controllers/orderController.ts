@@ -5,12 +5,11 @@ import { z, ZodError } from "zod";
 import { fetchPrices } from "../services/marketPriceService";
 
 export const placeOrderSchema = z.object({
-  coinId: z.string().uuid(),
-  networkId: z.string().uuid(), // REQUIRED
-  type: z.enum(["BUY", "SELL"]),
-  amount: z.number().positive(),
-  stake: z.number().positive().optional(),
-  entryPrice: z.number().positive(), // ✅ FROM FRONTEND
+  marketPairId: z.string().uuid(),
+  period: z.enum(["S30", "M1", "M5", "M15"]),
+  direction: z.enum(["BULLISH", "BEARISH"]),
+  stake: z.number().positive(),
+  entryPrice: z.number().positive(),
 });
 
 export const TRADE_PERIODS = {
@@ -20,13 +19,11 @@ export const TRADE_PERIODS = {
   M15: { seconds: 900, profitRate: 1.5 },
 } as const;
 
-
 export const placeTradeSchema = z.object({
   tradeConfigId: z.string().uuid(),
   stake: z.number().positive(),
   entryPrice: z.number().positive(),
 });
-
 
 export const getMarketPrices = async (req: Request, res: Response) => {
   try {
@@ -45,14 +42,20 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.user.userId;
-    const { tradeConfigId, stake, entryPrice } =
-      placeTradeSchema.parse(req.body);
+    const { marketPairId, period, direction, stake, entryPrice } =
+      placeOrderSchema.parse(req.body);
 
     /* ============================
        Load trade config + pair
     ============================ */
+    // Find the config for this Pair + Period
     const tradeConfig = await prisma.tradeConfig.findUnique({
-      where: { id: tradeConfigId },
+      where: {
+        marketPairId_period: {
+          marketPairId,
+          period,
+        },
+      },
       include: {
         marketPair: {
           include: {
@@ -64,7 +67,9 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     });
 
     if (!tradeConfig || !tradeConfig.isActive) {
-      return res.status(400).json({ error: "Invalid trade configuration" });
+      return res
+        .status(400)
+        .json({ error: "Invalid trade configuration or period not supported" });
     }
 
     const pair = tradeConfig.marketPair;
@@ -156,6 +161,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           userId,
           marketPairId: pair.id,
           tradeConfigId: tradeConfig.id,
+          direction, // 👈 Manual direction
           stake,
           entryPrice,
           profitRate: tradeConfig.profitRate,
@@ -183,7 +189,6 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: "Trade placement failed" });
   }
 };
-
 
 // const settleTrade = async (orderId: string) => {
 //   const order = await prisma.order.findUnique({
@@ -249,5 +254,132 @@ export const getUserOrders = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error("getUserOrders error:", error);
     res.status(500).json({ error: "Failed to fetch orders" });
+  }
+};
+
+/* =========================================
+   ADMIN: GET ALL ORDERS
+========================================= */
+export const adminGetOrders = async (req: Request, res: Response) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: { id: true, email: true },
+          },
+          marketPair: {
+            include: {
+              baseCoin: true,
+              quoteCoin: true,
+            },
+          },
+        },
+      }),
+      prisma.order.count(),
+    ]);
+
+    return res.json({
+      orders,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("adminGetOrders error:", error);
+    return res.status(500).json({ error: "Failed to fetch orders" });
+  }
+};
+
+/* =========================================
+   ADMIN: SETTLE ORDER (MANUAL)
+========================================= */
+export const adminSettleOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { result } = req.body; // "WIN" or "LOSS"
+
+    if (!["WIN", "LOSS"].includes(result)) {
+      return res
+        .status(400)
+        .json({ error: "Invalid result. Must be WIN or LOSS" });
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        marketPair: true, // Need to know networkId
+        tradeConfig: true,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (order.status !== "PENDING") {
+      return res.status(400).json({ error: "Order is already settled" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. If WIN, Credit User logic
+      if (result === "WIN") {
+        const profit = Number(order.stake) * Number(order.profitRate);
+        const payout = Number(order.stake) + profit;
+
+        // Find user's USDT wallet on that network
+        const wallet = await tx.wallet.findFirst({
+          where: {
+            userId: order.userId,
+            coin: { symbol: "USDT" },
+            networkId: order.marketPair.networkId,
+          },
+        });
+
+        if (wallet) {
+          // Update Wallet
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { increment: payout } },
+          });
+
+          // Create Transaction Record
+          await tx.transaction.create({
+            data: {
+              userId: order.userId,
+              walletId: wallet.id,
+              type: "DEPOSIT",
+              amount: payout,
+              status: "COMPLETED",
+            },
+          });
+        }
+      }
+
+      // 2. Update Order Status
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "SETTLED",
+          result: result as "WIN" | "LOSS",
+          settledAt: new Date(),
+        },
+      });
+    });
+
+    return res.json({ message: "Order settled successfully" });
+  } catch (error) {
+    console.error("adminSettleOrder error:", error);
+    return res.status(500).json({ error: "Failed to settle order" });
   }
 };

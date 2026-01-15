@@ -1,13 +1,32 @@
 import { Search, Filter, Calendar, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { OrderFilters, TransactionFilters } from "./types";
+import {
+  OrderFilters,
+  TransactionFilters,
+  TradeStatus,
+  TradeResult,
+  TradeDirection,
+  TradePeriod,
+  TransactionType,
+  TransactionStatus,
+} from "./types";
 
 interface FiltersProps {
   activeTab: "orders" | "transactions";
@@ -24,48 +43,44 @@ const Filters = ({
   onOrderFilterChange,
   onTransactionFilterChange,
 }: FiltersProps) => {
-  const filters = activeTab === "orders" ? orderFilters : transactionFilters;
-  const setFilters = activeTab === "orders" ? onOrderFilterChange : onTransactionFilterChange;
-
   const orderStatusOptions = [
     { value: "ALL", label: "All Status" },
     { value: "PENDING", label: "Pending", color: "bg-yellow-500" },
-    { value: "RUNNING", label: "Running", color: "bg-blue-500" },
     { value: "SETTLED", label: "Settled", color: "bg-green-500" },
-    { value: "CANCELLED", label: "Cancelled", color: "bg-gray-500" },
-    { value: "EXPIRED", label: "Expired", color: "bg-red-500" },
   ];
 
   const orderResultOptions = [
     { value: "ALL", label: "All Results" },
-    { value: "WON", label: "Won", color: "bg-green-500" },
-    { value: "LOST", label: "Lost", color: "bg-red-500" },
+    { value: "WIN", label: "Win", color: "bg-green-500" },
+    { value: "LOSS", label: "Loss", color: "bg-red-500" },
     { value: "DRAW", label: "Draw", color: "bg-gray-500" },
   ];
 
   const orderDirectionOptions = [
     { value: "ALL", label: "All Directions" },
-    { value: "BULLISH", label: "BULLISH", color: "bg-green-500" },
-    { value: "BEARISH", label: "BEARISH", color: "bg-red-500" },
+    { value: "BULLISH", label: "Bullish", color: "bg-green-500" },
+    { value: "BEARISH", label: "Bearish", color: "bg-red-500" },
   ];
 
   const orderPeriodOptions = [
     { value: "ALL", label: "All Periods" },
+    { value: "S30", label: "30 Seconds" },
     { value: "M1", label: "1 Minute" },
     { value: "M5", label: "5 Minutes" },
     { value: "M15", label: "15 Minutes" },
-    { value: "H1", label: "1 Hour" },
-    { value: "H4", label: "4 Hours" },
-    { value: "D1", label: "1 Day" },
   ];
 
   const transactionTypeOptions = [
     { value: "ALL", label: "All Types" },
     { value: "DEPOSIT", label: "Deposit", color: "bg-green-500" },
     { value: "WITHDRAWAL", label: "Withdrawal", color: "bg-blue-500" },
-    { value: "TRADE", label: "Trade", color: "bg-purple-500" },
+    { value: "TRADE_OPEN", label: "Trade Open", color: "bg-purple-500" },
+    { value: "TRADE_CLOSE", label: "Trade Close", color: "bg-purple-500" },
+    { value: "TRADE_WIN", label: "Trade Win", color: "bg-green-500" },
+    { value: "TRADE_PROFIT", label: "Trade Profit", color: "bg-green-500" },
     { value: "BONUS", label: "Bonus", color: "bg-yellow-500" },
-    { value: "REFERRAL", label: "Referral", color: "bg-cyan-500" },
+    { value: "FEE", label: "Fee", color: "bg-red-500" },
+    { value: "ADMIN_ADJUST", label: "Admin Adjustment", color: "bg-gray-500" },
   ];
 
   const transactionStatusOptions = [
@@ -73,7 +88,6 @@ const Filters = ({
     { value: "PENDING", label: "Pending", color: "bg-yellow-500" },
     { value: "COMPLETED", label: "Completed", color: "bg-green-500" },
     { value: "FAILED", label: "Failed", color: "bg-red-500" },
-    { value: "PROCESSING", label: "Processing", color: "bg-blue-500" },
     { value: "REJECTED", label: "Rejected", color: "bg-gray-500" },
   ];
 
@@ -86,10 +100,27 @@ const Filters = ({
   ];
 
   const handleClearFilters = () => {
-    setFilters({});
+    if (activeTab === "orders") {
+      onOrderFilterChange({});
+    } else {
+      onTransactionFilterChange({});
+    }
   };
 
-  const hasActiveFilters = Object.keys(filters).length > 0;
+  const currentFilters =
+    activeTab === "orders" ? orderFilters : transactionFilters;
+  const hasActiveFilters = Object.keys(currentFilters).length > 0;
+
+  const updateOrderFilter = (key: keyof OrderFilters, value: any) => {
+    onOrderFilterChange({ ...orderFilters, [key]: value });
+  };
+
+  const updateTransactionFilter = (
+    key: keyof TransactionFilters,
+    value: any
+  ) => {
+    onTransactionFilterChange({ ...transactionFilters, [key]: value });
+  };
 
   return (
     <div className="space-y-4 mb-6">
@@ -99,62 +130,60 @@ const Filters = ({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={
-              activeTab === "orders" 
-                ? "Search by coin, pair, ID..." 
+              activeTab === "orders"
+                ? "Search by coin, pair, ID..."
                 : "Search by amount, ID, hash..."
             }
-            value={filters.search || ""}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            value={currentFilters.search || ""}
+            onChange={(e) => {
+              if (activeTab === "orders")
+                updateOrderFilter("search", e.target.value);
+              else updateTransactionFilter("search", e.target.value);
+            }}
             className="pl-9"
           />
         </div>
 
         {/* Status Filter */}
         <Select
-          value={filters.status || "ALL"}
-          onValueChange={(value) => setFilters({ 
-            ...filters, 
-            status: value === "ALL" ? undefined : value as any 
-          })}
+          value={currentFilters.status || "ALL"}
+          onValueChange={(value) => {
+            const nextValue = value === "ALL" ? undefined : value;
+            if (activeTab === "orders") updateOrderFilter("status", nextValue);
+            else updateTransactionFilter("status", nextValue);
+          }}
         >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            {activeTab === "orders" 
-              ? orderStatusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div className="flex items-center gap-2">
-                      {option.color && (
-                        <div className={`w-2 h-2 rounded-full ${option.color}`} />
-                      )}
-                      {option.label}
-                    </div>
-                  </SelectItem>
-                ))
-              : transactionStatusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div className="flex items-center gap-2">
-                      {option.color && (
-                        <div className={`w-2 h-2 rounded-full ${option.color}`} />
-                      )}
-                      {option.label}
-                    </div>
-                  </SelectItem>
-                ))
-            }
+            {(activeTab === "orders"
+              ? orderStatusOptions
+              : transactionStatusOptions
+            ).map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <div className="flex items-center gap-2">
+                  {option.color && (
+                    <div className={`w-2 h-2 rounded-full ${option.color}`} />
+                  )}
+                  {option.label}
+                </div>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
-        {/* Type Filter */}
+        {/* Tab Specific Filters */}
         {activeTab === "orders" ? (
           <>
             <Select
-              value={filters.direction || "ALL"}
-              onValueChange={(value) => setFilters({ 
-                ...filters, 
-                direction: value === "ALL" ? undefined : value as any 
-              })}
+              value={orderFilters.direction || "ALL"}
+              onValueChange={(value) =>
+                updateOrderFilter(
+                  "direction",
+                  value === "ALL" ? undefined : value
+                )
+              }
             >
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Direction" />
@@ -164,7 +193,9 @@ const Filters = ({
                   <SelectItem key={option.value} value={option.value}>
                     <div className="flex items-center gap-2">
                       {option.color && (
-                        <div className={`w-2 h-2 rounded-full ${option.color}`} />
+                        <div
+                          className={`w-2 h-2 rounded-full ${option.color}`}
+                        />
                       )}
                       {option.label}
                     </div>
@@ -174,11 +205,10 @@ const Filters = ({
             </Select>
 
             <Select
-              value={filters.result || "ALL"}
-              onValueChange={(value) => setFilters({ 
-                ...filters, 
-                result: value === "ALL" ? undefined : value as any 
-              })}
+              value={orderFilters.result || "ALL"}
+              onValueChange={(value) =>
+                updateOrderFilter("result", value === "ALL" ? undefined : value)
+              }
             >
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Result" />
@@ -188,7 +218,9 @@ const Filters = ({
                   <SelectItem key={option.value} value={option.value}>
                     <div className="flex items-center gap-2">
                       {option.color && (
-                        <div className={`w-2 h-2 rounded-full ${option.color}`} />
+                        <div
+                          className={`w-2 h-2 rounded-full ${option.color}`}
+                        />
                       )}
                       {option.label}
                     </div>
@@ -199,11 +231,13 @@ const Filters = ({
           </>
         ) : (
           <Select
-            value={filters.type || "ALL"}
-            onValueChange={(value) => setFilters({ 
-              ...filters, 
-              type: value === "ALL" ? undefined : value as any 
-            })}
+            value={transactionFilters.type || "ALL"}
+            onValueChange={(value) =>
+              updateTransactionFilter(
+                "type",
+                value === "ALL" ? undefined : value
+              )
+            }
           >
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Type" />
@@ -230,15 +264,20 @@ const Filters = ({
               variant="outline"
               className={cn(
                 "w-full md:w-[240px] justify-start text-left font-normal",
-                (filters.startDate || filters.endDate) && "border-primary"
+                (currentFilters.startDate || currentFilters.endDate) &&
+                  "border-primary"
               )}
             >
               <Calendar className="mr-2 h-4 w-4" />
-              {filters.startDate || filters.endDate ? (
+              {currentFilters.startDate || currentFilters.endDate ? (
                 <>
-                  {filters.startDate ? format(new Date(filters.startDate), "MMM dd") : ""}
+                  {currentFilters.startDate
+                    ? format(new Date(currentFilters.startDate), "MMM dd")
+                    : ""}
                   {" - "}
-                  {filters.endDate ? format(new Date(filters.endDate), "MMM dd, yyyy") : ""}
+                  {currentFilters.endDate
+                    ? format(new Date(currentFilters.endDate), "MMM dd, yyyy")
+                    : ""}
                 </>
               ) : (
                 <span>Pick a date range</span>
@@ -249,15 +288,29 @@ const Filters = ({
             <CalendarComponent
               mode="range"
               selected={{
-                from: filters.startDate ? new Date(filters.startDate) : undefined,
-                to: filters.endDate ? new Date(filters.endDate) : undefined,
+                from: currentFilters.startDate
+                  ? new Date(currentFilters.startDate)
+                  : undefined,
+                to: currentFilters.endDate
+                  ? new Date(currentFilters.endDate)
+                  : undefined,
               }}
               onSelect={(range) => {
-                setFilters({
-                  ...filters,
-                  startDate: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
-                  endDate: range?.to ? format(range.to, "yyyy-MM-dd") : undefined,
-                });
+                const startDate = range?.from
+                  ? format(range.from, "yyyy-MM-dd")
+                  : undefined;
+                const endDate = range?.to
+                  ? format(range.to, "yyyy-MM-dd")
+                  : undefined;
+                if (activeTab === "orders") {
+                  onOrderFilterChange({ ...orderFilters, startDate, endDate });
+                } else {
+                  onTransactionFilterChange({
+                    ...transactionFilters,
+                    startDate,
+                    endDate,
+                  });
+                }
               }}
               numberOfMonths={2}
             />
@@ -281,40 +334,64 @@ const Filters = ({
       {/* Active Filters Badges */}
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2">
-          {Object.entries(filters).map(([key, value]) => {
+          {Object.entries(currentFilters).map(([key, value]) => {
             if (!value || key === "search") return null;
-            
+
             let label = "";
             let color = "bg-gray-100 text-gray-800";
-            
+
             if (key === "status") {
-              const option = (activeTab === "orders" ? orderStatusOptions : transactionStatusOptions)
-                .find(opt => opt.value === value);
+              const option = (
+                activeTab === "orders"
+                  ? orderStatusOptions
+                  : transactionStatusOptions
+              ).find((opt) => opt.value === value);
               label = `Status: ${option?.label}`;
               color = "bg-blue-100 text-blue-800";
-            } else if (key === "type") {
-              const option = transactionTypeOptions.find(opt => opt.value === value);
+            } else if (key === "type" && activeTab === "transactions") {
+              const option = transactionTypeOptions.find(
+                (opt) => opt.value === value
+              );
               label = `Type: ${option?.label}`;
               color = "bg-green-100 text-green-800";
-            } else if (key === "direction") {
-              const option = orderDirectionOptions.find(opt => opt.value === value);
+            } else if (key === "direction" && activeTab === "orders") {
+              const option = orderDirectionOptions.find(
+                (opt) => opt.value === value
+              );
               label = `Direction: ${option?.label}`;
-              color = value === "UP" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
-            } else if (key === "result") {
-              const option = orderResultOptions.find(opt => opt.value === value);
+              color =
+                value === "BULLISH"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800";
+            } else if (key === "result" && activeTab === "orders") {
+              const option = orderResultOptions.find(
+                (opt) => opt.value === value
+              );
               label = `Result: ${option?.label}`;
-              color = value === "WON" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
+              color =
+                value === "WIN"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800";
             } else if (key === "startDate" || key === "endDate") {
-              label = `${key === "startDate" ? "From" : "To"}: ${format(new Date(value), "MMM dd, yyyy")}`;
+              label = `${key === "startDate" ? "From" : "To"}: ${format(
+                new Date(value as string),
+                "MMM dd, yyyy"
+              )}`;
               color = "bg-purple-100 text-purple-800";
-            } else if (key === "period") {
-              const option = timePeriodOptions.find(opt => opt.value === value);
+            } else if (key === "period" && activeTab === "orders") {
+              const option = orderPeriodOptions.find(
+                (opt) => opt.value === value
+              );
               label = `Period: ${option?.label}`;
               color = "bg-amber-100 text-amber-800";
             }
-            
+
             return label ? (
-              <Badge key={key} variant="secondary" className={cn(color, "font-normal")}>
+              <Badge
+                key={key}
+                variant="secondary"
+                className={cn(color, "font-normal")}
+              >
                 {label}
               </Badge>
             ) : null;

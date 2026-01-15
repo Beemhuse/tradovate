@@ -106,7 +106,7 @@ const AdminTradingPairs = () => {
   );
 
   const { mutate: deletePair, isPending: deleting } = useDeleteData(
-    "/market/pairs",
+    (id) => `/market/pairs/${id}`,
     ["market-pairs"]
   );
 
@@ -238,7 +238,7 @@ const AdminTradingPairs = () => {
   }, [pairs]);
 
   const handleCreatePair = (formData: CreatePairFormData) => {
-      console.log("CREATE PAIR PAYLOAD:", formData); // 👈 ADD THIS
+    console.log("CREATE PAIR PAYLOAD:", formData); // 👈 ADD THIS
 
     createPair(formData, {
       onSuccess: (res) => {

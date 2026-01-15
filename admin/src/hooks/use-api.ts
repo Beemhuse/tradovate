@@ -26,7 +26,9 @@ export const useFetchData = <T = any>(endpoint: Endpoint, queryKey: string) => {
     queryKey: [queryKey, endpoint],
     queryFn: async () => {
       try {
-        const response = await fetchData(endpoint);
+        const finalEndpoint =
+          typeof endpoint === "function" ? (endpoint as any)() : endpoint;
+        const response = await fetchData(finalEndpoint);
         return response;
       } catch (error) {
         const errorMessage = handleGenericError(error as Error);
@@ -41,7 +43,7 @@ export const useFetchData = <T = any>(endpoint: Endpoint, queryKey: string) => {
  * CREATE DATA (POST)
  * ------------------------------------------ */
 export const useCreateData = <T = any, D = any>(
-  endpoint: string,
+  endpoint: string | ((data: D) => string),
   queryKey: QueryKey,
   isFormData: boolean = false
 ) => {
@@ -49,7 +51,9 @@ export const useCreateData = <T = any, D = any>(
 
   return useMutation<T, Error, D>({
     mutationFn: async (data: D) => {
-      const response = await postData(endpoint, data, isFormData);
+      const finalEndpoint =
+        typeof endpoint === "function" ? endpoint(data) : endpoint;
+      const response = await postData(finalEndpoint, data, isFormData);
       return response; // ✅ return clean data
     },
     onSuccess: (data) => {
@@ -77,7 +81,9 @@ export const useUpdateData = <T = any, D = any>(
   const queryClient = useQueryClient();
   return useMutation<T, Error, D>({
     mutationFn: async (newData: D) => {
-      const response = await updateData(endpoint, newData);
+      const finalEndpoint =
+        typeof endpoint === "function" ? (endpoint as any)(newData) : endpoint;
+      const response = await updateData(finalEndpoint, newData);
       return response;
     },
     onSuccess: (response) => {
@@ -113,9 +119,9 @@ export const usePatchData = <T = any, D = any>(
     mutationFn: async (newData: D) => {
       // Support dynamic endpoint callback
       const finalEndpoint =
-        typeof endpoint === "function" ? endpoint(newData) : endpoint;
+        typeof endpoint === "function" ? (endpoint as any)(newData) : endpoint;
 
-      const response = await patchData(finalEndpoint, newData);
+      const response = await patchData(finalEndpoint as string, newData);
       return response;
     },
 
@@ -143,7 +149,6 @@ export const usePatchData = <T = any, D = any>(
     },
   });
 };
-
 
 /* -------------------------------------------
  * DELETE DATA

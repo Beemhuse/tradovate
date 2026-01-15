@@ -18,6 +18,10 @@ import {
   deactivateCoin,
   reactivateCoin,
 } from "../controllers/adminController";
+import {
+  adminGetOrders,
+  adminSettleOrder,
+} from "../controllers/orderController";
 
 const router = Router();
 
@@ -25,7 +29,6 @@ const router = Router();
 router.use(authenticateToken, requireRole("ADMIN"));
 
 // =============== COIN MANAGEMENT ROUTES ===============
-
 
 /**
  * @swagger
@@ -721,5 +724,8 @@ router.patch("/coins/:id/deactivate", deactivateCoin);
 router.patch("/:id/reactivate", reactivateCoin);
 router.patch("/users/:id/suspend", suspendUser);
 
+// =============== ORDER MANAGEMENT ROUTES ===============
+router.get("/orders", adminGetOrders);
+router.post("/orders/:id/settle", adminSettleOrder);
 
 export default router;

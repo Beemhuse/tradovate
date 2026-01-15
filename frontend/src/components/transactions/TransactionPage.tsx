@@ -1,21 +1,26 @@
 import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFetchData } from "@/hooks/use-api";
-import { 
-  Download, 
-  RefreshCw, 
-  TrendingUp, 
-  CreditCard, 
-  History, 
+import {
+  Download,
+  RefreshCw,
+  TrendingUp,
+  CreditCard,
+  History,
   BarChart3,
   ArrowUpDown,
-  Wallet
+  Wallet,
 } from "lucide-react";
-import { Order, Transaction, OrderFilters, Filters as TransactionFilters } from "./types";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Order, Transaction, OrderFilters, TransactionFilters } from "./types";
 import StatsCards from "./StatsCards";
 import Filters from "./Filters";
 import OrdersSection from "./OrdersSection";
@@ -25,12 +30,16 @@ import TransactionDetailsDialog from "./TransactionDetailsDialog";
 
 const TransactionsPage = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"orders" | "transactions">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "transactions">(
+    "orders"
+  );
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [orderFilters, setOrderFilters] = useState<OrderFilters>({});
-  const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>({});
-  
+  const [transactionFilters, setTransactionFilters] =
+    useState<TransactionFilters>({});
+
   // Fetch orders data
   const {
     data: ordersData,
@@ -48,39 +57,51 @@ const TransactionsPage = () => {
   } = useFetchData("/user/transactions", "user-transactions");
 
   const orders = useMemo(() => ordersData || [], [ordersData]);
-  const transactions = useMemo(() => transactionsData?.transactions || [], [transactionsData]);
+  const transactions = useMemo(
+    () => transactionsData?.transactions || [],
+    [transactionsData]
+  );
 
   // Calculate stats
   const stats = useMemo(() => {
-    const activeOrders = orders.filter(o => 
-      o.status === 'PENDING' || o.status === 'RUNNING'
-    ).length;
-    
-    const settledOrders = orders.filter(o => o.status === 'SETTLED');
-    const wonOrders = settledOrders.filter(o => o.result === 'WON');
-    const lostOrders = settledOrders.filter(o => o.result === 'LOST');
-    
-    const totalStake = orders.reduce((sum, order) => sum + order.stake, 0);
-    const totalPnl = orders.reduce((sum, order) => sum + (order.pnl || 0), 0);
-    
+    const activeOrders = orders.filter((o) => o.status === "PENDING").length;
+
+    const settledOrders = orders.filter((o) => o.status === "SETTLED");
+    const wonOrders = settledOrders.filter((o) => o.result === "WIN");
+
+    const totalStake = orders.reduce(
+      (sum, order) => sum + Number(order.stake),
+      0
+    );
+    const totalPnl = orders.reduce((sum, order) => {
+      const stakeNum = Number(order.stake);
+      const profitRateNum = Number(order.profitRate);
+      if (order.result === "WIN") return sum + stakeNum * profitRateNum;
+      if (order.result === "LOSS") return sum - stakeNum;
+      return sum;
+    }, 0);
+
     const totalDeposits = transactions
-      .filter(t => t.type === 'DEPOSIT' && t.status === 'COMPLETED')
-      .reduce((sum, t) => sum + t.amount, 0);
-    
+      .filter((t) => t.type === "DEPOSIT" && t.status === "COMPLETED")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
     const totalWithdrawals = transactions
-      .filter(t => t.type === 'WITHDRAWAL' && t.status === 'COMPLETED')
-      .reduce((sum, t) => sum + t.amount, 0);
-    
-    const pendingTransactions = transactions
-      .filter(t => t.status === 'PENDING' || t.status === 'PROCESSING')
-      .length;
+      .filter((t) => t.type === "WITHDRAWAL" && t.status === "COMPLETED")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const pendingTransactions = transactions.filter(
+      (t) => t.status === "PENDING"
+    ).length;
 
     return {
       totalOrders: orders.length,
       activeOrders,
       totalStake,
       totalPnl,
-      winRate: settledOrders.length > 0 ? (wonOrders.length / settledOrders.length) * 100 : 0,
+      winRate:
+        settledOrders.length > 0
+          ? (wonOrders.length / settledOrders.length) * 100
+          : 0,
       totalTransactions: transactions.length,
       totalDeposits,
       totalWithdrawals,
@@ -93,7 +114,6 @@ const TransactionsPage = () => {
       title: "Exporting data...",
       description: "Your transaction history is being prepared for download.",
     });
-    // Implement export functionality here
   };
 
   const handleRefresh = () => {
@@ -112,22 +132,6 @@ const TransactionsPage = () => {
     }
   };
 
-//   useEffect(() => {
-//     // Real-time updates for active orders
-//     const interval = setInterval(() => {
-//       if (activeTab === "orders") {
-//         const hasActiveOrders = orders.some(o => 
-//           o.status === 'PENDING' || o.status === 'RUNNING'
-//         );
-//         if (hasActiveOrders) {
-//           refetchOrders();
-//         }
-//       }
-//     }, 10000); // Check every 10 seconds
-
-//     return () => clearInterval(interval);
-//   }, [activeTab, orders, refetchOrders]);
-
   if (ordersError || transactionsError) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -135,9 +139,13 @@ const TransactionsPage = () => {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-12">
               <History className="h-12 w-12 text-destructive mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Failed to Load Data</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Failed to Load Data
+              </h3>
               <p className="text-muted-foreground text-center mb-4">
-                {ordersError?.message || transactionsError?.message || "An error occurred"}
+                {ordersError?.message ||
+                  transactionsError?.message ||
+                  "An error occurred"}
               </p>
               <Button onClick={handleRefresh}>
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -162,7 +170,9 @@ const TransactionsPage = () => {
                   <History className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Transactions & Orders</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    Transactions & Orders
+                  </h1>
                   <p className="text-muted-foreground">
                     Track your trading orders and financial transactions
                   </p>
@@ -185,14 +195,21 @@ const TransactionsPage = () => {
                 onClick={handleRefresh}
                 disabled={loadingOrders || loadingTransactions}
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loadingOrders || loadingTransactions ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${
+                    loadingOrders || loadingTransactions ? "animate-spin" : ""
+                  }`}
+                />
                 Refresh
               </Button>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <StatsCards stats={stats} isLoading={loadingOrders || loadingTransactions} />
+          <StatsCards
+            stats={stats}
+            isLoading={loadingOrders || loadingTransactions}
+          />
         </div>
 
         {/* Main Content */}
@@ -205,17 +222,25 @@ const TransactionsPage = () => {
                   View your orders and transaction history
                 </CardDescription>
               </div>
-              <Tabs 
-                value={activeTab} 
-                onValueChange={(v) => setActiveTab(v as "orders" | "transactions")}
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) =>
+                  setActiveTab(v as "orders" | "transactions")
+                }
                 className="w-full sm:w-auto"
               >
                 <TabsList className="grid grid-cols-2 w-full sm:w-auto">
-                  <TabsTrigger value="orders" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="orders"
+                    className="flex items-center gap-2"
+                  >
                     <TrendingUp className="h-4 w-4" />
                     Orders ({orders.length})
                   </TabsTrigger>
-                  <TabsTrigger value="transactions" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="transactions"
+                    className="flex items-center gap-2"
+                  >
                     <ArrowUpDown className="h-4 w-4" />
                     Transactions ({transactions.length})
                   </TabsTrigger>

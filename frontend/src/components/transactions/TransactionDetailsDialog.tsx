@@ -8,8 +8,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Copy, 
+import {
+  Copy,
   ExternalLink,
   Download,
   CheckCircle,
@@ -20,7 +20,7 @@ import {
   ArrowDownLeft,
   Building,
   User,
-  Hash
+  Hash,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Transaction } from "./types";
@@ -33,7 +33,11 @@ interface TransactionDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: TransactionDetailsDialogProps) => {
+const TransactionDetailsDialog = ({
+  transaction,
+  open,
+  onOpenChange,
+}: TransactionDetailsDialogProps) => {
   const { toast } = useToast();
 
   if (!transaction) return null;
@@ -59,18 +63,29 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
   const handleViewOnExplorer = () => {
     if (transaction.txHash && transaction.wallet?.network.explorerUrl) {
       const explorerUrl = `${transaction.wallet.network.explorerUrl}/tx/${transaction.txHash}`;
-      window.open(explorerUrl, '_blank');
+      window.open(explorerUrl, "_blank");
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'FAILED': return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'PENDING': return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'PROCESSING': return <Clock className="h-4 w-4 text-blue-500" />;
-      default: return <AlertCircle className="h-4 w-4" />;
+      case "COMPLETED":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "FAILED":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case "PENDING":
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
     }
+  };
+
+  const isPositive = (type: string) => {
+    return ["DEPOSIT", "TRADE_WIN", "TRADE_PROFIT", "BONUS"].includes(type);
+  };
+
+  const isNegative = (type: string) => {
+    return ["WITHDRAWAL", "TRADE_OPEN", "FEE"].includes(type);
   };
 
   return (
@@ -83,9 +98,11 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
               <Badge
                 variant="outline"
                 className={cn(
-                  transaction.type === 'DEPOSIT' ? "bg-green-500/10 text-green-700 border-green-500/30" :
-                  transaction.type === 'WITHDRAWAL' ? "bg-blue-500/10 text-blue-700 border-blue-500/30" :
-                  "bg-purple-500/10 text-purple-700 border-purple-500/30"
+                  isPositive(transaction.type)
+                    ? "bg-green-500/10 text-green-700 border-green-500/30"
+                    : isNegative(transaction.type)
+                    ? "bg-red-500/10 text-red-700 border-red-500/30"
+                    : "bg-purple-500/10 text-purple-700 border-purple-500/30"
                 )}
               >
                 {transaction.type}
@@ -93,10 +110,13 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
               <Badge
                 variant="secondary"
                 className={cn(
-                  transaction.status === 'COMPLETED' ? "bg-green-500/20 text-green-700" :
-                  transaction.status === 'FAILED' ? "bg-red-500/20 text-red-700" :
-                  transaction.status === 'PENDING' ? "bg-yellow-500/20 text-yellow-700" :
-                  "bg-blue-500/20 text-blue-700"
+                  transaction.status === "COMPLETED"
+                    ? "bg-green-500/20 text-green-700"
+                    : transaction.status === "FAILED"
+                    ? "bg-red-500/20 text-red-700"
+                    : transaction.status === "PENDING"
+                    ? "bg-yellow-500/20 text-yellow-700"
+                    : "bg-gray-500/20 text-gray-700"
                 )}
               >
                 {getStatusIcon(transaction.status)}
@@ -113,15 +133,21 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
           {/* Amount */}
           <div className="text-center space-y-2">
             <div className="text-sm text-muted-foreground">Amount</div>
-            <div className={cn(
-              "text-3xl font-bold",
-              transaction.type === 'DEPOSIT' || transaction.type === 'BONUS' || transaction.type === 'REFERRAL'
-                ? "text-green-600"
-                : transaction.type === 'WITHDRAWAL' || transaction.type === 'WITHDRAWAL_FEE'
-                ? "text-red-600"
-                : "text-gray-600"
-            )}>
-              {transaction.type === 'DEPOSIT' || transaction.type === 'BONUS' || transaction.type === 'REFERRAL' ? '+' : '-'}
+            <div
+              className={cn(
+                "text-3xl font-bold",
+                isPositive(transaction.type)
+                  ? "text-green-600"
+                  : isNegative(transaction.type)
+                  ? "text-red-600"
+                  : "text-gray-600"
+              )}
+            >
+              {isPositive(transaction.type)
+                ? "+"
+                : isNegative(transaction.type)
+                ? "-"
+                : ""}
               ${transaction.amount.toFixed(2)}
             </div>
             {transaction.coin && (
@@ -143,7 +169,10 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
                   <span className="text-sm">Created</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {format(new Date(transaction.createdAt), "MMM dd, yyyy HH:mm:ss")}
+                  {format(
+                    new Date(transaction.createdAt),
+                    "MMM dd, yyyy HH:mm:ss"
+                  )}
                 </div>
               </div>
 
@@ -153,7 +182,10 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
                   <span className="text-sm">Last Updated</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {format(new Date(transaction.updatedAt), "MMM dd, yyyy HH:mm:ss")}
+                  {format(
+                    new Date(transaction.updatedAt),
+                    "MMM dd, yyyy HH:mm:ss"
+                  )}
                 </div>
               </div>
             </div>
@@ -180,7 +212,9 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => handleCopy(transaction.txHash!, "Transaction hash")}
+                        onClick={() =>
+                          handleCopy(transaction.txHash!, "Transaction hash")
+                        }
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -212,7 +246,9 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                      onClick={() => handleCopy(transaction.toAddress!, "Address")}
+                      onClick={() =>
+                        handleCopy(transaction.toAddress!, "Address")
+                      }
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -234,7 +270,12 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                      onClick={() => handleCopy(transaction.wallet!.address, "Wallet address")}
+                      onClick={() =>
+                        handleCopy(
+                          transaction.wallet!.address,
+                          "Wallet address"
+                        )
+                      }
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -264,20 +305,30 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
                 <div className="text-sm font-medium">Bank Details</div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm text-muted-foreground">Bank Name</div>
+                    <div className="text-sm text-muted-foreground">
+                      Bank Name
+                    </div>
                     <div className="font-medium">{transaction.bankName}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Account Name</div>
+                    <div className="text-sm text-muted-foreground">
+                      Account Name
+                    </div>
                     <div className="font-medium">{transaction.accountName}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Account Number</div>
-                    <div className="font-medium">{transaction.accountNumber}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Account Number
+                    </div>
+                    <div className="font-medium">
+                      {transaction.accountNumber}
+                    </div>
                   </div>
                   {transaction.ifscCode && (
                     <div>
-                      <div className="text-sm text-muted-foreground">IFSC Code</div>
+                      <div className="text-sm text-muted-foreground">
+                        IFSC Code
+                      </div>
                       <div className="font-medium">{transaction.ifscCode}</div>
                     </div>
                   )}
@@ -287,16 +338,20 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
           )}
 
           {/* Admin Actions */}
-          {transaction.adminAction !== 'NONE' && (
+          {transaction.adminAction !== "NONE" && (
             <>
               <Separator />
               <div className="space-y-3">
                 <div className="text-sm font-medium">Admin Action</div>
                 <div className="flex items-center justify-between">
                   <Badge
-                    variant={transaction.adminAction === 'APPROVED' ? "default" : "destructive"}
+                    variant={
+                      transaction.adminAction === "APPROVED"
+                        ? "default"
+                        : "destructive"
+                    }
                     className={cn(
-                      transaction.adminAction === 'APPROVED' 
+                      transaction.adminAction === "APPROVED"
                         ? "bg-green-100 text-green-800 hover:bg-green-100"
                         : "bg-red-100 text-red-800 hover:bg-red-100"
                     )}
@@ -315,16 +370,11 @@ const TransactionDetailsDialog = ({ transaction, open, onOpenChange }: Transacti
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleDownloadReceipt}
-          >
+          <Button variant="outline" onClick={handleDownloadReceipt}>
             <Download className="h-4 w-4 mr-2" />
             Download Receipt
           </Button>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </div>
       </DialogContent>
     </Dialog>

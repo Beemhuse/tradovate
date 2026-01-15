@@ -1,18 +1,25 @@
-import { useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import React, { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Eye, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Eye,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  CheckCircle,
+  XCircle,
   MinusCircle,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Order, OrderFilters } from "./types";
@@ -25,86 +32,112 @@ interface OrdersSectionProps {
   onOrderClick: (order: Order) => void;
 }
 
-const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSectionProps) => {
+const OrdersSection = ({
+  orders,
+  filters,
+  isLoading,
+  onOrderClick,
+}: OrdersSectionProps) => {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   // Apply filters
-  const filteredOrders = orders.filter(order => {
-    if (filters.status && filters.status !== "ALL" && order.status !== filters.status) {
+  const filteredOrders = orders.filter((order) => {
+    if (
+      filters.status &&
+      filters.status !== "ALL" &&
+      order.status !== filters.status
+    ) {
       return false;
     }
-    if (filters.result && filters.result !== "ALL" && order.result !== filters.result) {
+    if (
+      filters.result &&
+      filters.result !== "ALL" &&
+      order.result !== filters.result
+    ) {
       return false;
     }
-    if (filters.direction && filters.direction !== "ALL" && order.direction !== filters.direction) {
+    if (
+      filters.direction &&
+      filters.direction !== "ALL" &&
+      order.direction !== filters.direction
+    ) {
       return false;
     }
-    if (filters.period && filters.period !== "ALL" && order.period !== filters.period) {
+    const period = order.tradeConfig?.period;
+    if (
+      filters.period &&
+      filters.period !== "ALL" &&
+      period !== filters.period
+    ) {
       return false;
     }
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      const matches = 
+      const matches =
         order.id.toLowerCase().includes(searchLower) ||
-        order.coin.symbol.toLowerCase().includes(searchLower) ||
-        order.coin.name.toLowerCase().includes(searchLower) ||
-        order.pair?.symbol.toLowerCase().includes(searchLower) ||
+        order.marketPair.baseCoin.symbol.toLowerCase().includes(searchLower) ||
+        order.marketPair.baseCoin.name.toLowerCase().includes(searchLower) ||
+        order.marketPair.symbol.toLowerCase().includes(searchLower) ||
         order.stake.toString().includes(searchLower);
       if (!matches) return false;
     }
     if (filters.startDate || filters.endDate) {
       const orderDate = new Date(order.createdAt);
-      if (filters.startDate && orderDate < new Date(filters.startDate)) return false;
-      if (filters.endDate && orderDate > new Date(filters.endDate)) return false;
+      if (filters.startDate && orderDate < new Date(filters.startDate))
+        return false;
+      if (filters.endDate && orderDate > new Date(filters.endDate))
+        return false;
     }
     return true;
   });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'PENDING': return <Clock className="h-3 w-3" />;
-      case 'RUNNING': return <Clock className="h-3 w-3" />;
-      case 'SETTLED': return <CheckCircle className="h-3 w-3" />;
-      case 'CANCELLED': return <XCircle className="h-3 w-3" />;
-      case 'EXPIRED': return <MinusCircle className="h-3 w-3" />;
-      default: return <AlertCircle className="h-3 w-3" />;
+      case "PENDING":
+        return <Clock className="h-3 w-3" />;
+      case "SETTLED":
+        return <CheckCircle className="h-3 w-3" />;
+      default:
+        return <AlertCircle className="h-3 w-3" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PENDING': return "bg-yellow-500/20 text-yellow-700 border-yellow-500/30";
-      case 'RUNNING': return "bg-blue-500/20 text-blue-700 border-blue-500/30";
-      case 'SETTLED': return "bg-green-500/20 text-green-700 border-green-500/30";
-      case 'CANCELLED': return "bg-gray-500/20 text-gray-700 border-gray-500/30";
-      case 'EXPIRED': return "bg-red-500/20 text-red-700 border-red-500/30";
-      default: return "bg-gray-500/20 text-gray-700 border-gray-500/30";
+      case "PENDING":
+        return "bg-yellow-500/20 text-yellow-700 border-yellow-500/30";
+      case "SETTLED":
+        return "bg-green-500/20 text-green-700 border-green-500/30";
+      default:
+        return "bg-gray-500/20 text-gray-700 border-gray-500/30";
     }
   };
 
   const getResultColor = (result?: string) => {
     switch (result) {
-      case 'WON': return "bg-green-500/20 text-green-700";
-      case 'LOST': return "bg-red-500/20 text-red-700";
-      case 'DRAW': return "bg-gray-500/20 text-gray-700";
-      default: return "bg-gray-500/20 text-gray-700";
+      case "WIN":
+        return "bg-green-500/20 text-green-700";
+      case "LOSS":
+        return "bg-red-500/20 text-red-700";
+      default:
+        return "bg-gray-500/20 text-gray-700";
     }
   };
 
   const getDirectionIcon = (direction: string) => {
-    return direction === 'BULLISH' 
-      ? <TrendingUp className="h-3 w-3 text-green-600" />
-      : <TrendingDown className="h-3 w-3 text-red-600" />;
+    return direction === "BULLISH" ? (
+      <TrendingUp className="h-3 w-3 text-green-600" />
+    ) : (
+      <TrendingDown className="h-3 w-3 text-red-600" />
+    );
   };
 
   const getPeriodLabel = (period: string) => {
     const labels: Record<string, string> = {
-      'M1': '1M',
-      'M5': '5M',
-      'M15': '15M',
-      'H1': '1H',
-      'H4': '4H',
-      'D1': '1D',
+      S30: "30S",
+      M1: "1M",
+      M5: "5M",
+      M15: "15M",
     };
     return labels[period] || period;
   };
@@ -117,7 +150,10 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
     return (
       <div className="space-y-3">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+          <div
+            key={i}
+            className="flex items-center justify-between p-4 border rounded-lg"
+          >
             <div className="flex items-center gap-4">
               <Skeleton className="h-10 w-10 rounded-full" />
               <div className="space-y-2">
@@ -146,13 +182,11 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
           {orders.length === 0 ? "No orders yet" : "No matching orders found"}
         </h3>
         <p className="text-muted-foreground mb-4">
-          {orders.length === 0 
-            ? "Start trading to see your orders here" 
+          {orders.length === 0
+            ? "Start trading to see your orders here"
             : "Try adjusting your filters"}
         </p>
-        <Button>
-          Start Trading
-        </Button>
+        <Button>Start Trading</Button>
       </div>
     );
   }
@@ -175,15 +209,23 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
         <TableBody>
           {filteredOrders.map((order) => {
             const isExpanded = expandedOrderId === order.id;
-            const pnl = order.pnl || 0;
-            const pnlPercentage = order.entryPrice ? (pnl / order.entryPrice) * 100 : 0;
+            const stakeNum = Number(order.stake);
+            const profitRateNum = Number(order.profitRate);
+            const pnl =
+              order.result === "WIN"
+                ? stakeNum * profitRateNum
+                : order.result === "LOSS"
+                ? -stakeNum
+                : 0;
 
             return (
-              <>
-                <TableRow key={order.id} className="hover:bg-muted/50">
+              <React.Fragment key={order.id}>
+                <TableRow className="hover:bg-muted/50">
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="font-medium text-sm">{order.id.slice(0, 8)}...</div>
+                      <div className="font-medium text-sm">
+                        {order.id.slice(0, 8)}...
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {format(new Date(order.createdAt), "MMM dd, HH:mm")}
                       </div>
@@ -191,23 +233,25 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {order.coin.iconUrl ? (
-                        <img 
-                          src={order.coin.iconUrl} 
-                          alt={order.coin.symbol}
+                      {order.marketPair.baseCoin.iconUrl ? (
+                        <img
+                          src={order.marketPair.baseCoin.iconUrl}
+                          alt={order.marketPair.baseCoin.symbol}
                           className="w-6 h-6 rounded-full"
                         />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                           <span className="text-xs font-bold">
-                            {order.coin.symbol.charAt(0)}
+                            {order.marketPair.baseCoin.symbol.charAt(0)}
                           </span>
                         </div>
                       )}
                       <div>
-                        <div className="font-medium">{order.coin.symbol}</div>
+                        <div className="font-medium">
+                          {order.marketPair.baseCoin.symbol}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {order.pair?.symbol || "Spot"}
+                          {order.marketPair.symbol}
                         </div>
                       </div>
                     </div>
@@ -218,7 +262,7 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
                         variant="outline"
                         className={cn(
                           "flex items-center gap-1",
-                          order.direction === 'UP' 
+                          order.direction === "BULLISH"
                             ? "bg-green-500/10 text-green-700 border-green-500/30"
                             : "bg-red-500/10 text-red-700 border-red-500/30"
                         )}
@@ -227,47 +271,56 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
                         {order.direction}
                       </Badge>
                       <Badge variant="secondary" className="font-mono">
-                        {getPeriodLabel(order.period)}
+                        {getPeriodLabel(order.tradeConfig.period)}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-semibold">${order.stake.toFixed(2)}</div>
+                    <div className="font-semibold">${stakeNum.toFixed(2)}</div>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      ${order.entryPrice.toFixed(order.coin.symbol === 'BTC' ? 2 : 4)}
+                      $
+                      {Number(order.entryPrice).toFixed(
+                        order.marketPair.baseCoin.symbol === "BTC" ? 2 : 4
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {order.status === 'SETTLED' && order.result ? (
-                      <div className={cn(
-                        "font-semibold",
-                        order.result === 'WON' ? "text-green-600" : 
-                        order.result === 'LOST' ? "text-red-600" : 
-                        "text-gray-600"
-                      )}>
-                        {order.result === 'WON' ? '+' : order.result === 'LOST' ? '-' : ''}
-                        ${Math.abs(pnl).toFixed(2)}
-                        <span className="text-xs ml-1">
-                          ({order.result === 'WON' ? '+' : order.result === 'LOST' ? '-' : ''}
-                          {Math.abs(pnlPercentage).toFixed(1)}%)
-                        </span>
-                      </div>
-                    ) : order.status === 'RUNNING' ? (
-                      <div className="text-amber-600 text-sm">
-                        <Clock className="h-3 w-3 inline mr-1" />
-                        Running...
+                    {order.status === "SETTLED" && order.result ? (
+                      <div
+                        className={cn(
+                          "font-semibold",
+                          order.result === "WIN"
+                            ? "text-green-600"
+                            : order.result === "LOSS"
+                            ? "text-red-600"
+                            : "text-gray-600"
+                        )}
+                      >
+                        {order.result === "WIN" ? "+" : "-"}$
+                        {Math.abs(pnl).toFixed(2)}
+                        {order.result === "WIN" && (
+                          <span className="text-xs ml-1">
+                            (+{(profitRateNum * 100).toFixed(0)}%)
+                          </span>
+                        )}
                       </div>
                     ) : (
-                      <div className="text-gray-500 text-sm">-</div>
+                      <div className="text-amber-600 text-sm">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        Pending...
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Badge
                         variant="outline"
-                        className={cn("flex items-center gap-1", getStatusColor(order.status))}
+                        className={cn(
+                          "flex items-center gap-1",
+                          getStatusColor(order.status)
+                        )}
                       >
                         {getStatusIcon(order.status)}
                         {order.status}
@@ -301,7 +354,7 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
                     </div>
                   </TableCell>
                 </TableRow>
-                
+
                 {/* Expanded Details */}
                 {isExpanded && (
                   <TableRow className="bg-muted/30">
@@ -309,51 +362,67 @@ const OrdersSection = ({ orders, filters, isLoading, onOrderClick }: OrdersSecti
                       <div className="p-4 space-y-3">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
-                            <div className="text-sm text-muted-foreground">Expires At</div>
+                            <div className="text-sm text-muted-foreground">
+                              Expires At
+                            </div>
                             <div className="font-medium">
-                              {format(new Date(order.expiresAt), "MMM dd, HH:mm:ss")}
+                              {format(
+                                new Date(order.expiresAt),
+                                "MMM dd, HH:mm:ss"
+                              )}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Settled At</div>
+                            <div className="text-sm text-muted-foreground">
+                              Settled At
+                            </div>
                             <div className="font-medium">
-                              {order.settledAt 
-                                ? format(new Date(order.settledAt), "MMM dd, HH:mm:ss")
-                                : "-"
-                              }
+                              {order.settledAt
+                                ? format(
+                                    new Date(order.settledAt),
+                                    "MMM dd, HH:mm:ss"
+                                  )
+                                : "Awaiting Settlement"}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Profit Rate</div>
+                            <div className="text-sm text-muted-foreground">
+                              Profit Rate
+                            </div>
                             <div className="font-medium">
-                              {order.profitRate ? `${(order.profitRate * 100).toFixed(1)}%` : "-"}
+                              {profitRateNum
+                                ? `${(profitRateNum * 100).toFixed(1)}%`
+                                : "-"}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Network</div>
+                            <div className="text-sm text-muted-foreground">
+                              Network
+                            </div>
                             <div className="font-medium">
-                              {order.network.name}
+                              {order.marketPair.network.name}
                             </div>
                           </div>
                         </div>
-                        {order.pair && (
-                          <div className="pt-2 border-t">
-                            <div className="text-sm text-muted-foreground mb-1">Trading Pair</div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">
-                                {order.pair.symbol}
-                              </Badge>
-                              <div className="text-sm">
-                                {order.pair.baseCoin.name} / {order.pair.quoteCoin.name}
-                              </div>
+                        <div className="pt-2 border-t">
+                          <div className="text-sm text-muted-foreground mb-1">
+                            Trading Pair
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {order.marketPair.symbol}
+                            </Badge>
+                            <div className="text-sm">
+                              {order.marketPair.baseCoin.name} /{" "}
+                              {order.marketPair.quoteCoin.name}
                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
                 )}
-              </>
+              </React.Fragment>
             );
           })}
         </TableBody>

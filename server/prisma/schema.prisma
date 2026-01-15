@@ -261,6 +261,7 @@ model Order {
   userId        String
   marketPairId  String
   tradeConfigId String
+  direction     TradeDirection // 👈 Moved here
 
   stake      Decimal
   entryPrice Decimal
@@ -291,7 +292,6 @@ model TradeConfig {
   marketPairId String
 
   period    TradePeriod
-  direction TradeDirection
 
   minStake   Decimal
   maxStake   Decimal
@@ -302,5 +302,14 @@ model TradeConfig {
   marketPair MarketPair @relation(fields: [marketPairId], references: [id])
   orders     Order[]
 
-  @@unique([marketPairId, period, direction])
+  @@unique([marketPairId, period])
+}
+
+model ContactInfo {
+    id        String   @id @default(uuid())
+    email     String?
+    phone     String?
+    whatsapp  String?
+    address   String?
+    updatedAt DateTime @updatedAt
 }

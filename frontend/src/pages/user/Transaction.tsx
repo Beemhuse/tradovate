@@ -1,4 +1,3 @@
-// In your routes file
 import { TransactionsPage } from "@/components/transactions";
 
 export default function TransactionsRoute() {
