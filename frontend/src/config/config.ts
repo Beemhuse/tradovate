@@ -11,7 +11,7 @@ export default function initAxios() {
   axios.defaults.baseURL = API_URL;
   axios.defaults.withCredentials = false;
 
-  const accessToken = CookieManager.get("travodate-token");
+  const accessToken = CookieManager.get("tradovate-token");
 
   // Set authorization header if token exists (using CookieManager)
   if (typeof window !== "undefined") {
@@ -29,9 +29,9 @@ export default function initAxios() {
         // Handle unauthorized access
         if (typeof window !== "undefined") {
           // Clear the auth token cookie
-          CookieManager.delete("travodate-token", "/");
-          CookieManager.delete("travodate-refresh-token", "/");
-          CookieManager.delete("travodate-user", "/");
+          CookieManager.delete("tradovate-token", "/");
+          CookieManager.delete("tradovate-refresh-token", "/");
+          CookieManager.delete("tradovate-user", "/");
 
           // Clear local storage
           localStorage.clear();
@@ -51,7 +51,7 @@ export default function initAxios() {
 // Helper functions for auth token management
 export const setAuthToken = (token: string) => {
   // Set cookie with 7 day expiration
-  CookieManager.set("travodate-token", token, {
+  CookieManager.set("tradovate-token", token, {
     expires: 7,
     path: "/",
     secure: true,
@@ -64,7 +64,7 @@ export const setAuthToken = (token: string) => {
 };
 export const setAuthUser = (token: string) => {
 
-  CookieManager.set("travodate-user", token, {
+  CookieManager.set("tradovate-user", token, {
     expires: 7,
     path: "/",
     secure: true,
@@ -76,18 +76,18 @@ export const setAuthUser = (token: string) => {
 };
 
 export const clearAuthToken = () => {
-  CookieManager.delete("travodate-token", "/");
-  CookieManager.delete("travodate-user", "/");
+  CookieManager.delete("tradovate-token", "/");
+  CookieManager.delete("tradovate-user", "/");
   window.location.reload()
   delete axios.defaults.headers.common.Authorization;
 };
 
 export const getAuthToken = (): string | null => {
-  return CookieManager.get("travodate-token");
+  return CookieManager.get("tradovate-token");
 }
 
 export const getAuthUser = (): string | null => {
-  return CookieManager.get("travodate-user");
+  return CookieManager.get("tradovate-user");
 };
 
 initAxios();

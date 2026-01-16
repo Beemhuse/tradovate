@@ -26,7 +26,7 @@ const UserCertificatesPage = () => {
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
     /* ---------------- API ---------------- */
-    
+
     const { data, isLoading } = useFetchData<{
         success: boolean;
         certificates: Certificate[];
@@ -41,7 +41,7 @@ const UserCertificatesPage = () => {
             setIsPreviewLoading(true);
             setPreviewUrl(null);
 
-            const token = CookieManager.get("travodate-token");
+            const token = CookieManager.get("tradovate-token");
 
             const response = await axios.get(
                 `${API_URL}/certificates/image/${filename}`,

@@ -26,12 +26,6 @@ const UserLogin = () => {
   const { toast } = useToast();
   const { setLoading, setCookies, setUser } = useAuth();
 
-  // useEffect(() => {
-  //   if (user) {
-  //     navigate("/dashboard");
-  //   }
-  // }, [user, navigate]);
-
   const { mutate, isPending } = useCreateData(AUTH.LOGIN, ["login"]);
 
   const handleLogin = (e: React.FormEvent) => {

@@ -234,7 +234,7 @@ const ForgotPassword = () => {
           )}
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Remember your password?{" "}
-            <Link to="/login" className="text-primary hover:underline">
+            <Link to="/" className="text-primary hover:underline">
               Sign in
             </Link>
           </p>
