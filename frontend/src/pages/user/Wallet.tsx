@@ -157,7 +157,7 @@ const Wallet = () => {
                   onClick={() => setAddCoinOpen(true)}
                 >
                   <WalletCards className="h-4 w-4 mr-2" />
-                  Add coin to wallet
+                  Create Wallet
                 </Button>
               </div>
             </div>

@@ -16,77 +16,77 @@ const exchanges: Exchange[] = [
     {
         id: "transak",
         name: "Transak",
-        logo: "/images/exchanges/transak.png", // Placeholder path
+        logo: "/exchanges/transak.png",
         url: "https://global.transak.com/",
         description: "Buy crypto with card, bank transfer or local payment methods",
     },
     {
         id: "paybis",
         name: "Paybis",
-        logo: "/images/exchanges/paybis.png",
+        logo: "/exchanges/paybis.png",
         url: "https://paybis.com/",
         description: "Buy Bitcoin and other cryptocurrencies with credit card",
     },
     {
         id: "binance",
         name: "Binance",
-        logo: "/images/exchanges/binance.png",
+        logo: "/exchanges/binance.png",
         url: "https://www.binance.com/en/buy-sell-crypto",
         description: "The world's largest crypto exchange",
     },
     {
         id: "huobi",
         name: "Huobi (HTX)",
-        logo: "/images/exchanges/huobi.png",
+        logo: "/exchanges/huobi.png",
         url: "https://www.htx.com/en-us/buy-crypto",
         description: "Buy crypto with 0 fees",
     },
     {
         id: "kraken",
         name: "Kraken",
-        logo: "/images/exchanges/kraken.png",
+        logo: "/exchanges/kraken.png",
         url: "https://www.kraken.com/buy-crypto",
         description: "Buy bitcoin & crypto instantly",
     },
     {
         id: "ramp",
         name: "Ramp",
-        logo: "/images/exchanges/ramp.png",
+        logo: "/exchanges/ramp.png",
         url: "https://ramp.network/buy",
         description: "Fast, secure crypto on-ramp",
     },
     {
         id: "banxa",
         name: "Banxa",
-        logo: "/images/exchanges/banxa.png",
+        logo: "/exchanges/banx.png",
         url: "https://banxa.com/",
         description: "Fiat-to-crypto gateway",
     },
     {
         id: "simplex",
         name: "Simplex",
-        logo: "/images/exchanges/simplex.png",
+        logo: "/exchanges/simplex.png",
         url: "https://www.simplex.com/buy-crypto",
         description: "Fraudless payment processing",
     },
     {
         id: "crypto_com",
         name: "Crypto.com",
-        logo: "/images/exchanges/crypto_com.png",
+        logo: "/exchanges/crypto.png",
         url: "https://crypto.com/exchange",
         description: "The world's fastest growing crypto app",
     },
     {
         id: "coinbase",
         name: "Coinbase",
-        logo: "/images/exchanges/coinbase.png",
+        logo: "/exchanges/coinbase.png",
         url: "https://www.coinbase.com/buy-crypto",
         description: "Buy & sell crypto",
     },
     {
         id: "okex",
         name: "OKX",
-        logo: "/images/exchanges/okx.png",
+        logo: "/exchanges/okex.png",
         url: "https://www.okx.com/buy-crypto",
         description: "One-stop crypto exchange",
     },
@@ -100,9 +100,9 @@ const BuyCrypto = () => {
     );
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
+        <div className="bg-background text-foreground">
 
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="container mx-auto px-4 py-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold mb-2">Buy Crypto</h1>
                     <p className="text-muted-foreground">Select an exchange to purchase cryptocurrency securely.</p>
@@ -120,7 +120,7 @@ const BuyCrypto = () => {
                 </div>
 
                 {/* Exchange List */}
-                <div className="space-y-3">
+                <div className="">
                     {filteredExchanges.length > 0 ? (
                         filteredExchanges.map((exchange) => (
                             <a
@@ -130,19 +130,11 @@ const BuyCrypto = () => {
                                 rel="noopener noreferrer"
                                 className="block group"
                             >
-                                <Card className="border-border hover:border-primary/50 transition-all duration-300 hover:bg-accent/5">
+                                <Card className="transition-all duration-300 border-0 border-t-2 border-t-card bg-transparent hover:bg-card hover:border-t-2 hover:border-t-primary/40 rounded-none">
                                     <CardContent className="flex items-center justify-between p-4 sm:p-6">
                                         <div className="flex items-center gap-4">
-                                            {/* Logo Placeholder - In a real app, use <img src={exchange.logo} /> */}
-                                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                                                {/* Render actual image if available, else first letter */}
-                                                {/* <img src={exchange.logo} alt={exchange.name} className="h-full w-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} /> */}
-                                                <span className="font-bold text-lg text-primary">{exchange.name.substring(0, 1)}</span>
-                                            </div>
-
-                                            <div className="flex flex-col">
-                                                <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{exchange.name}</h3>
-                                                {/* <p className="text-sm text-muted-foreground hidden sm:block">{exchange.description}</p> */}
+                                            <div className="h-10 w-fit flex items-center justify-center shrink-0">
+                                                <img src={exchange.logo} alt={exchange.name} className="h-full w-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
                                             </div>
                                         </div>
 
