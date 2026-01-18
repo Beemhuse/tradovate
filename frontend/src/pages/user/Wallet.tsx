@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Wallet = () => {
+  const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -102,9 +103,9 @@ const Wallet = () => {
               <p className="text-4xl font-bold">
                 {showBalance
                   ? `$${totalBalance.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`
                   : "••••••"}
               </p>
               <div className="flex gap-3 flex-wrap">
@@ -145,10 +146,18 @@ const Wallet = () => {
                 <Button
                   variant="outline"
                   className="flex-1 min-w-[120px]"
+                  onClick={() => navigate("/buy-crypto")}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Buy
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 min-w-[120px]"
                   onClick={() => setAddCoinOpen(true)}
                 >
                   <WalletCards className="h-4 w-4 mr-2" />
-                  Add coin to wallet
+                  Create Wallet
                 </Button>
               </div>
             </div>

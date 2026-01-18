@@ -20,6 +20,7 @@ import TransactionsRoute from "./pages/user/Transaction";
 import UserKYC from "./pages/user/KYC";
 import UserSupport from "./pages/user/Support";
 import UserCertificatesPage from "./pages/user/Certificates";
+import BuyCrypto from "./pages/user/BuyCrypto";
 import NotFound from "./pages/NotFound";
 import PublicRoute from "./components/PublicRoutes";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/kyc" element={<UserKYC />} />
               <Route path="/support" element={<UserSupport />} />
               <Route path="/certificates" element={<UserCertificatesPage />} />
+              <Route path="/buy-crypto" element={<BuyCrypto />} />
             </Route>
           </Route>
 

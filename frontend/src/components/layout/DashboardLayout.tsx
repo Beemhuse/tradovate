@@ -13,15 +13,12 @@ const DashboardLayout = () => {
   const {
     data: meData,
     isLoading: meLoading,
-  } = useFetchData(AUTH.ME, "me");
-
-  console.log("meData", meData);
+    } = useFetchData(AUTH.ME, "me");
 
   useEffect(() => {
     setLoading(meLoading);
     if (meData) {
       setUser(meData);
-      console.log("meData", meData);
     }
   }, [meData, meLoading, setUser, setLoading]);
 

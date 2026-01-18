@@ -56,11 +56,11 @@ const UserNav = () => {
                       <User className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex flex-col overflow-hidden">
-                      <span className="font-medium truncate">{user?.fullName || "User Name"}</span>
+                      <span className="font-medium truncate">{user?.fullName || user?.role }</span>
                       <span className="font-medium truncate">{user?.email || "User Email"}</span>
                       <div className="w-full flex items-center gap-3">
                       <span className="text-xs text-muted-foreground truncate">VERIFICATION: {" "}</span>
-                      <span className={cn("text-xs text-muted-foreground truncate border px-3 py-1 rounded-full text-white", user?.isVerified ? "border-success bg-success/50" : "border-destructive bg-destructive/30 ")}>{user?.isVerified ? "Verified" : "not verified"}</span>
+                      <span className={cn("text-xs text-muted-foreground truncate border px-3 py-1 rounded-full ", user?.kycStatus !== "PENDING" ? "border-success bg-success/50" : "border-destructive bg-destructive/30 ")}>{user?.kycStatus !== "PENDING" ? "Verified" : "not verified"}</span>
                       </div>
                     </div>
                   </div>
@@ -98,15 +98,17 @@ const UserNav = () => {
                     </Link>
 
                   </div>
-                  <hr className="my-4" />
-                  <button
-                    onClick={handleLogout}
-                    className="flex p-2 w-1/2 ml-4 mb-5 items-center justify-center rounded-lg border border-border bg-card hover:bg-destructive/10 hover:text-destructive transition-colors gap-2"
-                  >
-                    <LogOut className="h-6 w-6" />
-                    <span className="text-sm font-medium">Log out</span>
-                  </button>
                 </div>
+                  <hr className="my" />
+                  <div className="flex w-full px-4">
+                    <button
+                      onClick={handleLogout}
+                      className="flex p-2 w-full mb-5 items-center justify-start rounded-lg hover:bg-destructive/10 text-destructive transition-colors gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-sm font-normal">Log out</span>
+                    </button>
+                  </div>
               </SheetContent>
             </Sheet>
 
@@ -128,8 +130,8 @@ const UserNav = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="font-medium hidden md:block">Hello, {user?.name || "User"}</span>
-            <span className="font-medium md:hidden text-sm">{user?.name || "User"}</span>
+            <span className="font-medium hidden md:block">Hello, {user?.fullName || "User"}</span>
+            <span className="font-medium md:hidden text-sm">{user?.fullName || "User"}</span>
           </div>
         </div>
       </div>

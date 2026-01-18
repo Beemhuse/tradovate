@@ -120,7 +120,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 className="h-24 gap-2 justify-start "
-                onClick={() => navigate("/market")}
+                onClick={() => navigate("/buy-crypto")}
               >
                 <DollarSign className="h-6 w-6" />
                 <span>Buy</span>
@@ -215,9 +215,8 @@ const Dashboard = () => {
                         </td>
 
                         <td
-                          className={`text-left py-3 px-4 ${
-                            priceData?.positive ? "text-success" : "text-danger"
-                          }`}
+                          className={`text-left py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
+                            }`}
                         >
                           <ChartNoAxesCombined />
                         </td>
@@ -225,9 +224,8 @@ const Dashboard = () => {
                           ${Number(priceData?.price).toLocaleString() || "..."}
                         </td>
                         <td
-                          className={`text-right py-3 px-4 ${
-                            priceData?.positive ? "text-success" : "text-danger"
-                          }`}
+                          className={`text-right py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
+                            }`}
                         >
                           {priceData?.positive ? "+" : ""}
                           {priceData?.changePercent24h}%
