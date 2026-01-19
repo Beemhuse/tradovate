@@ -210,13 +210,15 @@ const Dashboard = () => {
                         className="border-b border-border hover:bg-secondary/50 transition-colors cursor-pointer"
                         onClick={() => navigate(`/market/?pair=${pair?.id}`)}
                       >
-                        <td className="py-3 px-4 font-medium">
-                          {priceData?.symbol}/USDT
+                        <td className="py-3 flex gap-4 px-4 font-medium">
+                          <p>{priceData?.symbol}/USDT</p>
+                          <p>({pair?.network?.type})</p>
                         </td>
 
                         <td
-                          className={`text-left py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
-                            }`}
+                          className={`text-left py-3 px-4 ${
+                            priceData?.positive ? "text-success" : "text-danger"
+                          }`}
                         >
                           <ChartNoAxesCombined />
                         </td>
@@ -224,8 +226,9 @@ const Dashboard = () => {
                           ${Number(priceData?.price).toLocaleString() || "..."}
                         </td>
                         <td
-                          className={`text-right py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
-                            }`}
+                          className={`text-right py-3 px-4 ${
+                            priceData?.positive ? "text-success" : "text-danger"
+                          }`}
                         >
                           {priceData?.positive ? "+" : ""}
                           {priceData?.changePercent24h}%

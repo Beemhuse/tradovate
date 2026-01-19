@@ -73,8 +73,15 @@ const Contract = () => {
                           className="border-b border-border hover:bg-secondary/50 transition-colors cursor-pointer"
                           onClick={() => navigate(`/contract/${pair?.id}`)}
                         >
-                          <td className="py-3 px-4 font-medium">
+                          <td className="py-3 flex gap-4 px-4 font-medium">
+                            <p>
+
                             {priceData?.symbol}/USDT
+                            </p>
+                            <p>
+
+                            ({pair?.network?.type})
+                            </p>
                           </td>
 
                           <td
