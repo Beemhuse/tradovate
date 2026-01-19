@@ -107,6 +107,11 @@ const BankWithdrawal = ({
                                         <div className="flex items-center gap-2">
                                             <img src={coin?.coin?.iconUrl} alt={coin?.coin?.name} className="w-6 h-6" />
                                             <span>{coin?.coin?.symbol}</span>
+                                            {coin?.network?.name && (
+                                              <span className="text-xs text-muted-foreground">
+                                                ({coin.network.name})
+                                              </span>
+                                            )}
                                         </div>
                                     </SelectItem>
                                 ))}
@@ -115,9 +120,26 @@ const BankWithdrawal = ({
                     </div>
                     {
                         selectedCoinData && (
-                            <div className="flex items-center justify-between gap-2">
-                                <Label className="text-muted-foreground">Available Balance</Label>
-                                <p className="text-success font-semibold">${selectedCoinData?.balance}</p>
+                            <div className="space-y-2 border-b pb-3">
+                                <div className="flex items-center justify-between gap-2">
+                                    <Label className="text-muted-foreground">Available Balance</Label>
+                                    <p className="text-success font-semibold">${selectedCoinData?.balance}</p>
+                                </div>
+                                {selectedCoinData?.network?.name && (
+                                  <div className="flex items-center justify-between gap-2">
+                                    <Label className="text-muted-foreground">Network</Label>
+                                    <div className="flex items-center gap-2">
+                                      {selectedCoinData.network.icon && (
+                                        <img
+                                          src={selectedCoinData.network.icon}
+                                          alt={selectedCoinData.network.name}
+                                          className="h-4 w-4"
+                                        />
+                                      )}
+                                      <p className="font-medium text-sm">{selectedCoinData.network.name}</p>
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                         )
                     }

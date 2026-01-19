@@ -1,8 +1,9 @@
-import { Request, Response } from "express";
+import { Request, Response, text } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { z, ZodError } from "zod";
 import { fetchPrices } from "../services/marketPriceService";
+import axios from "axios";
 
 export const placeOrderSchema = z.object({
   marketPairId: z.string().uuid(),
@@ -132,7 +133,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 
       const totalBalance = usdtWallets.reduce(
         (sum, w) => sum + Number(w.balance),
-        0
+        0,
       );
 
       if (totalBalance < stake) {
@@ -285,7 +286,35 @@ export const adminGetOrders = async (req: Request, res: Response) => {
       }),
       prisma.order.count(),
     ]);
+    // 🔔 Emit event (non-blocking)
+    try {
+      const response = await axios.post(
+        "http://localhost:6001/api/v1/events",
+        {
+          source: "user-service",
+          type: "profile_viewed",
+          severity: "info",
+          message: "User profile fetched successfully",
+          payload: {
+            userId: 'user.id',
+            email: 'user.email',
+          },
+        },
+        {
+          headers: {
+            Authorization:
+              "Bearer nsk_c3834093db1c2a6fb5935e52e13782864bfeb79881bfa685da78aff1707a235c",
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
+      const text = await response.data;
+      // console.log("LOGCENTER STATUS:", response.status);
+      // console.log("LOGCENTER RESPONSE:", text);
+    } catch (err) {
+      console.error("LOGCENTER ERROR:", err);
+    }
     return res.json({
       orders,
       pagination: {

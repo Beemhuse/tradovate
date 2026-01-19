@@ -18,6 +18,7 @@ export const COINS = {
   DEPOSIT: "/market/deposit",
   WITHDRAW: "/market/withdraw",
   BANK_WITHDRAW: "/market/withdraw/bank",
+  CONVERSIONS: "/market/conversion",
 };
 
 export const MARKET_PAIR = {

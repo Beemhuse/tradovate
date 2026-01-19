@@ -12,6 +12,11 @@ export interface Wallet {
     symbol: string;
     iconUrl: string | null;
   };
+  network?: {
+    id: string;
+    name: string;
+    icon?: string | null;
+  } | null;
 }
 
 export const useWallet = () => {

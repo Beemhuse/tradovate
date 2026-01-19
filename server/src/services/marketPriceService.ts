@@ -81,20 +81,22 @@ export function updatePrice(symbol: string, price: number, change24h?: number) {
 export async function getMarketPriceForCoin(
   coinId: string
 ): Promise<MarketPrice | null> {
+  const coin = await prisma.coin.findUnique({
+    where: { id: coinId },
+  });
+  
+  if (!coin) return null;
+
   const prices = await fetchPrices();
-  return prices.find((p: { coinId: string }) => p.coinId === coinId) ?? null;
+  return prices[coin.symbol] || null;
 }
 
-// Helper for WebSocket/batch lookups by symbol if you want
-export async function getMarketPriceBySymbol(
+// Helper to get price by symbol
+export async function getPriceByCoinSymbol(
   symbol: string
-): Promise<MarketPrice | null> {
-  const coins = await prisma.coin.findMany({
-    where: { symbol },
-  });
-
-  if (!coins.length) return null;
-  return getMarketPriceForCoin(coins[0].id);
+): Promise<number | null> {
+  const prices = await fetchPrices();
+  return prices[symbol]?.price || null;
 }
 export const klineEvents = new EventEmitter();
 

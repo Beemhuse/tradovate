@@ -25,9 +25,17 @@ const MarketRow = ({ pair, live, history, onClick }: Props) => {
         />
         <div>
           <p className="text-white font-medium">{pair.baseCoin.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {pair.symbol}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground">{pair.symbol}</p>
+            {pair.network && (
+              <>
+                <span className="text-[10px] text-muted-foreground">•</span>
+                <span className="text-[10px] text-primary font-medium">
+                  {pair.network.name} ({pair.network.type || "Mainnet"})
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

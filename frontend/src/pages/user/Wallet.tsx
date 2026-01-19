@@ -103,9 +103,9 @@ const Wallet = () => {
               <p className="text-4xl font-bold">
                 {showBalance
                   ? `$${totalBalance.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
                   : "••••••"}
               </p>
               <div className="flex gap-3 flex-wrap">
@@ -175,6 +175,7 @@ const Wallet = () => {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4">Coin</th>
+                    <th className="text-left py-3 px-4">Network</th>
                     <th className="text-right py-3 px-4">Available</th>
                     <th className="text-right py-3 px-4">Frozen</th>
                     <th className="text-right py-3 px-4">USDT Value</th>
@@ -186,7 +187,7 @@ const Wallet = () => {
                     // coupon_code: appliedCoupon?.code || null,
                     const usdtValue = calculateUSDTValue(
                       symbol,
-                      Number(wallet.balance)
+                      Number(wallet.balance),
                     );
                     return (
                       <tr
@@ -215,6 +216,31 @@ const Wallet = () => {
                               </p>
                             </div>
                           </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {wallet.network ? (
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                {wallet.network.icon && (
+                                  <img
+                                    src={wallet.network.icon}
+                                    alt={wallet.network.name}
+                                    className="h-4 w-4"
+                                  />
+                                )}
+                                <span className="text-sm font-medium">
+                                  {wallet.network.name}
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground uppercase">
+                                {wallet.network.type || "Mainnet"}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              N/A
+                            </span>
+                          )}
                         </td>
                         <td className="text-right py-4 px-4 font-mono">
                           {showBalance

@@ -257,6 +257,13 @@ model Transaction {
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
+  // Dual-currency support (for deposits/conversions)
+  fromCoinId      String?       // Original coin (e.g., USDT)
+  toCoinId        String?       // Target coin (e.g., BTC)
+  fromAmount      Float?        // Amount in original coin
+  toAmount        Float?        // Equivalent amount in target coin
+  conversionRate  Float?        // Price at time of transaction
+
   bankName      String?
   accountName   String?
   accountNumber String?

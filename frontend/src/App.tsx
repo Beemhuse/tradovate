@@ -21,6 +21,7 @@ import UserKYC from "./pages/user/KYC";
 import UserSupport from "./pages/user/Support";
 import UserCertificatesPage from "./pages/user/Certificates";
 import BuyCrypto from "./pages/user/BuyCrypto";
+import Conversion from "./pages/user/Conversion";
 import NotFound from "./pages/NotFound";
 import PublicRoute from "./components/PublicRoutes";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/market" element={<Market />} />
               <Route path="/transactions" element={<TransactionsRoute />} />
               <Route path="/wallet" element={<UserWallet />} />
+              <Route path="/conversion" element={<Conversion />} />
               <Route path="/contract" element={<UserContract />} />
               <Route path="/contract/:id" element={<TradePage />} />
               <Route path="/kyc" element={<UserKYC />} />

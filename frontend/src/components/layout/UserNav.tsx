@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, TrendingUp, Wallet, FileText, ChevronLeft, Menu, FileCheck, MessageSquare, Award, User, LogOut } from "lucide-react";
+import { Home, TrendingUp, Wallet, FileText, ChevronLeft, Menu, FileCheck, MessageSquare, Award, User, LogOut, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +26,7 @@ const UserNav = () => {
     { to: "/market", icon: TrendingUp, label: "Market" },
     { to: "/contract", icon: FileText, label: "Contract" },
     { to: "/wallet", icon: Wallet, label: "Wallet" },
+    { to: "/conversion", icon: ArrowRightLeft, label: "Conversion" },
     { to: "/kyc", icon: FileCheck, label: "KYC" },
     { to: "/transactions", icon: FileCheck, label: "Transactions" },
     { to: "/support", icon: MessageSquare, label: "Support" },

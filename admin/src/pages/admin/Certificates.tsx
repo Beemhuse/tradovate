@@ -74,7 +74,6 @@ const AdminUploadCertificatesPage = () => {
       setIsPreviewLoading(false);
     }
   };
-console.log('debug: ', previewFilename);
   useEffect(() => {
     if (previewFilename) {
       fetchCertificateImage(previewFilename);

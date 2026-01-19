@@ -222,7 +222,7 @@ export const getPairs = async (req: Request, res: Response) => {
         symbol: true,
         networkId: true, // ✅ added
         network: {
-          select: { id: true, name: true, icon: true },
+          select: { id: true, name: true, type: true, icon: true },
         },
         baseCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },
@@ -290,7 +290,7 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
       where: { id },
       include: {
         network: {
-          select: { id: true, name: true, icon: true },
+          select: { id: true, name: true, type: true, icon: true },
         },
         baseCoin: {
           select: { id: true, symbol: true, name: true, iconUrl: true },

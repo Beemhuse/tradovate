@@ -8,7 +8,9 @@ import {
   requestWithdraw,
   getTransactions,
   requestBankWithdraw,
+  getWalletById,
   getWalletConversions,
+  executeConversion,
 } from "../controllers/walletController";
 import {
   getMarketPrices,
@@ -324,7 +326,7 @@ router.delete(
   "/pairs/:id",
   authenticateToken,
   requireRole("ADMIN"),
-  deletePair
+  deletePair,
 );
 
 /**
@@ -679,5 +681,6 @@ router.get("/orders", getUserOrders);
  */
 
 router.get("/conversion", getWalletConversions);
+router.post("/conversion", authenticateToken, executeConversion);
 
 export default router;
