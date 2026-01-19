@@ -20,6 +20,8 @@ export interface TradingPair {
   lastPrice?: number;
   priceChangePercent?: number;
   volume24h?: number;
+  minStake?: number;
+  maxStake?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +46,14 @@ export interface CreatePairFormData {
   minStake: number;
   maxStake: number;
   isActive?: boolean;
+}
+
+export interface UpdatePairFormData {
+  minStake?: number;
+  maxStake?: number;
+  pricePrecision?: number;
+  quantityPrecision?: number;
+  minTradeAmount?: number;
 }
 
 export interface Network {

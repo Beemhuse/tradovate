@@ -92,6 +92,7 @@ export const getAssets = async (req: AuthRequest, res: Response) => {
                 id: wallet.network.id,
                 name: wallet.network.name,
                 icon: wallet.network.icon,
+                type: wallet.network.type,
               }
             : null,
 

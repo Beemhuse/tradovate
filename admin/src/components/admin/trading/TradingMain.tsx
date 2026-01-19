@@ -19,7 +19,7 @@ import PairsTable from "./PairsTable";
 import CreatePairDialog from "./CreatePairDialog";
 import EditPairDialog from "./EditDialog";
 import DeletePairDialog from "./DeletePairDialog";
-import { Coin, TradingPair, CreatePairFormData, CoinNetwork } from "./types";
+import { Coin, TradingPair, CreatePairFormData, UpdatePairFormData, CoinNetwork } from "./types";
 type TradableCoin = {
   id: string; // CoinNetwork.id
   coinId: string;
@@ -238,7 +238,6 @@ const AdminTradingPairs = () => {
   }, [pairs]);
 
   const handleCreatePair = (formData: CreatePairFormData) => {
-    console.log("CREATE PAIR PAYLOAD:", formData); // 👈 ADD THIS
 
     createPair(formData, {
       onSuccess: (res) => {
@@ -260,11 +259,7 @@ const AdminTradingPairs = () => {
     });
   };
 
-  const handleUpdatePair = (formData: {
-    pricePrecision: number;
-    quantityPrecision: number;
-    minTradeAmount: number;
-  }) => {
+  const handleUpdatePair = (formData: UpdatePairFormData) => {
     if (!selectedPair) return;
 
     const updateData = {
