@@ -780,249 +780,164 @@ export const getWalletConversions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
 
-    const toSymbol = (req.query.to as string)?.toUpperCase() || "USDT";
-    const fromSymbol = (req.query.coin as string)?.toUpperCase();
-    const amountParam = req.query.amount ? Number(req.query.amount) : undefined;
+    const fromCoinId = req.query.coinId as string | undefined;
+    const toCoinId = req.query.toCoinId as string | undefined;
+    const amountParam = req.query.amount
+      ? Number(req.query.amount)
+      : undefined;
 
-    if (amountParam !== undefined && amountParam <= 0) {
+    if (!fromCoinId || !toCoinId || amountParam === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "coinId, toCoinId and amount are required",
+      });
+    }
+
+    if (amountParam <= 0) {
       return res.status(400).json({
         success: false,
         error: "Amount must be greater than zero",
       });
     }
 
-    /* 1️⃣ Target coin */
-    const targetCoin = await prisma.coin.findFirst({
-      where: { symbol: toSymbol, isActive: true },
-    });
-
-    if (!targetCoin) {
+    if (fromCoinId === toCoinId) {
       return res.status(400).json({
         success: false,
-        error: `Target currency ${toSymbol} not supported`,
+        error: "Cannot convert to the same wallet",
       });
     }
 
-    const targetMarket = await getMarketPriceForCoin(targetCoin.id);
-    if (!targetMarket) {
-      return res.status(400).json({
-        success: false,
-        error: `Market price unavailable for ${toSymbol}`,
-      });
-    }
-
-    /* ===============================
-       SINGLE COIN + AMOUNT CONVERSION
-    =============================== */
-    if (fromSymbol && amountParam !== undefined) {
-      const fromCoin = await prisma.coin.findFirst({
-        where: { symbol: fromSymbol, isActive: true },
-      });
-
-      if (!fromCoin) {
-        return res.status(404).json({
-          success: false,
-          error: `Coin ${fromSymbol} not found`,
-        });
-      }
-
-      const wallet = await prisma.wallet.findFirst({
-        where: { userId, coinId: fromCoin.id },
-        include: { coin: true },
-      });
-
-      if (!wallet) {
-        return res.status(403).json({
-          success: false,
-          error: `You do not own ${fromSymbol}`,
-        });
-      }
-
-      if (wallet.balance < amountParam) {
-        return res.status(400).json({
-          success: false,
-          error: `Insufficient ${fromSymbol} balance`,
-        });
-      }
-
-      // Same coin conversion
-      if (fromCoin.id === targetCoin.id) {
-        return res.json({
-          success: true,
-          mode: "single",
-          from: fromSymbol,
-          to: toSymbol,
-          amount: amountParam,
-          conversionRate: 1,
-          convertedAmount: amountParam,
-          fromPrice: 1,
-          toPrice: 1,
-        });
-      }
-
-      const fromMarket = await getMarketPriceForCoin(fromCoin.id);
-      if (!fromMarket) {
-        return res.status(400).json({
-          success: false,
-          error: `Market price unavailable for ${fromSymbol}`,
-        });
-      }
-
-      const conversionRate = fromMarket.price / targetMarket.price;
-      const convertedAmount = amountParam * conversionRate;
-
-      return res.json({
-        success: true,
-        mode: "single",
-        from: fromSymbol,
-        to: toSymbol,
-        amount: amountParam,
-        conversionRate,
-        convertedAmount,
-        fromPrice: fromMarket.price,
-        toPrice: targetMarket.price,
-      });
-    }
-
-    /* ===============================
-       PORTFOLIO CONVERSION
-    =============================== */
-    const wallets = await prisma.wallet.findMany({
-      where: { userId },
-      include: { coin: true },
-    });
-
-    const conversions = await Promise.all(
-      wallets.map(async (wallet) => {
-        if (wallet.balance <= 0) return null;
-
-        if (wallet.coinId === targetCoin.id) {
-          return {
-            walletId: wallet.id,
-            coin: wallet.coin.symbol,
-            balance: wallet.balance,
-            price: 1,
-            conversionRate: 1,
-            convertedAmount: wallet.balance,
-            convertedTo: targetCoin.symbol,
-          };
-        }
-
-        const market = await getMarketPriceForCoin(wallet.coinId);
-        if (!market) return null;
-
-        const conversionRate = market.price / targetMarket.price;
-
-        return {
-          walletId: wallet.id,
-          coin: wallet.coin.symbol,
-          balance: wallet.balance,
-          price: market.price,
-          conversionRate,
-          convertedAmount: wallet.balance * conversionRate,
-          convertedTo: targetCoin.symbol,
-        };
-      }),
-    );
-
-    const valid = conversions.filter(Boolean) as any[];
-
-    return res.json({
-      success: true,
-      mode: "portfolio",
-      base: targetCoin.symbol,
-      totalValue: valid.reduce((sum, w) => sum + w.convertedAmount, 0),
-      wallets: valid,
-    });
-  } catch (error) {
-    console.error("Conversion error:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to convert wallet balances",
-    });
-  }
-};
-export const executeConversion = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-
-    const { fromSymbol, toSymbol, amount } = z
-      .object({
-        fromSymbol: z.string().toUpperCase(),
-        toSymbol: z.string().toUpperCase(),
-        amount: z.number().positive(),
-      })
-      .parse(req.body);
-
-    if (fromSymbol === toSymbol) {
-      return res.status(400).json({
-        success: false,
-        error: "Cannot convert to the same currency",
-      });
-    }
-
+    /* 1️⃣ Validate coins */
     const [fromCoin, toCoin] = await Promise.all([
-      prisma.coin.findFirst({
-        where: { symbol: fromSymbol, isActive: true },
-      }),
-      prisma.coin.findFirst({
-        where: { symbol: toSymbol, isActive: true },
-      }),
+      prisma.coin.findUnique({ where: { id: fromCoinId } }),
+      prisma.coin.findUnique({ where: { id: toCoinId } }),
     ]);
 
-    if (!fromCoin || !toCoin) {
+    if (!fromCoin || !toCoin || !fromCoin.isActive || !toCoin.isActive) {
       return res.status(404).json({
         success: false,
-        error: "One or both currencies not found",
+        error: "One or both coins not supported",
       });
     }
 
-    const [fromMarket, toMarket] = await Promise.all([
-      getMarketPriceForCoin(fromCoin.id),
-      getMarketPriceForCoin(toCoin.id),
-    ]);
-
-    if (!fromMarket || !toMarket) {
-      return res.status(400).json({
-        success: false,
-        error: "Market prices not available",
-      });
-    }
-
-    const conversionRate = fromMarket.price / toMarket.price;
-    const convertedAmount = amount * conversionRate;
-
+    /* 2️⃣ Check source wallet */
     const fromWallet = await prisma.wallet.findFirst({
-      where: { userId, coinId: fromCoin.id },
+      where: { userId, coinId: fromCoinId },
     });
 
-    if (!fromWallet || fromWallet.balance < amount) {
+    if (!fromWallet || fromWallet.balance < amountParam) {
       return res.status(400).json({
         success: false,
-        error: `Insufficient ${fromSymbol} balance`,
+        error: `Insufficient ${fromCoin.symbol} balance`,
       });
     }
 
+    /* 3️⃣ Check target wallet */
     const toWallet = await prisma.wallet.findFirst({
-      where: { userId, coinId: toCoin.id },
+      where: { userId, coinId: toCoinId },
     });
 
     if (!toWallet) {
       return res.status(400).json({
         success: false,
-        error: `Target wallet for ${toSymbol} not found`,
+        error: `Target wallet for ${toCoin.symbol} not found`,
       });
     }
 
+    /* 4️⃣ Preview (1:1 internal transfer) */
+    return res.json({
+      success: true,
+      mode: "single",
+      fromCoinId,
+      toCoinId,
+      amount: amountParam,
+      conversionRate: 1,
+      convertedAmount: amountParam,
+    });
+  } catch (error) {
+    console.error("Conversion preview error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to preview conversion",
+    });
+  }
+};
+
+
+export const executeConversion = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const { fromCoinId, toCoinId, amount } = z
+      .object({
+        fromCoinId: z.string().uuid(),
+        toCoinId: z.string().uuid(),
+        amount: z.number().positive(),
+      })
+      .parse(req.body);
+
+    if (fromCoinId === toCoinId) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot move funds to the same wallet",
+      });
+    }
+
+    /* 1️⃣ Fetch coins (validation only) */
+    const [fromCoin, toCoin] = await Promise.all([
+      prisma.coin.findUnique({
+        where: { id: fromCoinId },
+      }),
+      prisma.coin.findUnique({
+        where: { id: toCoinId },
+      }),
+    ]);
+
+    if (!fromCoin || !toCoin || !fromCoin.isActive || !toCoin.isActive) {
+      return res.status(404).json({
+        success: false,
+        error: "One or both coins are not supported",
+      });
+    }
+
+    /* 2️⃣ Fetch wallets */
+    const [fromWallet, toWallet] = await Promise.all([
+      prisma.wallet.findFirst({
+        where: { userId, coinId: fromCoinId },
+      }),
+      prisma.wallet.findFirst({
+        where: { userId, coinId: toCoinId },
+      }),
+    ]);
+
+    if (!fromWallet || fromWallet.balance < amount) {
+      return res.status(400).json({
+        success: false,
+        error: `Insufficient ${fromCoin.symbol} balance`,
+      });
+    }
+
+    if (!toWallet) {
+      return res.status(400).json({
+        success: false,
+        error: `Target wallet for ${toCoin.symbol} not found`,
+      });
+    }
+
+    /* 3️⃣ Atomic internal transfer */
     const transaction = await prisma.$transaction(async (tx) => {
       await tx.wallet.update({
         where: { id: fromWallet.id },
-        data: { balance: { decrement: amount } },
+        data: {
+          balance: { decrement: amount },
+        },
       });
 
       await tx.wallet.update({
         where: { id: toWallet.id },
-        data: { balance: { increment: convertedAmount } },
+        data: {
+          balance: { increment: amount },
+        },
       });
 
       return tx.transaction.create({
@@ -1030,14 +945,18 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
           userId,
           walletId: fromWallet.id,
           type: "TRANSFER",
-          amount: amount, // ← THIS WAS MISSING
-
           status: "COMPLETED",
-          fromCoinId: fromCoin.id,
-          toCoinId: toCoin.id,
+
+          // REQUIRED BY SCHEMA
+          amount,
+
+          // AUDIT FIELDS
+          fromCoinId,
+          toCoinId,
           fromAmount: amount,
-          toAmount: convertedAmount,
-          conversionRate,
+          toAmount: amount,
+          conversionRate: 1,
+
           txHash: `conv_${Date.now()}`,
         },
       });
@@ -1045,7 +964,7 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
 
     return res.json({
       success: true,
-      message: "Conversion successful",
+      message: "Funds moved successfully",
       transaction,
     });
   } catch (err) {
@@ -1060,7 +979,8 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      error: "Failed to execute conversion",
+      error: "Failed to move funds",
     });
   }
 };
+

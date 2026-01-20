@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useConversion } from "@/hooks/useConversion";
 import { useFetchData } from "@/hooks/use-api";
 import { COINS } from "@/hooks/apiEndpoint";
+import { useCryptoPrice } from "@/hooks/useCryptoPrice";
 
 type ViewMode = "single" | "portfolio";
 
@@ -25,17 +26,21 @@ const CurrencyConversion = () => {
 
   /* -------------------- STATE -------------------- */
   const [viewMode, setViewMode] = useState<ViewMode>("portfolio");
-  const [fromCoinId, setFromCoinId] = useState<string>("");
-  const [toCoinId, setToCoinId] = useState<string>("");
+  const [fromCoinId, setFromCoinId] = useState("");
+  const [toCoinId, setToCoinId] = useState("");
   const [amount, setAmount] = useState("");
 
   /* -------------------- DATA -------------------- */
   const { data: coinsData } = useFetchData(COINS.COINLIST, "coin_list");
-  const { data: assetsData, refetch: refetchAssets } = useFetchData(
-    COINS.ASSETS,
-    "assets"
-  );
+  const { refetch: refetchAssets } = useFetchData(COINS.ASSETS, "assets");
 
+    const {
+    data: assetData,
+    refetch,
+    isLoading: isAssetsLoading,
+  } = useFetchData(COINS.ASSETS, "assets");
+
+  const assets = assetData?.assets;
   const coins = useMemo(() => {
     return (coinsData?.coins || coinsData?.data || []).map((c: any) => ({
       id: c.id,
@@ -67,29 +72,44 @@ const CurrencyConversion = () => {
 
   const toggleMode = () => {
     setViewMode((prev) => (prev === "single" ? "portfolio" : "single"));
-
-    // When switching back to portfolio, refresh preview
-    if (viewMode === "single" && toCoinId) {
-      convertCoin(undefined, toCoinId);
-    }
   };
 
   /* -------------------- EFFECTS -------------------- */
   useEffect(() => {
-    // Auto-load portfolio preview
-    if (viewMode === "portfolio" && toCoinId) {
-      convertCoin(undefined, toCoinId);
+    if (viewMode === "portfolio") {
+      // Portfolio view does NOT need conversion preview,
+      // but we keep this to sync backend state if needed
+      convertCoin();
     }
-  }, [viewMode, toCoinId, convertCoin]);
+  }, [viewMode, convertCoin]);
 
   /* -------------------- ACTIONS -------------------- */
   const handlePreview = () => {
-    if (!fromCoinId || !toCoinId || Number(amount) <= 0) return;
+    if (
+      !fromCoinId ||
+      !toCoinId ||
+      Number(amount) <= 0 ||
+      fromCoinId === toCoinId
+    )
+      return;
+
     convertCoin(fromCoinId, toCoinId, Number(amount));
   };
-
+    const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
+    const prices = useCryptoPrice(coinSymbols);
+  const calculateUSDTValue = (symbol: string, balance: number) => {
+    if (symbol === "USDT") return balance;
+    const price = parseFloat(prices[symbol]?.price || "0");
+    return balance * price;
+  };
   const handleExecute = async () => {
-    if (!fromCoinId || !toCoinId || Number(amount) <= 0) return;
+    if (
+      !fromCoinId ||
+      !toCoinId ||
+      Number(amount) <= 0 ||
+      fromCoinId === toCoinId
+    )
+      return;
 
     const res = await executeConversion({
       fromCoinId,
@@ -100,16 +120,16 @@ const CurrencyConversion = () => {
     if (res.success) {
       toast({
         title: "Conversion Successful",
-        description: "Your assets were converted successfully.",
+        description: "Funds moved successfully between wallets.",
       });
 
       setAmount("");
       refetchAssets();
-      convertCoin(undefined, toCoinId);
+      convertCoin();
     } else {
       toast({
         title: "Conversion Failed",
-        description: res.error || "Unable to execute conversion",
+        description: res.error || "Unable to move funds",
         variant: "destructive",
       });
     }
@@ -119,13 +139,12 @@ const CurrencyConversion = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-6">
-        <UserNav />
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Currency Conversion</h1>
+            <h1 className="text-3xl font-bold">Wallet Conversion</h1>
             <p className="text-muted-foreground">
-              Convert cryptocurrencies using live market prices
+              Move funds between your wallets (1:1 internal transfer)
             </p>
           </div>
 
@@ -136,7 +155,7 @@ const CurrencyConversion = () => {
             className="flex items-center gap-2"
           >
             <ArrowRightLeft className="h-4 w-4" />
-            {viewMode === "single" ? "View Portfolio" : "Single Coin"}
+            {viewMode === "single" ? "View Wallets" : "Convert Funds"}
           </Button>
         </div>
 
@@ -144,14 +163,14 @@ const CurrencyConversion = () => {
         {viewMode === "single" && (
           <Card>
             <CardHeader>
-              <CardTitle>Convert Single Coin</CardTitle>
+              <CardTitle>Move Funds</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* FROM */}
                 <div className="space-y-4">
-                  <Label>From Coin</Label>
+                  <Label>From Wallet</Label>
                   <Select value={fromCoinId} onValueChange={setFromCoinId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select coin" />
@@ -179,7 +198,7 @@ const CurrencyConversion = () => {
 
                 {/* TO */}
                 <div className="space-y-4">
-                  <Label>To Coin</Label>
+                  <Label>To Wallet</Label>
                   <Select value={toCoinId} onValueChange={setToCoinId}>
                     <SelectTrigger>
                       <SelectValue />
@@ -202,37 +221,34 @@ const CurrencyConversion = () => {
                       onClick={handlePreview}
                       disabled={isLoading}
                     >
-                      {isLoading ? "Calculating..." : "Preview Conversion"}
+                      Preview Transfer
                     </Button>
 
                     {result?.mode === "single" && (
                       <Button onClick={handleExecute} disabled={isLoading}>
-                        Execute Conversion
+                        Confirm Transfer
                       </Button>
                     )}
                   </div>
                 </div>
               </div>
 
-              {error && (
+              {/* {error && (
                 <div className="bg-destructive/10 text-destructive p-4 rounded">
                   {error}
                 </div>
-              )}
+              )} */}
 
               {result?.mode === "single" && (
                 <div className="bg-secondary/50 p-4 rounded">
                   <p className="text-sm text-muted-foreground">
-                    You will receive
+                    You are about to move
                   </p>
-                  <p className="text-2xl font-bold text-success">
-                    {result.convertedAmount?.toFixed(8)}{" "}
-                    {getSymbol(result.toCoinId)}
+                  <p className="text-2xl font-bold">
+                    {amount} {getSymbol(fromCoinId)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Rate: 1 {getSymbol(result.fromCoinId)} ={" "}
-                    {result.conversionRate?.toFixed(8)}{" "}
-                    {getSymbol(result.toCoinId)}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    → {amount} {getSymbol(toCoinId)}
                   </p>
                 </div>
               )}
@@ -242,73 +258,107 @@ const CurrencyConversion = () => {
 
         {/* ===================== PORTFOLIO ===================== */}
         {viewMode === "portfolio" && (
-          <Card>
-            <CardHeader className="flex justify-between items-center">
-              <CardTitle>
-                Portfolio Value in {getSymbol(toCoinId)}
-              </CardTitle>
-
-              <Select value={toCoinId} onValueChange={setToCoinId}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {coins.map((coin) => (
-                    <SelectItem key={coin.id} value={coin.id}>
-                      {coin.symbol}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardHeader>
-
-            <CardContent>
-              {isLoading ? (
-                <p className="text-center py-8">Loading portfolio...</p>
-              ) : error ? (
-                <div className="bg-destructive/10 text-destructive p-4 rounded">
-                  {error}
-                </div>
-              ) : result?.mode === "portfolio" ? (
-                <>
-                  <div className="mb-6">
-                    <p className="text-muted-foreground">
-                      Total Portfolio Value
-                    </p>
-                    <p className="text-4xl font-bold">
-                      {result.totalValue?.toLocaleString()}{" "}
-                      {getSymbol(toCoinId)}
-                    </p>
-                  </div>
-
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Coin</th>
-                        <th className="text-right py-2">Balance</th>
-                        <th className="text-right py-2">Value</th>
+             <Card>
+          <CardHeader>
+            <CardTitle>My Assets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4">Coin</th>
+                    <th className="text-left py-3 px-4">Network</th>
+                    <th className="text-right py-3 px-4">Available</th>
+                    <th className="text-right py-3 px-4">Frozen</th>
+                    <th className="text-right py-3 px-4">USDT Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assets?.map((wallet, index) => {
+                    const symbol = wallet.coin?.symbol || "";
+                    // coupon_code: appliedCoupon?.code || null,
+                    const usdtValue = calculateUSDTValue(
+                      symbol,
+                      Number(wallet.balance),
+                    );
+                    return (
+                      <tr
+                        key={wallet.coinId + `${index}`}
+                        className="border-b border-border hover:bg-secondary/50 transition-colors"
+                      >
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 border border-border rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                              {wallet.coin?.iconUrl ? (
+                                <img
+                                  src={wallet.coin.iconUrl}
+                                  alt={symbol}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-primary font-bold">
+                                  {symbol[0]}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">{wallet.coin?.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {symbol}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {wallet.network ? (
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                {wallet.network.icon && (
+                                  <img
+                                    src={wallet.network.icon}
+                                    alt={wallet.network.name}
+                                    className="h-4 w-4"
+                                  />
+                                )}
+                                <span className="text-sm font-medium">
+                                  {wallet.network.name}
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground uppercase">
+                                {wallet.network.type || "Mainnet"}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              N/A
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right py-4 px-4 font-mono">
+                          {Number(wallet.balance).toFixed(2)}
+                        </td>
+                        {/* <td className="text-right py-4 px-4 font-mono text-muted-foreground">
+                          {showBalance
+                            ? Number(wallet.locked_balance)
+                              ? Number(wallet.locked_balance).toFixed(8)
+                              : "0.0"
+                            : "••••"}
+                        </td> */}
+                        <td className="text-right py-4 px-4 font-semibold text-success">
+                          {/* {showBalance ? `$${usdtValue.toFixed(2)}` : "••••••"} */}
+                          {/* {showBalance
+                            ? `$${Number(wallet.balance)}`
+                            : "••••••"} */}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {result.wallets?.map((w) => (
-                        <tr key={w.walletId} className="border-b">
-                          <td className="py-2">
-                            {getSymbol(w.coinId)}
-                          </td>
-                          <td className="text-right py-2">
-                            {w.balance.toFixed(8)}
-                          </td>
-                          <td className="text-right py-2">
-                            {w.convertedAmount.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              ) : null}
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
         )}
       </div>
     </div>
