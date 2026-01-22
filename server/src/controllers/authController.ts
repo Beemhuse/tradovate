@@ -293,13 +293,13 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        wallets: {
-          include: { coin: true },
-        },
-        transactions: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        },
+        // wallets: {
+        //   include: { coin: true },
+        // },
+        // transactions: {
+        //   orderBy: { createdAt: "desc" },
+        //   take: 10,
+        // },
         kyc: true, // optional: include KYC if you added model
       },
     });
