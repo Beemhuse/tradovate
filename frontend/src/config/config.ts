@@ -33,8 +33,6 @@ export default function initAxios() {
           CookieManager.delete("tradovate-refresh-token", "/");
           CookieManager.delete("tradovate-user", "/");
 
-          // Clear local storage
-          localStorage.clear();
 
           // Clear the axios auth header
           delete axios.defaults.headers.common.Authorization;
