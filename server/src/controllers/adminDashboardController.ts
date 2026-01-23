@@ -1,21 +1,16 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import dayjs from "dayjs";
-import {
-  TransactionType,
-  TransactionStatus,
-  KycStatus,
-} from "@prisma/client";
 
 
 export const getAdminDashboard = async (req: Request, res: Response) => {
   try {
-    /** 📊 METRICS */
+    /** 📊 COUNTS */
     const [
       totalUsers,
       activeCoins,
       pendingKyc,
-      tradingVolumeAgg,
+      tradingVolume,
     ] = await Promise.all([
       prisma.user.count(),
 
@@ -24,23 +19,19 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
       }),
 
       prisma.kyc.count({
-        where: { status: KycStatus.PENDING },
+        where: { status: "PENDING" },
       }),
 
       prisma.transaction.aggregate({
         where: {
-          type: {
-            in: [TransactionType.BUY, TransactionType.SELL],
-          },
-          status: TransactionStatus.COMPLETED,
+          type: { in: ["BUY", "SELL"] },
+          status: "COMPLETED",
         },
         _sum: { amount: true },
       }),
     ]);
 
-    const tradingVolume = tradingVolumeAgg?._sum?.amount ?? 0;
-
-    /** 🕒 RECENT USERS */
+    /** 🕒 RECENT ACTIVITY */
     const recentUsers = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       take: 3,
@@ -50,80 +41,63 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
       },
     });
 
-    /** 🕒 RECENT KYC */
     const recentKyc = await prisma.kyc.findMany({
       orderBy: { createdAt: "desc" },
       take: 3,
       include: {
-        user: {
-          select: { email: true },
-        },
+        user: { select: { email: true } },
       },
     });
 
-    /** 🕒 RECENT TRANSACTIONS */
     const recentTx = await prisma.transaction.findMany({
       where: {
-        type: {
-          in: [
-            TransactionType.WITHDRAW,
-            TransactionType.BANK_WITHDRAW,
-            TransactionType.DEPOSIT,
-          ],
-        },
+        type: { in: ["WITHDRAW", "BANK_WITHDRAW", "DEPOSIT"] },
       },
       orderBy: { createdAt: "desc" },
       take: 4,
       include: {
-        user: {
-          select: { email: true },
-        },
+        user: { select: { email: true } },
       },
     });
 
-    /** 🧾 NORMALIZED ACTIVITY FEED */
+    /** 🧾 Normalize Activity Feed */
     const activity = [
       ...recentUsers.map((u) => ({
         type: "New user registered",
-        description: u.email ?? "Unknown user",
-        timestamp: dayjs(u.createdAt).valueOf(),
+        description: u.email,
+        time: u.createdAt,
       })),
 
       ...recentKyc.map((k) => ({
         type: "KYC submitted",
-        description: k.user?.email ?? "Unknown user",
-        timestamp: dayjs(k.createdAt).valueOf(),
+        description: k.user.email,
+        time: k.createdAt,
       })),
 
       ...recentTx.map((t) => ({
         type:
-          t.type === TransactionType.DEPOSIT
+          t.type === "DEPOSIT"
             ? "New deposit"
             : "Withdrawal request",
-        description: t.user?.email ?? "Unknown user",
-        timestamp: dayjs(t.createdAt).valueOf(),
+        description: t.user.email,
+        time: t.createdAt,
       })),
     ]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 6)
-      .map(({ timestamp, ...rest }) => ({
-        ...rest
-        // time: dayjs(timestamp).fromNow(),
-      }));
+      .sort((a, b) => (a.time < b.time ? 1 : -1))
+      .slice(0, 6);
 
-    return res.status(200).json({
+    return res.json({
       success: true,
       metrics: {
         totalUsers,
         activeCoins,
         pendingKyc,
-        tradingVolume,
+        tradingVolume: tradingVolume._sum.amount ?? 0,
       },
       activity,
     });
   } catch (error) {
-    console.error("[ADMIN_DASHBOARD_ERROR]", error);
-
+    console.error("Admin dashboard error:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to load dashboard metrics",
