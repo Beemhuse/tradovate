@@ -14,7 +14,7 @@ const AdminDashboard = () => {
     "/admin/dashboard",
     "admin-dashboard"
   );
-console.log("Dashboard data:", data);
+// console.log("Dashboard data:", data);
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -129,9 +129,9 @@ console.log("Dashboard data:", data);
                       {item.description}
                     </p>
                   </div>
-                  {/* <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     {formatDate(item.time, 'MM/dd/yyyy')}
-                  </span> */}
+                  </span>
                 </div>
               ))}
             </div>
