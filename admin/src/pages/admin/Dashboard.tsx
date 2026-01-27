@@ -129,9 +129,9 @@ const AdminDashboard = () => {
                       {item.description}
                     </p>
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  {/* <span className="text-sm text-muted-foreground">
                     {formatDate(item.time, 'MM/dd/yyyy')}
-                  </span>
+                  </span> */}
                 </div>
               ))}
             </div>

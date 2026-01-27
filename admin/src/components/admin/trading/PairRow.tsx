@@ -35,6 +35,7 @@ interface PairRowProps {
   onToggle: (pair: TradingPair, checked: boolean) => void;
   onDelete: (pair: TradingPair) => void;
   isPatching: boolean;
+  onManage?: (pair: TradingPair) => void;
 }
 
 const PairRow = ({
@@ -200,6 +201,10 @@ const PairRow = ({
             <DropdownMenuItem>
               <ExternalLink className="h-4 w-4 mr-2" />
               View Market
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onManage && onManage(pair)}>
+              <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              Manage Periods
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

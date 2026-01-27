@@ -19,6 +19,7 @@ import PairsTable from "./PairsTable";
 import CreatePairDialog from "./CreatePairDialog";
 import EditPairDialog from "./EditDialog";
 import DeletePairDialog from "./DeletePairDialog";
+import ManagePeriodsDialog from "./ManagePeriodsDialog";
 import { Coin, TradingPair, CreatePairFormData, UpdatePairFormData, CoinNetwork } from "./types";
 type TradableCoin = {
   id: string; // CoinNetwork.id
@@ -65,6 +66,7 @@ const AdminTradingPairs = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isManagePeriodsOpen, setIsManagePeriodsOpen] = useState(false);
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -109,6 +111,11 @@ const AdminTradingPairs = () => {
     (id) => `/market/pairs/${id}`,
     ["market-pairs"]
   );
+
+  const handleOpenManage = (pair: TradingPair) => {
+    setSelectedPair(pair);
+    setIsManagePeriodsOpen(true);
+  };
 
   // Transform coins data
   const coins = useMemo<TradableCoin[]>(() => {
@@ -413,7 +420,7 @@ const AdminTradingPairs = () => {
           </div>
 
           {/* Stats Cards */}
-          <StatsCards
+          <PairsTable
             stats={stats}
             isLoading={loadingPairs}
             onRefresh={refetchPairs}
@@ -438,7 +445,17 @@ const AdminTradingPairs = () => {
           allPairs={pairs}
           isLoading={loadingPairs}
           onEditPair={handleEditPair}
+            onManagePair={handleOpenManage}
           onTogglePair={handleTogglePair}
+
+          {/* Manage Periods Dialog */}
+          {selectedPair && (
+            <ManagePeriodsDialog
+              open={isManagePeriodsOpen}
+              onOpenChange={setIsManagePeriodsOpen}
+              pair={selectedPair}
+            />
+          )}
           onDeletePair={(pair) => {
             setSelectedPair(pair);
             setIsDeleteDialogOpen(true);

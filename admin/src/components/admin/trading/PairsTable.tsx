@@ -14,6 +14,7 @@ interface PairsTableProps {
   onEditPair: (pair: TradingPair) => void;
   onTogglePair: (pair: TradingPair, checked: boolean) => void;
   onDeletePair: (pair: TradingPair) => void;
+  onManagePair?: (pair: TradingPair) => void;
   sortBy: "name" | "volume" | "price" | "date";
   sortOrder: "asc" | "desc";
   onSort: (field: "name" | "volume" | "price" | "date") => void;
@@ -37,6 +38,7 @@ const PairsTable = ({
   networkFilter,
   searchQuery,
   onCreatePairClick,
+  onManagePair,
 }: PairsTableProps) => {
   const activePairs = allPairs.filter(p => p.isActive);
   const inactivePairs = allPairs.filter(p => !p.isActive);
@@ -169,6 +171,7 @@ const PairsTable = ({
                   onToggle={onTogglePair}
                   onDelete={onDeletePair}
                   isPatching={isPatching}
+                  onManage={onManagePair}
                 />
               ))}
             </TableBody>

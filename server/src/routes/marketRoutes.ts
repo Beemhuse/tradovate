@@ -24,6 +24,9 @@ import {
   getPairById,
   getPairs,
   updatePair,
+  createTradeConfig,
+  updateTradeConfig,
+  deleteTradeConfig,
 } from "../controllers/marketController";
 
 const router = Router();
@@ -327,6 +330,30 @@ router.delete(
   authenticateToken,
   requireRole("ADMIN"),
   deletePair,
+);
+
+/**
+ * Admin endpoints for Trade Configs (periods)
+ */
+router.post(
+  "/configs",
+  authenticateToken,
+  requireRole("ADMIN"),
+  createTradeConfig,
+);
+
+router.patch(
+  "/configs/:id",
+  authenticateToken,
+  requireRole("ADMIN"),
+  updateTradeConfig,
+);
+
+router.delete(
+  "/configs/:id",
+  authenticateToken,
+  requireRole("ADMIN"),
+  deleteTradeConfig,
 );
 
 /**

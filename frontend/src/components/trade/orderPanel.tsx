@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCreateData } from "@/hooks/use-api";
+import { useFetchData } from "@/hooks/use-api";
 import clsx from "clsx";
 import { useToast } from "@/hooks/use-toast";
+import { MARKET_PAIR } from "@/hooks/apiEndpoint";
 
 type Props = {
   marketPairId: string; // 👈 New Prop
@@ -13,14 +15,7 @@ type Props = {
 
 type Direction = "BULLISH" | "BEARISH";
 
-const PRESET_AMOUNTS = [30, 100, 200, 400, 1000];
-
-const TRADE_PERIODS = [
-  { label: "30s", period: "S30", profitPercent: 80 },
-  { label: "1m", period: "M1", profitPercent: 90 },
-  { label: "5m", period: "M5", profitPercent: 120 },
-  { label: "15m", period: "M15", profitPercent: 150 },
-] as const;
+// We'll fetch trade periods (configs) from the pair endpoint and derive presets
 
 const OrderPanel = ({
   marketPairId,
@@ -30,10 +25,32 @@ const OrderPanel = ({
 }: Props) => {
   const [stake, setStake] = useState<number>(30);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(30);
-  const [selectedPeriod, setSelectedPeriod] = useState<
-    (typeof TRADE_PERIODS)[number]
-  >(TRADE_PERIODS[0]);
+  const [selectedPeriod, setSelectedPeriod] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Fetch pair (includes active tradeConfigs)
+  const { data: pairData } = useFetchData(MARKET_PAIR.GET_PAIR(marketPairId), "market-pair");
+  const tradePeriods: any[] = pairData?.pair?.tradeConfigs ?? [];
+
+  useEffect(() => {
+    if (tradePeriods && tradePeriods.length > 0) {
+      setSelectedPeriod((prev) => prev ?? tradePeriods[0]);
+    }
+  }, [tradePeriods]);
+
+  // Derive preset amounts from selectedPeriod.minStake/maxStake
+  const getPresets = (min: any, max: any) => {
+    const a = Number(min) || 1;
+    const b = Number(max) || a * 5;
+    if (b <= a) return [a, a * 2, a * 3, a * 4, a * 5].map((v) => Number(v.toFixed(2)));
+    const presets: number[] = [];
+    const steps = 5;
+    for (let i = 0; i < steps; i++) {
+      const v = a + ((b - a) * i) / (steps - 1);
+      presets.push(Number(v.toFixed(2)));
+    }
+    return presets;
+  };
 
   const { toast } = useToast();
 
@@ -110,23 +127,36 @@ const OrderPanel = ({
       <div>
         <p className="text-sm text-muted-foreground mb-2">Trade Period</p>
         <div className="grid grid-cols-2 gap-2">
-          {TRADE_PERIODS.map((p) => (
-            <button
-              key={p.period}
-              onClick={() => setSelectedPeriod(p)}
-              className={clsx(
-                "p-3 rounded border text-xs transition",
-                selectedPeriod.period === p.period
-                  ? "bg-blue-500 text-black border-blue-500"
-                  : "bg-gray-900 border-gray-700 hover:border-blue-400"
-              )}
-            >
-              <div className="font-semibold">{p.label}</div>
-              <div className="text-[10px] opacity-80">
-                Profit {p.profitPercent}%
-              </div>
-            </button>
-          ))}
+          {tradePeriods.map((p) => {
+            const label =
+              p.period === "S30"
+                ? "30s"
+                : p.period === "M1"
+                ? "1m"
+                : p.period === "M5"
+                ? "5m"
+                : p.period === "M15"
+                ? "15m"
+                : p.period;
+
+            return (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPeriod(p)}
+                className={clsx(
+                  "p-3 rounded border text-xs transition",
+                  selectedPeriod?.id === p.id
+                    ? "bg-blue-500 text-black border-blue-500"
+                    : "bg-gray-900 border-gray-700 hover:border-blue-400"
+                )}
+              >
+                <div className="font-semibold">{label}</div>
+                <div className="text-[10px] opacity-80">
+                  Profit {Number(p.profitRate) * 100}%
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -134,7 +164,7 @@ const OrderPanel = ({
       <div>
         <p className="text-sm text-muted-foreground mb-2">Amount (USDT)</p>
         <div className="grid grid-cols-5 gap-2">
-          {PRESET_AMOUNTS.map((value) => (
+          {(selectedPeriod ? getPresets(selectedPeriod.minStake, selectedPeriod.maxStake) : [30, 100, 200, 400, 1000]).map((value) => (
             <button
               key={value}
               onClick={() => {
@@ -170,7 +200,7 @@ const OrderPanel = ({
       <div className="text-xs text-muted-foreground">
         Expected profit:{" "}
         <span className="text-green-400 font-medium">
-          {(stake * selectedPeriod.profitPercent) / 100} USDT
+          {selectedPeriod ? Number(stake) * Number(selectedPeriod.profitRate) : 0} USDT
         </span>
       </div>
 

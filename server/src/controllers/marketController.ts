@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/authMiddleware";
@@ -365,6 +366,120 @@ export const getPairById = async (req: AuthRequest, res: Response) => {
       success: false,
       error: "Failed to fetch market pair",
     });
+  }
+};
+
+// Admin: Create a TradeConfig (trade period) for a market pair
+const createConfigSchema = z.object({
+  marketPairId: z.string().uuid(),
+  period: z.string(),
+  minStake: z.number().positive(),
+  maxStake: z.number().positive(),
+  profitRate: z.number().positive(),
+  isActive: z.boolean().optional(),
+});
+
+export const createTradeConfig = async (req: Request, res: Response) => {
+  try {
+    const payload = createConfigSchema.parse(req.body);
+
+    if (payload.minStake >= payload.maxStake) {
+      return res.status(400).json({ error: "minStake must be less than maxStake" });
+    }
+
+    const pair = await prisma.marketPair.findUnique({ where: { id: payload.marketPairId } });
+    if (!pair) {
+      return res.status(404).json({ error: "Market pair not found" });
+    }
+
+    // Ensure unique period per pair
+    const existing = await prisma.tradeConfig.findUnique({
+      where: { marketPairId_period: { marketPairId: payload.marketPairId, period: payload.period as any } },
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: "Trade config for this period already exists for the pair" });
+    }
+
+    // Validate period against known enum values to avoid DB errors
+    const allowedPeriods = ["S30", "M1", "M5", "M15"];
+    if (!allowedPeriods.includes(payload.period)) {
+      return res.status(400).json({ error: "Invalid period value" });
+    }
+
+    // Prisma's Decimal fields may require string/Prisma.Decimal inputs depending on client config.
+    // Convert numeric inputs to string to be safe.
+    const config = await prisma.tradeConfig.create({
+      data: {
+        marketPairId: payload.marketPairId,
+        period: payload.period as any,
+        minStake: payload.minStake.toString() as any,
+        maxStake: payload.maxStake.toString() as any,
+        profitRate: payload.profitRate.toString() as any,
+        isActive: payload.isActive ?? true,
+      },
+    });
+
+    return res.status(201).json({ success: true, config });
+  } catch (err: any) {
+    console.error("createTradeConfig error", err);
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    return res.status(500).json({ error: "Failed to create trade config" });
+  }
+};
+
+// Admin: Update a TradeConfig
+const updateConfigSchema = z.object({
+  minStake: z.number().positive().optional(),
+  maxStake: z.number().positive().optional(),
+  profitRate: z.number().positive().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateTradeConfig = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    const payload = updateConfigSchema.parse(req.body);
+
+    const config = await prisma.tradeConfig.findUnique({ where: { id } });
+    if (!config) return res.status(404).json({ error: "Trade config not found" });
+
+    if (payload.minStake !== undefined && payload.maxStake !== undefined) {
+      if (payload.minStake >= payload.maxStake) {
+        return res.status(400).json({ error: "minStake must be less than maxStake" });
+      }
+    }
+
+    // Convert numeric fields to strings for Prisma Decimal compatibility
+    const data: any = {};
+    if (payload.minStake !== undefined) data.minStake = payload.minStake.toString();
+    if (payload.maxStake !== undefined) data.maxStake = payload.maxStake.toString();
+    if (payload.profitRate !== undefined) data.profitRate = payload.profitRate.toString();
+    if (payload.isActive !== undefined) data.isActive = payload.isActive;
+
+    const updated = await prisma.tradeConfig.update({ where: { id }, data });
+
+    return res.json({ success: true, config: updated });
+  } catch (err: any) {
+    console.error("updateTradeConfig error", err);
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    return res.status(500).json({ error: "Failed to update trade config" });
+  }
+};
+
+// Admin: Delete a TradeConfig
+export const deleteTradeConfig = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    const config = await prisma.tradeConfig.findUnique({ where: { id } });
+    if (!config) return res.status(404).json({ error: "Trade config not found" });
+
+    await prisma.tradeConfig.delete({ where: { id } });
+
+    return res.json({ success: true, message: "Trade config deleted" });
+  } catch (err: any) {
+    console.error("deleteTradeConfig error", err);
+    return res.status(500).json({ error: "Failed to delete trade config" });
   }
 };
 export const deletePair = async (req: Request, res: Response) => {

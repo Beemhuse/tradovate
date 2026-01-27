@@ -1,5 +1,4 @@
 import { useParams } from "react-router-dom";
-import UserNav from "@/components/layout/UserNav";
 import { Card, CardContent } from "@/components/ui/card";
 import TradingViewChart from "@/components/TradingViewChart";
 import OrderPanel from "@/components/trade/orderPanel";
