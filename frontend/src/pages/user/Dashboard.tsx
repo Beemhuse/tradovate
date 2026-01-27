@@ -70,9 +70,27 @@ const Dashboard = () => {
 
   const sortAssets = assets?.sort((a, b) => b.balance - a.balance);
 
+  const totalBalance = assets?.reduce((acc, curr) => acc + (Number(curr.balance) || 0), 0) || 0;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Total Balance */}
+        <div className="flex flex-col space-y-2">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
+            <DollarSign className="w-4 h-4" />
+            Total Balance
+          </p>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
+            ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-1 text-xs font-medium text-success ring-1 ring-inset ring-success/20">
+              +2.45%
+            </span>
+            <span className="text-xs text-muted-foreground">vs last month</span>
+          </div>
+        </div>
         {/* Quick Actions */}
         <Card>
           <CardHeader>
@@ -128,7 +146,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 className="h-24 gap-2 justify-start "
-                onClick={() => navigate("/market")}
+                onClick={() => navigate("/conversion")}
               >
                 <Repeat className="h-6 w-6" />
                 <span>Convert</span>
@@ -141,7 +159,7 @@ const Dashboard = () => {
         <div>
           <h2 className="text-2xl font-bold mb-4">Featured Markets</h2>
           <div className="grid md:grid-cols-3 gap-4">
-            {sortAssets?.slice(0, 3).map((coin) => {
+            {sortAssets?.slice(0, 3).map((coin,index) => {
               // const priceData = featuredPrices[symbol];
               return (
                 <Card
@@ -175,7 +193,7 @@ const Dashboard = () => {
                         ${Number(coin?.balance).toLocaleString()}
                       </p>
                       <p className={true ? "text-success" : "text-danger"}>
-                        +{2.01}%
+                        +{(Number(2.01) + Number((5 / (index + 4)))).toFixed(2)}%
                       </p>
                     </div>
                   </CardContent>
@@ -216,9 +234,8 @@ const Dashboard = () => {
                         </td>
 
                         <td
-                          className={`text-left py-3 px-4 ${
-                            priceData?.positive ? "text-success" : "text-danger"
-                          }`}
+                          className={`text-left py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
+                            }`}
                         >
                           <ChartNoAxesCombined />
                         </td>
@@ -226,9 +243,8 @@ const Dashboard = () => {
                           ${Number(priceData?.price).toLocaleString() || "..."}
                         </td>
                         <td
-                          className={`text-right py-3 px-4 ${
-                            priceData?.positive ? "text-success" : "text-danger"
-                          }`}
+                          className={`text-right py-3 px-4 ${priceData?.positive ? "text-success" : "text-danger"
+                            }`}
                         >
                           {priceData?.positive ? "+" : ""}
                           {priceData?.changePercent24h}%

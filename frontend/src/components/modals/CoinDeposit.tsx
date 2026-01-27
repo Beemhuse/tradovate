@@ -43,11 +43,12 @@ const CoinDeposit = ({
   const [fromCoinId, setFromCoinId] = useState<string>("");
   const [conversionRate, setConversionRate] = useState<number | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const { data: coinsData } = useFetchData(COINS.COINLIST, "coin_list");
   const coinList = coinsData?.data || coinsData?.coins || [];
 
-  const { mutate, isPending } = useCreateData(COINS.DEPOSIT, ["coin_deposit"]);
+  const { mutate, isPending } = useCreateData(COINS.DEPOSIT, ["coin_deposit"], true);
 
   /** ✅ Single source of truth */
   const selectedWallet = useMemo(() => {
@@ -116,10 +117,12 @@ const CoinDeposit = ({
       return;
     }
 
-    const payload: any = {
-      walletId,
-      amount: Number(amount),
-    };
+    const formData = new FormData();
+    formData.append("walletId", walletId);
+    formData.append("amount", amount);
+    if (receiptFile) {
+      formData.append("receipt", receiptFile);
+    }
 
     // Add conversion details if enabled
     if (
@@ -128,11 +131,11 @@ const CoinDeposit = ({
       selectedWallet &&
       fromCoinId !== selectedWallet.coinId
     ) {
-      payload.fromCoinId = fromCoinId;
-      payload.toCoinId = selectedWallet.coinId;
+      formData.append("fromCoinId", fromCoinId);
+      formData.append("toCoinId", selectedWallet.coinId);
     }
 
-    mutate(payload, {
+    mutate(formData, {
       onSuccess: () => {
         toast({
           title: "Deposit submitted",
@@ -146,6 +149,7 @@ const CoinDeposit = ({
         setFromCoinId("");
         setConversionRate(null);
         setConvertedAmount(null);
+        setReceiptFile(null);
       },
       onError: (err: any) => {
         toast({
@@ -162,7 +166,7 @@ const CoinDeposit = ({
 
   return (
     <Dialog open={addCoinOpen} onOpenChange={setAddCoinOpen}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
         <DialogHeader>
           <DialogTitle>Deposit Coin</DialogTitle>
         </DialogHeader>
@@ -240,33 +244,6 @@ const CoinDeposit = ({
                 </div>
               )}
 
-              {/* Amount */}
-              <div className="space-y-2">
-                <Label>
-                  {enableConversion && fromCoinId
-                    ? "Deposit Amount"
-                    : "Deposit Amount"}
-                  {selectedDepositCoin
-                    ? ` (${selectedDepositCoin.symbol})`
-                    : ` (${selectedWallet.coin.symbol})`}
-                </Label>
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                />
-                {enableConversion && convertedAmount && (
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <ArrowRightLeft className="h-3 w-3" />
-                    You will receive:{" "}
-                    <span className="font-semibold text-foreground">
-                      {convertedAmount.toFixed(8)} {selectedWallet.coin.symbol}
-                    </span>
-                  </div>
-                )}
-              </div>
-
               {/* Address */}
               <div className="space-y-2">
                 <Label>Deposit Address</Label>
@@ -298,6 +275,47 @@ const CoinDeposit = ({
                 </div>
               )}
 
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label>
+                  {enableConversion && fromCoinId
+                    ? "Deposit Amount"
+                    : "Deposit Amount"}
+                  {selectedDepositCoin
+                    ? ` (${selectedDepositCoin.symbol})`
+                    : ` (${selectedWallet.coin.symbol})`}
+                </Label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+                {enableConversion && convertedAmount && (
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <ArrowRightLeft className="h-3 w-3" />
+                    You will receive:{" "}
+                    <span className="font-semibold text-foreground">
+                      {convertedAmount.toFixed(8)} {selectedWallet.coin.symbol}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Receipt Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="receipt">Upload Receipt</Label>
+                <Input
+                  id="receipt"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Please upload a screenshot of your transaction proof.
+                </p>
+              </div>
+
               {/* Actions */}
               <div className="flex gap-2 pt-4">
                 <Button
@@ -310,9 +328,14 @@ const CoinDeposit = ({
                 <Button
                   className="w-full"
                   onClick={handleDeposit}
-                  disabled={isPending || (enableConversion && !fromCoinId)}
+                  disabled={
+                    isPending ||
+                    !amount ||
+                    !receiptFile ||
+                    (enableConversion && !fromCoinId)
+                  }
                 >
-                  {isPending ? "Depositing..." : "Deposit"}
+                  {isPending ? "Submitting..." : "Submit"}
                 </Button>
               </div>
             </>
