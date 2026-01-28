@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getAllTransactions,
   updateTransactionStatus,
+  getReceiptImage,
 } from "../controllers/adminTransactionController";
 import { authenticateToken, requireRole } from "../middlewares/authMiddleware";
 
@@ -12,6 +13,7 @@ router.use(authenticateToken, requireRole("ADMIN"));
 
 router.get("/", getAllTransactions);
 router.patch("/:id/status", updateTransactionStatus);
+router.get("/receipts/:userId/:filename", getReceiptImage);
 /**
  * @swagger
  * tags:
@@ -56,7 +58,6 @@ router.patch("/:id/status", updateTransactionStatus);
  *       403:
  *         description: Forbidden – Only admins can access this resource
  */
-
 
 /**
  * @swagger

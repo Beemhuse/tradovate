@@ -303,27 +303,27 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         kyc: true, // optional: include KYC if you added model
       },
     });
-    const response = await fetch("http://localhost:6001/api/v1/events", {
-      method: "POST",
-      headers: {
-        "X-API-Key":
-          "nsk_553999d3978e7da9bf8da3308eff9e08045ce5ee5451bddbf04823690b048442",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        source: "tradovate",
-        title: "Payment Processed",
-        type: "application.payment_error",
-        severity: "error",
-        event: "PAYMENT",
-        message: "Payment processed successfully",
-        payload: {
-          orderId: "12345",
-          amount: 99.99,
-        },
-      }),
-    });
-    console.log("Event logged with status:", response.status);
+    // const response = await fetch("http://localhost:6001/api/v1/events", {
+    //   method: "POST",
+    //   headers: {
+    //     "X-API-Key":
+    //       "nsk_553999d3978e7da9bf8da3308eff9e08045ce5ee5451bddbf04823690b048442",
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({
+    //     source: "tradovate",
+    //     title: "Payment Processed",
+    //     type: "application.payment_error",
+    //     severity: "error",
+    //     event: "PAYMENT",
+    //     message: "Payment processed successfully",
+    //     payload: {
+    //       orderId: "12345",
+    //       amount: 99.99,
+    //     },
+    //   }),
+    // });
+    // console.log("Event logged with status:", response.status);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     // Remove sensitive fields before sending

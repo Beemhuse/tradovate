@@ -48,9 +48,43 @@ const Wallet = () => {
     isLoading,
   } = useFetchData(COINS.ASSETS, "assets");
 
-  const assets = assetData?.assets;
+  const assets = assetData?.assets || [];
+  const allAssets = useMemo(() => {
+    if (!coins) return assets;
 
-  const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
+    // Create a map for existing assets for quick lookup
+    const assetMap = new Map(
+      assets.map((a) => [`${a.coinId}-${a.networkId}`, a]),
+    );
+
+    // Merge all coins (we'll show them even if they don't have a wallet yet)
+    // Note: Since a coin can be on multiple networks, this is a bit tricky.
+    // For now, let's just make sure all COINS are represented.
+    const merged = [...assets];
+    const presentCoinIds = new Set(assets.map((a) => a.coinId));
+
+    coins.forEach((coin) => {
+      if (!presentCoinIds.has(coin.id)) {
+        merged.push({
+          coinId: coin.id,
+          balance: 0,
+          locked_balance: 0,
+          coin: {
+            id: coin.id,
+            name: coin.name,
+            symbol: coin.symbol,
+            iconUrl: coin.iconUrl,
+          },
+          network: null,
+          walletId: `temp-${coin.id}`,
+        });
+      }
+    });
+
+    return merged;
+  }, [assets, coins]);
+
+  const coinSymbols = allAssets?.map((c) => c?.coin?.symbol) || [];
   const prices = useCryptoPrice(coinSymbols);
 
   useEffect(() => {
@@ -74,8 +108,8 @@ const Wallet = () => {
   }
 
   const totalBalance =
-    assets?.reduce((sum, coin) => {
-      const symbol = coin.symbol || "";
+    allAssets?.reduce((sum, coin) => {
+      const symbol = coin.coin?.symbol || "";
       return sum + Number(coin.balance);
     }, 0) || 0;
 
@@ -182,7 +216,7 @@ const Wallet = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {assets?.map((wallet, index) => {
+                  {allAssets?.map((wallet, index) => {
                     const symbol = wallet.coin?.symbol || "";
                     // coupon_code: appliedCoupon?.code || null,
                     const usdtValue = calculateUSDTValue(

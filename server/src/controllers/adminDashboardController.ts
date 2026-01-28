@@ -2,34 +2,29 @@ import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import dayjs from "dayjs";
 
-
 export const getAdminDashboard = async (req: Request, res: Response) => {
   try {
     /** 📊 COUNTS */
-    const [
-      totalUsers,
-      activeCoins,
-      pendingKyc,
-      tradingVolume,
-    ] = await Promise.all([
-      prisma.user.count(),
+    const [totalUsers, activeCoins, pendingKyc, tradingVolume] =
+      await Promise.all([
+        prisma.user.count(),
 
-      prisma.coin.count({
-        where: { isActive: true },
-      }),
+        prisma.coin.count({
+          where: { isActive: true },
+        }),
 
-      prisma.kyc.count({
-        where: { status: "PENDING" },
-      }),
+        prisma.kyc.count({
+          where: { status: "PENDING" },
+        }),
 
-      prisma.transaction.aggregate({
-        where: {
-          type: { in: ["BUY", "SELL"] },
-          status: "COMPLETED",
-        },
-        _sum: { amount: true },
-      }),
-    ]);
+        prisma.transaction.aggregate({
+          where: {
+            type: { in: ["BUY", "SELL"] },
+            status: "COMPLETED",
+          },
+          _sum: { amount: true },
+        }),
+      ]);
 
     /** 🕒 RECENT ACTIVITY */
     const recentUsers = await prisma.user.findMany({
@@ -54,7 +49,7 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
         type: { in: ["WITHDRAW", "BANK_WITHDRAW", "DEPOSIT"] },
       },
       orderBy: { createdAt: "desc" },
-      take: 4,
+      take: 5, // Increased slightly
       include: {
         user: { select: { email: true } },
       },
@@ -70,7 +65,7 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
 
       ...recentKyc.map((k) => ({
         type: "KYC submitted",
-        description: k.user.email,
+        description: k.user?.email || "Unknown User",
         time: k.createdAt,
       })),
 
@@ -78,8 +73,10 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
         type:
           t.type === "DEPOSIT"
             ? "New deposit"
-            : "Withdrawal request",
-        description: t.user.email,
+            : t.type === "WITHDRAW" || t.type === "BANK_WITHDRAW"
+              ? "Withdrawal request"
+              : "Transaction recorded",
+        description: t.user?.email || "Unknown User",
         time: t.createdAt,
       })),
     ]

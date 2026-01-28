@@ -20,7 +20,13 @@ import CreatePairDialog from "./CreatePairDialog";
 import EditPairDialog from "./EditDialog";
 import DeletePairDialog from "./DeletePairDialog";
 import ManagePeriodsDialog from "./ManagePeriodsDialog";
-import { Coin, TradingPair, CreatePairFormData, UpdatePairFormData, CoinNetwork } from "./types";
+import {
+  Coin,
+  TradingPair,
+  CreatePairFormData,
+  UpdatePairFormData,
+  CoinNetwork,
+} from "./types";
 type TradableCoin = {
   id: string; // CoinNetwork.id
   coinId: string;
@@ -57,7 +63,7 @@ const transformCoinsData = (coinsData: any[]): TradableCoin[] => {
         slug: cn.network.slug,
         type: cn.network.type,
       },
-    }))
+    })),
   );
 };
 
@@ -74,7 +80,7 @@ const AdminTradingPairs = () => {
   >("all");
   const [networkFilter, setNetworkFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "volume" | "price" | "date">(
-    "name"
+    "name",
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -94,22 +100,22 @@ const AdminTradingPairs = () => {
   // 🔹 Mutations
   const { mutate: createPair, isPending: creating } = useCreateData(
     "/market/pairs",
-    ["market-pairs"]
+    ["market-pairs"],
   );
 
   const { mutate: updatePair, isPending: updating } = useUpdateData(
     "/market/pairs",
-    ["market-pairs"]
+    ["market-pairs"],
   );
 
   const { mutate: patchPair, isPending: patching } = usePatchData(
     (payload) => `/market/pairs/${payload.id}`,
-    ["market-pairs"]
+    ["market-pairs"],
   );
 
   const { mutate: deletePair, isPending: deleting } = useDeleteData(
     (id) => `/market/pairs/${id}`,
-    ["market-pairs"]
+    ["market-pairs"],
   );
 
   const handleOpenManage = (pair: TradingPair) => {
@@ -223,13 +229,13 @@ const AdminTradingPairs = () => {
     const inactivePairs = pairs.filter((p: TradingPair) => !p.isActive);
     const totalVolume = pairs.reduce(
       (sum: number, p: TradingPair) => sum + (p.volume24h || 0),
-      0
+      0,
     );
     const averagePrice =
       pairs.length > 0
         ? pairs.reduce(
             (sum: number, p: TradingPair) => sum + (p.lastPrice || 0),
-            0
+            0,
           ) / pairs.length
         : 0;
 
@@ -245,7 +251,6 @@ const AdminTradingPairs = () => {
   }, [pairs]);
 
   const handleCreatePair = (formData: CreatePairFormData) => {
-
     createPair(formData, {
       onSuccess: (res) => {
         toast({
@@ -313,7 +318,7 @@ const AdminTradingPairs = () => {
             variant: "destructive",
           });
         },
-      }
+      },
     );
   };
 
@@ -420,7 +425,7 @@ const AdminTradingPairs = () => {
           </div>
 
           {/* Stats Cards */}
-          <PairsTable
+          <StatsCards
             stats={stats}
             isLoading={loadingPairs}
             onRefresh={refetchPairs}
@@ -445,17 +450,8 @@ const AdminTradingPairs = () => {
           allPairs={pairs}
           isLoading={loadingPairs}
           onEditPair={handleEditPair}
-            onManagePair={handleOpenManage}
+          onManagePair={handleOpenManage}
           onTogglePair={handleTogglePair}
-
-          {/* Manage Periods Dialog */}
-          {selectedPair && (
-            <ManagePeriodsDialog
-              open={isManagePeriodsOpen}
-              onOpenChange={setIsManagePeriodsOpen}
-              pair={selectedPair}
-            />
-          )}
           onDeletePair={(pair) => {
             setSelectedPair(pair);
             setIsDeleteDialogOpen(true);
@@ -468,6 +464,15 @@ const AdminTradingPairs = () => {
           searchQuery={searchQuery}
           onCreatePairClick={() => setIsCreateDialogOpen(true)}
         />
+
+        {/* Manage Periods Dialog */}
+        {selectedPair && (
+          <ManagePeriodsDialog
+            open={isManagePeriodsOpen}
+            onOpenChange={setIsManagePeriodsOpen}
+            pair={selectedPair}
+          />
+        )}
       </div>
 
       {/* Dialogs */}

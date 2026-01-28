@@ -43,11 +43,16 @@ const CoinDeposit = ({
   const [fromCoinId, setFromCoinId] = useState<string>("");
   const [conversionRate, setConversionRate] = useState<number | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
+  const [receipt, setReceipt] = useState<File | null>(null);
 
   const { data: coinsData } = useFetchData(COINS.COINLIST, "coin_list");
   const coinList = coinsData?.data || coinsData?.coins || [];
 
-  const { mutate, isPending } = useCreateData(COINS.DEPOSIT, ["coin_deposit"]);
+  const { mutate, isPending } = useCreateData(
+    COINS.DEPOSIT,
+    ["coin_deposit"],
+    true,
+  );
 
   /** ✅ Single source of truth */
   const selectedWallet = useMemo(() => {
@@ -116,10 +121,12 @@ const CoinDeposit = ({
       return;
     }
 
-    const payload: any = {
-      walletId,
-      amount: Number(amount),
-    };
+    const payload = new FormData();
+    payload.append("walletId", walletId);
+    payload.append("amount", amount);
+    if (receipt) {
+      payload.append("receipt", receipt);
+    }
 
     // Add conversion details if enabled
     if (
@@ -128,8 +135,8 @@ const CoinDeposit = ({
       selectedWallet &&
       fromCoinId !== selectedWallet.coinId
     ) {
-      payload.fromCoinId = fromCoinId;
-      payload.toCoinId = selectedWallet.coinId;
+      payload.append("fromCoinId", fromCoinId);
+      payload.append("toCoinId", selectedWallet.coinId);
     }
 
     mutate(payload, {
@@ -146,6 +153,7 @@ const CoinDeposit = ({
         setFromCoinId("");
         setConversionRate(null);
         setConvertedAmount(null);
+        setReceipt(null);
       },
       onError: (err: any) => {
         toast({
@@ -297,6 +305,21 @@ const CoinDeposit = ({
                   </p>
                 </div>
               )}
+
+              {/* Receipt Upload */}
+              <div className="space-y-2">
+                <Label>Upload Receipt (Optional)</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setReceipt(e.target.files?.[0] || null)}
+                />
+                {receipt && (
+                  <p className="text-xs text-primary font-medium">
+                    Selected: {receipt.name}
+                  </p>
+                )}
+              </div>
 
               {/* Actions */}
               <div className="flex gap-2 pt-4">

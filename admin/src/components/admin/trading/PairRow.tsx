@@ -44,6 +44,7 @@ const PairRow = ({
   onToggle,
   onDelete,
   isPatching,
+  onManage,
 }: PairRowProps) => {
   return (
     <TableRow className="hover:bg-muted/50 group">
@@ -155,7 +156,7 @@ const PairRow = ({
               "min-w-[70px] justify-center",
               pair.isActive
                 ? "bg-green-500/20 text-green-700 hover:bg-green-500/20 border-green-500/30"
-                : "bg-amber-500/20 text-amber-700 hover:bg-amber-500/20 border-amber-500/30"
+                : "bg-amber-500/20 text-amber-700 hover:bg-amber-500/20 border-amber-500/30",
             )}
           >
             {pair.isActive ? (
@@ -203,7 +204,14 @@ const PairRow = ({
               View Market
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onManage && onManage(pair)}>
-              <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M3 12h18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
               Manage Periods
             </DropdownMenuItem>
             <DropdownMenuSeparator />

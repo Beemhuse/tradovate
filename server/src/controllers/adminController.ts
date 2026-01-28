@@ -34,12 +34,7 @@ const linkCoinNetworkSchema = z.object({
   contractAddress: z.string().optional(),
   decimals: z.number().optional(),
 });
-let network: {
-  id: string;
-  name: string;
-  type: string | null;
-  isActive: boolean;
-} | null = null;
+
 export const createCoin = async (req: Request, res: Response) => {
   try {
     const schema = createCoinSchema.extend({
@@ -111,7 +106,7 @@ export const createCoin = async (req: Request, res: Response) => {
 
         if (!isNative && !contractAddress) {
           throw new Error(
-            `Contract address is required for ${network.type} tokens`
+            `Contract address is required for ${network.type} tokens`,
           );
         }
 
@@ -161,12 +156,10 @@ export const createCoin = async (req: Request, res: Response) => {
 
     return res.status(400).json({
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to create coin",
+      error: error instanceof Error ? error.message : "Failed to create coin",
     });
   }
 };
-
 
 export const getAllCoins = async (req: Request, res: Response) => {
   try {
@@ -432,7 +425,7 @@ export const reactivateCoin = async (req: Request, res: Response) => {
 export const toggleCoinStatus = async (req: Request, res: Response) => {
   try {
     const { coinId, toggleNetworks = true } = req.body;
-console.log(coinId, toggleNetworks);
+    console.log(coinId, toggleNetworks);
     if (!coinId) {
       return res.status(400).json({
         error: "coinId is required",
@@ -590,7 +583,6 @@ export const deleteCoin = async (req: Request, res: Response) => {
     });
   }
 };
-
 
 export const linkCoinToNetwork = async (req: Request, res: Response) => {
   try {
@@ -807,7 +799,7 @@ export const getAllUsersWithWallets = async (req: Request, res: Response) => {
       // SUM ALL WALLET BALANCES
       const totalBalance = user.wallets.reduce(
         (sum, w) => sum + (w.balance || 0),
-        0
+        0,
       );
 
       return {
@@ -896,8 +888,8 @@ export const suspendUser = async (req: AuthRequest, res: Response) => {
 
     const data: any = {
       suspended: suspend,
-      suspendedReason: suspend ? reason ?? null : null,
-      suspendedBy: suspend ? adminId ?? null : null,
+      suspendedReason: suspend ? (reason ?? null) : null,
+      suspendedBy: suspend ? (adminId ?? null) : null,
       suspendedAt: suspend ? new Date() : null,
     };
 
@@ -928,13 +920,11 @@ export const suspendUser = async (req: AuthRequest, res: Response) => {
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Invalid payload",
-          details: err.errors,
-        });
+      return res.status(400).json({
+        success: false,
+        error: "Invalid payload",
+        details: err.errors,
+      });
     }
     console.error("suspendUser error", err);
     return res

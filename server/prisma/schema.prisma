@@ -273,6 +273,8 @@ model Transaction {
   admin        User?        @relation("AdminActions", fields: [adminId], references: [id])
   adminAction  AdminAction? @default(NONE)
   adminMessage String?
+  receiptUrl   String?
+  screenshot   String?
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   wallet Wallet? @relation(fields: [walletId], references: [id], onDelete: SetNull)

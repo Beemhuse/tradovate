@@ -13,9 +13,9 @@ dotenv.config();
 
 const BASE_URL = process.env.BASE_URL ?? "https://api.tradovate.com";
 const bodySchema = z.object({
-  status: z.enum(["approved", "rejected", "pending"]).transform((s) =>
-    s.toUpperCase()
-  ), // accepts lowercase on input, transforms to UPPERCASE for DB
+  status: z
+    .enum(["approved", "rejected", "pending"])
+    .transform((s) => s.toUpperCase()), // accepts lowercase on input, transforms to UPPERCASE for DB
   reason: z.string().optional().nullable(),
 });
 // Define a Request type that includes multer files
@@ -34,8 +34,6 @@ const submitKycSchema = z.object({
   idType: z.string().optional(),
   country: z.string().optional(),
 });
-
-
 
 export const getMyKyc = async (req: MulterRequest, res: Response) => {
   try {
@@ -65,12 +63,8 @@ export const getMyKyc = async (req: MulterRequest, res: Response) => {
   }
 };
 
-
 // Admin handlers (approve/reject/list)
-export const adminListKyc = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const adminListKyc = async (req: AuthRequest, res: Response) => {
   try {
     const records = await prisma.kyc.findMany({
       orderBy: { createdAt: "desc" },
@@ -121,7 +115,9 @@ export const updateKycStatus = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existing) {
-      return res.status(404).json({ success: false, error: "KYC record not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "KYC record not found" });
     }
 
     // Determine user's kycStatus update value
@@ -151,15 +147,19 @@ export const updateKycStatus = async (req: AuthRequest, res: Response) => {
     ]);
 
     // Compose absolute image URLs for response (do not overwrite DB)
-    const frontImageUrl = updatedKyc.frontImage ? `${BASE_URL}${updatedKyc.frontImage}` : null;
-    const backImageUrl = updatedKyc.backImage ? `${BASE_URL}${updatedKyc.backImage}` : null;
+    const frontImageUrl = updatedKyc.frontImage
+      ? `${BASE_URL}${updatedKyc.frontImage}`
+      : null;
+    const backImageUrl = updatedKyc.backImage
+      ? `${BASE_URL}${updatedKyc.backImage}`
+      : null;
 
     const frontendMessage =
       statusUpper === "APPROVED"
         ? "KYC approved successfully"
         : statusUpper === "REJECTED"
-        ? "KYC rejected"
-        : "KYC status updated";
+          ? "KYC rejected"
+          : "KYC status updated";
 
     return res.json({
       success: true,
@@ -173,15 +173,17 @@ export const updateKycStatus = async (req: AuthRequest, res: Response) => {
   } catch (err: any) {
     // Zod validation error
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ success: false, error: "Invalid input", details: err.errors });
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid input", details: err.errors });
     }
 
     console.error("updateKycStatus error", err);
-    return res.status(500).json({ success: false, error: "Failed to update KYC" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Failed to update KYC" });
   }
 };
-
-
 
 export const submitKyc = async (req: AuthRequest, res: Response) => {
   try {
@@ -233,8 +235,6 @@ export const submitKyc = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
-
 export const getKycImage = async (req: AuthRequest, res: Response) => {
   const { userId, filename } = req.params;
 
@@ -250,7 +250,7 @@ export const getKycImage = async (req: AuthRequest, res: Response) => {
     "private_uploads",
     "kyc",
     userId,
-    filename
+    filename,
   );
 
   if (!fs.existsSync(filePath)) {
@@ -263,4 +263,3 @@ export const getKycImage = async (req: AuthRequest, res: Response) => {
 
   decryptFileToStream(filePath, res);
 };
-

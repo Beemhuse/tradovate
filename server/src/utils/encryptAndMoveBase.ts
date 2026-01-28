@@ -7,22 +7,20 @@ import { encryptFile } from "./crypto";
  * (used by KYC & Certificates)
  */
 export function encryptAndMoveBase(
-  baseFolder: "kyc" | "certificates",
+  baseFolder: "kyc" | "certificates" | "receipts",
   userId: string,
-  file: Express.Multer.File
+  file: Express.Multer.File,
 ): string {
   const userDir = path.join(
     process.cwd(),
     "private_uploads",
     baseFolder,
-    userId
+    userId,
   );
 
   fs.mkdirSync(userDir, { recursive: true });
 
-  const filename = `${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2)}.enc`;
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.enc`;
 
   const targetPath = path.join(userDir, filename);
 

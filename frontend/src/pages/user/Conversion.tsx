@@ -34,7 +34,7 @@ const CurrencyConversion = () => {
   const { data: coinsData } = useFetchData(COINS.COINLIST, "coin_list");
   const { refetch: refetchAssets } = useFetchData(COINS.ASSETS, "assets");
 
-    const {
+  const {
     data: assetData,
     refetch,
     isLoading: isAssetsLoading,
@@ -58,13 +58,8 @@ const CurrencyConversion = () => {
   }, [coins, toCoinId]);
 
   /* -------------------- CONVERSION HOOK -------------------- */
-  const {
-    result,
-    isLoading,
-    error,
-    convertCoin,
-    executeConversion,
-  } = useConversion();
+  const { result, isLoading, error, convertCoin, executeConversion } =
+    useConversion();
 
   /* -------------------- HELPERS -------------------- */
   const getSymbol = (coinId?: string) =>
@@ -95,8 +90,8 @@ const CurrencyConversion = () => {
 
     convertCoin(fromCoinId, toCoinId, Number(amount));
   };
-    const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
-    const prices = useCryptoPrice(coinSymbols);
+  const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
+  const prices = useCryptoPrice(coinSymbols);
   const calculateUSDTValue = (symbol: string, balance: number) => {
     if (symbol === "USDT") return balance;
     const price = parseFloat(prices[symbol]?.price || "0");
@@ -139,12 +134,11 @@ const CurrencyConversion = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-6">
-
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Wallet Conversion</h1>
             <p className="text-muted-foreground">
-              Move funds between your wallets (1:1 internal transfer)
+              Swap funds between your wallets using real-time market prices
             </p>
           </div>
 
@@ -248,7 +242,11 @@ const CurrencyConversion = () => {
                     {amount} {getSymbol(fromCoinId)}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    → {amount} {getSymbol(toCoinId)}
+                    → {result.convertedAmount?.toFixed(8)} {getSymbol(toCoinId)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2 italic">
+                    Rate: 1 {getSymbol(fromCoinId)} ={" "}
+                    {result.conversionRate?.toFixed(8)} {getSymbol(toCoinId)}
                   </p>
                 </div>
               )}
@@ -258,107 +256,109 @@ const CurrencyConversion = () => {
 
         {/* ===================== PORTFOLIO ===================== */}
         {viewMode === "portfolio" && (
-             <Card>
-          <CardHeader>
-            <CardTitle>My Assets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4">Coin</th>
-                    <th className="text-left py-3 px-4">Network</th>
-                    <th className="text-right py-3 px-4">Available</th>
-                    <th className="text-right py-3 px-4">Frozen</th>
-                    <th className="text-right py-3 px-4">USDT Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assets?.map((wallet, index) => {
-                    const symbol = wallet.coin?.symbol || "";
-                    // coupon_code: appliedCoupon?.code || null,
-                    const usdtValue = calculateUSDTValue(
-                      symbol,
-                      Number(wallet.balance),
-                    );
-                    return (
-                      <tr
-                        key={wallet.coinId + `${index}`}
-                        className="border-b border-border hover:bg-secondary/50 transition-colors"
-                      >
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 border border-border rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                              {wallet.coin?.iconUrl ? (
-                                <img
-                                  src={wallet.coin.iconUrl}
-                                  alt={symbol}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-primary font-bold">
-                                  {symbol[0]}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{wallet.coin?.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {symbol}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          {wallet.network ? (
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                {wallet.network.icon && (
+          <Card>
+            <CardHeader>
+              <CardTitle>My Assets</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4">Coin</th>
+                      <th className="text-left py-3 px-4">Network</th>
+                      <th className="text-right py-3 px-4">Available</th>
+                      <th className="text-right py-3 px-4">Frozen</th>
+                      <th className="text-right py-3 px-4">USDT Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assets?.map((wallet, index) => {
+                      const symbol = wallet.coin?.symbol || "";
+                      // coupon_code: appliedCoupon?.code || null,
+                      const usdtValue = calculateUSDTValue(
+                        symbol,
+                        Number(wallet.balance),
+                      );
+                      return (
+                        <tr
+                          key={wallet.coinId + `${index}`}
+                          className="border-b border-border hover:bg-secondary/50 transition-colors"
+                        >
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 border border-border rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                                {wallet.coin?.iconUrl ? (
                                   <img
-                                    src={wallet.network.icon}
-                                    alt={wallet.network.name}
-                                    className="h-4 w-4"
+                                    src={wallet.coin.iconUrl}
+                                    alt={symbol}
+                                    className="h-full w-full object-cover"
                                   />
+                                ) : (
+                                  <span className="text-primary font-bold">
+                                    {symbol[0]}
+                                  </span>
                                 )}
-                                <span className="text-sm font-medium">
-                                  {wallet.network.name}
+                              </div>
+                              <div>
+                                <p className="font-medium">
+                                  {wallet.coin?.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {symbol}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            {wallet.network ? (
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                  {wallet.network.icon && (
+                                    <img
+                                      src={wallet.network.icon}
+                                      alt={wallet.network.name}
+                                      className="h-4 w-4"
+                                    />
+                                  )}
+                                  <span className="text-sm font-medium">
+                                    {wallet.network.name}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-muted-foreground uppercase">
+                                  {wallet.network.type || "Mainnet"}
                                 </span>
                               </div>
-                              <span className="text-xs text-muted-foreground uppercase">
-                                {wallet.network.type || "Mainnet"}
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                N/A
                               </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              N/A
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-right py-4 px-4 font-mono">
-                          {Number(wallet.balance).toFixed(2)}
-                        </td>
-                        {/* <td className="text-right py-4 px-4 font-mono text-muted-foreground">
+                            )}
+                          </td>
+                          <td className="text-right py-4 px-4 font-mono">
+                            {Number(wallet.balance).toFixed(2)}
+                          </td>
+                          {/* <td className="text-right py-4 px-4 font-mono text-muted-foreground">
                           {showBalance
                             ? Number(wallet.locked_balance)
                               ? Number(wallet.locked_balance).toFixed(8)
                               : "0.0"
                             : "••••"}
                         </td> */}
-                        <td className="text-right py-4 px-4 font-semibold text-success">
-                          {/* {showBalance ? `$${usdtValue.toFixed(2)}` : "••••••"} */}
-                          {/* {showBalance
+                          <td className="text-right py-4 px-4 font-semibold text-success">
+                            {/* {showBalance ? `$${usdtValue.toFixed(2)}` : "••••••"} */}
+                            {/* {showBalance
                             ? `$${Number(wallet.balance)}`
                             : "••••••"} */}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

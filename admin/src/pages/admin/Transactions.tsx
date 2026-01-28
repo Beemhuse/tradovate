@@ -12,13 +12,23 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useFetchData, usePatchData } from "@/hooks/use-api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const AdminTransactions = () => {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedTx, setSelectedTx] = useState<any>(null);
   const { toast } = useToast();
 
   // Fetch transactions
-  const { data, isLoading } = useFetchData("/admin/transactions", "admin-transactions");
+  const { data, isLoading } = useFetchData(
+    "/admin/transactions",
+    "admin-transactions",
+  );
 
   // server returns shape: { transactions: Transaction[] }
   const transactionsRaw = data?.transactions || [];
@@ -31,7 +41,11 @@ const AdminTransactions = () => {
         type: (tx.type || "").toLowerCase(), // e.g. 'deposit'
         amount: Number(tx.amount ?? 0),
         status: (tx.status || "").toLowerCase(), // 'pending' | 'completed' | 'cancelled'
-        createdAt: tx.createdAt || tx.created_at || tx.raw?.createdAt || tx.raw?.created_at,
+        createdAt:
+          tx.createdAt ||
+          tx.created_at ||
+          tx.raw?.createdAt ||
+          tx.raw?.created_at,
         userEmail: tx.user?.email ?? tx.raw?.user?.email ?? "-",
         userId: tx.user?.id ?? tx.raw?.user?.id ?? null,
         walletId: tx.walletId ?? tx.raw?.walletId ?? null,
@@ -40,8 +54,9 @@ const AdminTransactions = () => {
         networkName: tx.network?.name ?? tx.raw?.wallet?.network?.name ?? null,
         raw: tx.raw ?? tx,
         adminAction: tx.adminAction ?? tx.raw?.adminAction ?? "NONE",
+        receiptUrl: tx.receiptUrl ?? tx.raw?.receiptUrl ?? null,
       })),
-    [transactionsRaw]
+    [transactionsRaw],
   );
 
   // Filter by selected status (compare lowercased)
@@ -54,9 +69,15 @@ const AdminTransactions = () => {
   const updateStatus = usePatchData<
     any,
     { id: string; action: "approve" | "reject" | "hold" }
-  >((payload) => `/admin/transactions/${payload.id}/status`, ["admin-transactions"]);
+  >(
+    (payload) => `/admin/transactions/${payload.id}/status`,
+    ["admin-transactions"],
+  );
 
-  const handleAction = async (id: string, action: "approve" | "reject" | "hold") => {
+  const handleAction = async (
+    id: string,
+    action: "approve" | "reject" | "hold",
+  ) => {
     try {
       const result = await updateStatus.mutateAsync({ id, action });
       toast({
@@ -87,7 +108,10 @@ const AdminTransactions = () => {
             <CardTitle>All Transactions</CardTitle>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v)}
+            >
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -120,8 +144,13 @@ const AdminTransactions = () => {
                   </thead>
                   <tbody>
                     {filteredTransactions.map((tx: any) => (
-                      <tr key={tx.id} className="border-b border-border hover:bg-secondary/50">
-                        <td className="py-4 px-4 capitalize">{tx.type?.replace(/_/g, " ")}</td>
+                      <tr
+                        key={tx.id}
+                        className="border-b border-border hover:bg-secondary/50"
+                      >
+                        <td className="py-4 px-4 capitalize">
+                          {tx.type?.replace(/_/g, " ")}
+                        </td>
                         <td className="py-4 px-4">
                           <div>
                             <div className="font-medium">{tx.userEmail}</div>
@@ -129,28 +158,44 @@ const AdminTransactions = () => {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <div className="font-medium">{tx.coinSymbol} • {tx.coinName}</div>
-                          <div className="text-xs text-muted-foreground">{tx.networkName ?? "-"}</div>
+                          <div className="font-medium">
+                            {tx.coinSymbol} • {tx.coinName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {tx.networkName ?? "-"}
+                          </div>
                         </td>
-                        <td className="py-4 px-4 text-right font-mono">{Number(tx.amount).toLocaleString()}</td>
+                        <td className="py-4 px-4 text-right font-mono">
+                          {Number(tx.amount).toLocaleString()}
+                        </td>
                         <td className="py-4 px-4">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               tx.status === "completed"
                                 ? "bg-success/10 text-success"
-                                : tx.status === "cancelled" || tx.status === "failed"
-                                ? "bg-danger/10 text-danger"
-                                : "bg-primary/10 text-primary"
+                                : tx.status === "cancelled" ||
+                                    tx.status === "failed"
+                                  ? "bg-danger/10 text-danger"
+                                  : "bg-primary/10 text-primary"
                             }`}
                           >
                             {tx.status}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-sm text-muted-foreground">
-                          {tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "-"}
+                          {tx.createdAt
+                            ? new Date(tx.createdAt).toLocaleString()
+                            : "-"}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedTx(tx)}
+                            >
+                              View
+                            </Button>
                             {tx.status === "pending" && (
                               <>
                                 <Button
@@ -182,7 +227,11 @@ const AdminTransactions = () => {
                                 </Button>
                               </>
                             )}
-                            {tx.status !== "pending" && <div className="text-xs text-muted-foreground">No actions</div>}
+                            {tx.status !== "pending" && (
+                              <div className="text-xs text-muted-foreground">
+                                No actions
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -190,7 +239,10 @@ const AdminTransactions = () => {
 
                     {filteredTransactions.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                        <td
+                          colSpan={7}
+                          className="py-8 text-center text-muted-foreground"
+                        >
                           No transactions found
                         </td>
                       </tr>
@@ -201,6 +253,129 @@ const AdminTransactions = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Details Dialog */}
+        <Dialog
+          open={!!selectedTx}
+          onOpenChange={(open) => !open && setSelectedTx(null)}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Transaction Details</DialogTitle>
+            </DialogHeader>
+
+            {selectedTx && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">User Email</p>
+                    <p className="font-medium">{selectedTx.userEmail}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">Type</p>
+                    <p className="font-medium uppercase">{selectedTx.type}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">Amount</p>
+                    <p className="font-medium">
+                      {selectedTx.amount} {selectedTx.coinSymbol}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">Network</p>
+                    <p className="font-medium">
+                      {selectedTx.networkName || "N/A"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">Status</p>
+                    <p className="font-medium capitalize">
+                      {selectedTx.status}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">Date</p>
+                    <p className="font-medium">
+                      {new Date(selectedTx.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedTx.raw?.bankName && (
+                  <div className="border-t pt-4 space-y-2">
+                    <h3 className="font-semibold">Bank Details</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Bank Name</p>
+                        <p>{selectedTx.raw.bankName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Account Name</p>
+                        <p>{selectedTx.raw.accountName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Account Number</p>
+                        <p>{selectedTx.raw.accountNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">IFSC Code</p>
+                        <p>{selectedTx.raw.ifscCode}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTx.receiptUrl && (
+                  <div className="border-t pt-4 space-y-2">
+                    <h3 className="font-semibold">Receipt</h3>
+                    <div className="bg-secondary/20 rounded-lg p-2 flex justify-center overflow-hidden border">
+                      <img
+                        src={`${import.meta.env.VITE_BASE_URL || "http://localhost:4001"}/api/v1/admin/transactions/receipts/${selectedTx.userId}/${selectedTx.receiptUrl}`}
+                        alt="Transaction Receipt"
+                        className="max-h-[300px] object-contain rounded"
+                        crossOrigin="anonymous"
+                      />
+                    </div>
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-xs"
+                      onClick={() =>
+                        window.open(
+                          `${import.meta.env.VITE_BASE_URL || "http://localhost:4001"}/api/v1/admin/transactions/receipts/${selectedTx.userId}/${selectedTx.receiptUrl}`,
+                          "_blank",
+                        )
+                      }
+                    >
+                      Open in new tab
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setSelectedTx(null)}>
+                    Close
+                  </Button>
+                  {selectedTx.status === "pending" && (
+                    <>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleAction(selectedTx.id, "reject")}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        className="bg-success hover:bg-success/90"
+                        onClick={() => handleAction(selectedTx.id, "approve")}
+                      >
+                        Approve
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

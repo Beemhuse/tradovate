@@ -2,6 +2,9 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../utils/prisma";
+import path from "path";
+import fs from "fs";
+import { decryptFileToStream } from "../utils/crypto";
 
 /**
  * Expected request body for status update:
@@ -32,7 +35,11 @@ export const getAllTransactions = async (req: Request, res: Response) => {
     // status map (frontend uses friendly names in some places; callers may pass enum strings)
     if (status && String(status) !== "all") {
       const s = String(status);
-      if (["PENDING", "COMPLETED", "FAILED", "CANCELLED"].includes(s.toUpperCase())) {
+      if (
+        ["PENDING", "COMPLETED", "FAILED", "CANCELLED"].includes(
+          s.toUpperCase(),
+        )
+      ) {
         where.status = s.toUpperCase();
       } else {
         // map friendly values to enums
@@ -47,7 +54,7 @@ export const getAllTransactions = async (req: Request, res: Response) => {
       where,
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true, /* name if available */ } },
+        user: { select: { id: true, email: true /* name if available */ } },
         wallet: {
           include: {
             coin: true,
@@ -66,18 +73,33 @@ export const getAllTransactions = async (req: Request, res: Response) => {
       createdAt: tx.createdAt,
       user: tx.user,
       walletId: tx.walletId,
-      coin: tx.wallet?.coin ? { id: tx.wallet.coin.id, symbol: tx.wallet.coin.symbol, name: tx.wallet.coin.name } : null,
-      network: tx.wallet?.network ? { id: tx.wallet.network.id, name: tx.wallet.network.name } : null,
+      coin: tx.wallet?.coin
+        ? {
+            id: tx.wallet.coin.id,
+            symbol: tx.wallet.coin.symbol,
+            name: tx.wallet.coin.name,
+          }
+        : null,
+      network: tx.wallet?.network
+        ? { id: tx.wallet.network.id, name: tx.wallet.network.name }
+        : null,
       raw: tx,
       adminAction: tx.adminAction ?? null,
       adminId: tx.adminId ?? null,
       adminMessage: tx.adminMessage ?? null,
+      receiptUrl: tx.receiptUrl ?? null,
     }));
 
-    return res.json({ success: true, count: payload.length, transactions: payload });
+    return res.json({
+      success: true,
+      count: payload.length,
+      transactions: payload,
+    });
   } catch (err) {
     console.error("getAllTransactions error", err);
-    return res.status(500).json({ success: false, error: "Failed to fetch transactions" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Failed to fetch transactions" });
   }
 };
 
@@ -91,18 +113,27 @@ export const updateTransactionStatus = async (req: Request, res: Response) => {
   try {
     const paramsParse = updateActionSchema.safeParse(req.body);
     if (!paramsParse.success) {
-      return res.status(400).json({ success: false, error: "Invalid payload", details: paramsParse.error.errors });
+      return res.status(400).json({
+        success: false,
+        error: "Invalid payload",
+        details: paramsParse.error.errors,
+      });
     }
     const { action, note } = paramsParse.data;
 
     const txId = req.params.id;
     const tx = await prisma.transaction.findUnique({
       where: { id: txId },
-      include: { wallet: { include: { coin: true, network: true } }, user: true },
+      include: {
+        wallet: { include: { coin: true, network: true } },
+        user: true,
+      },
     });
 
     if (!tx) {
-      return res.status(404).json({ success: false, error: "Transaction not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Transaction not found" });
     }
 
     // adminId from authenticated user; assume your auth middleware attaches user to req.user
@@ -127,7 +158,8 @@ export const updateTransactionStatus = async (req: Request, res: Response) => {
           return res.status(400).json({
             success: false,
             error: "Missing wallet for deposit transaction",
-            frontendMessage: "Cannot credit wallet because wallet information is missing.",
+            frontendMessage:
+              "Cannot credit wallet because wallet information is missing.",
           });
         }
 
@@ -139,8 +171,28 @@ export const updateTransactionStatus = async (req: Request, res: Response) => {
 
         frontendMessage = `Deposit of ${tx.amount} ${tx.wallet?.coin?.symbol ?? ""} approved and credited to wallet.`;
       } else if (tx.type === "WITHDRAW") {
+        if (!tx.walletId) {
+          return res.status(400).json({
+            success: false,
+            error: "Missing wallet for withdrawal transaction",
+          });
+        }
+        await prisma.wallet.update({
+          where: { id: tx.walletId },
+          data: { balance: { decrement: Number(tx.amount) } },
+        });
         frontendMessage = `Withdrawal of ${tx.amount} ${tx.wallet?.coin?.symbol ?? ""} approved. Please process on-chain as needed.`;
       } else if (tx.type === "BANK_WITHDRAW") {
+        if (!tx.walletId) {
+          return res.status(400).json({
+            success: false,
+            error: "Missing wallet for bank withdrawal transaction",
+          });
+        }
+        await prisma.wallet.update({
+          where: { id: tx.walletId },
+          data: { balance: { decrement: Number(tx.amount) } },
+        });
         frontendMessage = `Bank withdrawal of ${tx.amount} approved. Please transfer the funds to the user's bank account (Account: ${tx.accountNumber ?? "N/A"}, Bank: ${tx.bankName ?? "N/A"}).`;
       } else {
         frontendMessage = `Transaction approved.`;
@@ -158,7 +210,8 @@ export const updateTransactionStatus = async (req: Request, res: Response) => {
         data: {
           adminId,
           adminAction: "HOLD",
-          adminMessage: note ?? `Placed on hold by admin ${adminId ?? "unknown"}`,
+          adminMessage:
+            note ?? `Placed on hold by admin ${adminId ?? "unknown"}`,
         },
       });
 
@@ -192,8 +245,49 @@ export const updateTransactionStatus = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: "Failed to update transaction",
-      frontendMessage: "An unexpected error occurred while updating the transaction.",
+      frontendMessage:
+        "An unexpected error occurred while updating the transaction.",
       details: err?.message,
     });
+  }
+};
+
+export const getReceiptImage = async (req: Request, res: Response) => {
+  try {
+    const { userId, filename } = req.params;
+
+    // Check if transaction exists with this receipt
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        userId,
+        receiptUrl: filename,
+      },
+    });
+
+    if (!transaction) {
+      // Also check if filename matches without path (some old ones might)
+      // but for now let's be strict
+    }
+
+    const filePath = path.join(
+      process.cwd(),
+      "private_uploads",
+      "receipts",
+      userId,
+      filename,
+    );
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    res.setHeader("Content-Type", "image/webp");
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    decryptFileToStream(filePath, res);
+  } catch (error) {
+    console.error("getReceiptImage error:", error);
+    res.status(500).json({ error: "Failed to fetch image" });
   }
 };

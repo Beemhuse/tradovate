@@ -8,6 +8,7 @@ import {
   getMarketPriceForCoin,
   getPriceByCoinSymbol,
 } from "../services/marketPriceService";
+import { encryptAndMoveReceipt } from "../middlewares/receiptUpload";
 
 const createWalletSchema = z.object({
   coinId: z.string(),
@@ -36,6 +37,7 @@ const depositSchema = z.object({
   // For dual-currency deposits (e.g., deposit USDT to get BTC equivalent)
   fromCoinId: z.string().optional(),
   toCoinId: z.string().optional(),
+  receiptUrl: z.string().optional(),
 });
 
 type WalletWithCoin = {
@@ -524,8 +526,15 @@ export const requestDeposit = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.userId;
     if (!(await enforceFinancialAccess(userId, res))) return;
 
-    const { walletId, amount, txHash, fromCoinId, toCoinId } =
+    const { walletId, amount, txHash, fromCoinId, toCoinId, receiptUrl } =
       depositSchema.parse(req.body);
+
+    const file = req.file;
+    let finalReceiptUrl = receiptUrl;
+
+    if (file) {
+      finalReceiptUrl = encryptAndMoveReceipt(userId, file);
+    }
 
     // Verify wallet belongs to user
     const wallet = await prisma.wallet.findUnique({ where: { id: walletId } });
@@ -551,6 +560,7 @@ export const requestDeposit = async (req: AuthRequest, res: Response) => {
       status: "PENDING",
       fromCoinId: fromCoinId || wallet.coinId,
       fromAmount: amount,
+      receiptUrl: finalReceiptUrl,
     };
 
     // 💡 DETERMINING IF THIS IS A CONVERSION DEPOSIT
@@ -682,10 +692,13 @@ export const requestWithdraw = async (req: AuthRequest, res: Response) => {
     }
 
     // Lock funds (debit user from the wallet)
+    // 🛑 DEBIT REMOVED - Wait for admin approval
+    /*
     await prisma.wallet.update({
       where: { id: walletId },
       data: { balance: { decrement: amount } },
     });
+    */
 
     // Create Transaction
     const tx = await prisma.transaction.create({
@@ -729,10 +742,13 @@ export const requestBankWithdraw = async (req: AuthRequest, res: Response) => {
     }
 
     // Debit funds
+    // 🛑 DEBIT REMOVED - Wait for admin approval
+    /*
     await prisma.wallet.update({
       where: { id: walletId! },
       data: { balance: { decrement: amount } },
     });
+    */
 
     const tx = await prisma.transaction.create({
       data: {
@@ -782,9 +798,7 @@ export const getWalletConversions = async (req: AuthRequest, res: Response) => {
 
     const fromCoinId = req.query.coinId as string | undefined;
     const toCoinId = req.query.toCoinId as string | undefined;
-    const amountParam = req.query.amount
-      ? Number(req.query.amount)
-      : undefined;
+    const amountParam = req.query.amount ? Number(req.query.amount) : undefined;
 
     if (!fromCoinId || !toCoinId || amountParam === undefined) {
       return res.status(400).json({
@@ -844,15 +858,28 @@ export const getWalletConversions = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    /* 4️⃣ Preview (1:1 internal transfer) */
+    /* 4️⃣ Get Market Rates */
+    const fromPrice = await getPriceByCoinSymbol(fromCoin.symbol);
+    const toPrice = await getPriceByCoinSymbol(toCoin.symbol);
+
+    if (!fromPrice || !toPrice) {
+      return res.status(400).json({
+        success: false,
+        error: "Market prices not available for conversion",
+      });
+    }
+
+    const conversionRate = fromPrice / toPrice;
+    const convertedAmount = amountParam * conversionRate;
+
     return res.json({
       success: true,
       mode: "single",
-      fromCoinId,
-      toCoinId,
+      from: fromCoin.symbol,
+      to: toCoin.symbol,
       amount: amountParam,
-      conversionRate: 1,
-      convertedAmount: amountParam,
+      conversionRate,
+      convertedAmount,
     });
   } catch (error) {
     console.error("Conversion preview error:", error);
@@ -862,7 +889,6 @@ export const getWalletConversions = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
 
 export const executeConversion = async (req: AuthRequest, res: Response) => {
   try {
@@ -924,7 +950,21 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    /* 3️⃣ Atomic internal transfer */
+    /* 3️⃣ Get Market Rates & Calculate Payout */
+    const fromPrice = await getPriceByCoinSymbol(fromCoin.symbol);
+    const toPrice = await getPriceByCoinSymbol(toCoin.symbol);
+
+    if (!fromPrice || !toPrice) {
+      return res.status(400).json({
+        success: false,
+        error: "Market prices not available for conversion execution",
+      });
+    }
+
+    const conversionRate = fromPrice / toPrice;
+    const convertedAmount = amount * conversionRate;
+
+    /* 4️⃣ Atomic internal transfer */
     const transaction = await prisma.$transaction(async (tx) => {
       await tx.wallet.update({
         where: { id: fromWallet.id },
@@ -936,7 +976,7 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
       await tx.wallet.update({
         where: { id: toWallet.id },
         data: {
-          balance: { increment: amount },
+          balance: { increment: convertedAmount },
         },
       });
 
@@ -954,8 +994,8 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
           fromCoinId,
           toCoinId,
           fromAmount: amount,
-          toAmount: amount,
-          conversionRate: 1,
+          toAmount: convertedAmount,
+          conversionRate,
 
           txHash: `conv_${Date.now()}`,
         },
@@ -983,4 +1023,3 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-

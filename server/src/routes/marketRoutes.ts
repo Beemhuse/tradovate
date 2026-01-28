@@ -28,6 +28,7 @@ import {
   updateTradeConfig,
   deleteTradeConfig,
 } from "../controllers/marketController";
+import { receiptUpload } from "../middlewares/receiptUpload";
 
 const router = Router();
 
@@ -433,7 +434,7 @@ router.post("/wallet", createWallet);
  *       200:
  *         description: Deposit requested
  */
-router.post("/deposit", requestDeposit);
+router.post("/deposit", receiptUpload, requestDeposit);
 
 /**
  * @swagger
