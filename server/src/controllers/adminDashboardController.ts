@@ -49,9 +49,14 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
         type: { in: ["WITHDRAW", "BANK_WITHDRAW", "DEPOSIT"] },
       },
       orderBy: { createdAt: "desc" },
-      take: 5, // Increased slightly
-      include: {
-        user: { select: { email: true } },
+      take: 5,
+      select: {
+        id: true,
+        type: true,
+        createdAt: true,
+        user: {
+          select: { email: true },
+        },
       },
     });
 

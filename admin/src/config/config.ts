@@ -24,7 +24,6 @@ export const handleFetchResponse = async (response: Response) => {
     if (typeof window !== "undefined") {
       CookieManager.delete("tradovate-token");
       CookieManager.delete("tradovate-user");
-      // Optionally redirect to login
       // window.location.href = "/auth";
     }
   }
@@ -34,7 +33,7 @@ export const handleFetchResponse = async (response: Response) => {
 
   if (!response.ok) {
     throw new Error(
-      data?.error || data?.message || `HTTP error! status: ${response.status}`
+      data?.error || data?.message || `HTTP error! status: ${response.status}`,
     );
   }
 
