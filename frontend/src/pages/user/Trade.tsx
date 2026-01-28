@@ -1,10 +1,24 @@
-import { useParams } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { History, ArrowRight } from "lucide-react";
 import TradingViewChart from "@/components/TradingViewChart";
 import OrderPanel from "@/components/trade/orderPanel";
 import { useFetchData } from "@/hooks/use-api";
 import { useLivePrice } from "@/hooks/useLivePrice";
 import { MARKET_PAIR, COINS } from "@/hooks/apiEndpoint";
+import {
+  OrdersSection,
+  Order,
+  OrderDetailsDialog,
+} from "@/components/transactions";
+import { useState, useMemo } from "react";
 
 type MarketPair = {
   id: string;
@@ -16,12 +30,25 @@ type MarketPair = {
 
 const TradePage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   /** 1️⃣ Fetch pair from backend */
   const { data, isLoading, error } = useFetchData<{
     success: boolean;
     pair: MarketPair;
   }>(MARKET_PAIR.GET_PAIR(id), "market-pair");
+
+  // Fetch orders data
+  const { data: ordersData, isLoading: loadingOrders } = useFetchData<Order[]>(
+    "/market/orders",
+    ["user-orders"],
+  );
+
+  const recentOrders = useMemo(() => {
+    if (!ordersData) return [];
+    return [...ordersData].slice(0, 5);
+  }, [ordersData]);
 
   // Fetch user assets for balance
   const { data: assetData } = useFetchData(COINS.ASSETS, "assets");
@@ -48,7 +75,7 @@ const TradePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <Card className="b-black">
+        <Card className="border-border">
           <CardContent className="flex flex-col md:flex-row gap-1 p-1">
             {/* 📊 TradingView chart (client-side only) */}
             <div className="flex-1 w-full md:w-1/2 lg:w-2/3">
@@ -69,7 +96,43 @@ const TradePage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* 📜 Trade History */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xl font-bold flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                Recent Trades
+              </CardTitle>
+              <CardDescription>Your last 5 trading activities</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/transactions")}
+              className="gap-2"
+            >
+              View All History
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <OrdersSection
+              orders={recentOrders}
+              filters={{}}
+              isLoading={loadingOrders}
+              onOrderClick={setSelectedOrder}
+            />
+          </CardContent>
+        </Card>
       </div>
+
+      <OrderDetailsDialog
+        order={selectedOrder}
+        open={!!selectedOrder}
+        onOpenChange={() => setSelectedOrder(null)}
+      />
     </div>
   );
 };

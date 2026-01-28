@@ -76,7 +76,7 @@ const CoinDeposit = ({
       const fetchConversion = async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_BASE_UR || "http://localhost:4001/api/v1"}/market/conversion?coin=${selectedDepositCoin.symbol}&to=${selectedWallet.coin.symbol}&amount=${amount}`,
+            `${import.meta.env.VITE_BASE_URL || "http://localhost:4001/api/v1"}/market/conversion?coin=${selectedDepositCoin.symbol}&to=${selectedWallet.coin.symbol}&amount=${amount}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
@@ -170,7 +170,7 @@ const CoinDeposit = ({
 
   return (
     <Dialog open={addCoinOpen} onOpenChange={setAddCoinOpen}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
         <DialogHeader>
           <DialogTitle>Deposit Coin</DialogTitle>
         </DialogHeader>
@@ -248,33 +248,6 @@ const CoinDeposit = ({
                 </div>
               )}
 
-              {/* Amount */}
-              <div className="space-y-2">
-                <Label>
-                  {enableConversion && fromCoinId
-                    ? "Deposit Amount"
-                    : "Deposit Amount"}
-                  {selectedDepositCoin
-                    ? ` (${selectedDepositCoin.symbol})`
-                    : ` (${selectedWallet.coin.symbol})`}
-                </Label>
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                />
-                {enableConversion && convertedAmount && (
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <ArrowRightLeft className="h-3 w-3" />
-                    You will receive:{" "}
-                    <span className="font-semibold text-foreground">
-                      {convertedAmount.toFixed(8)} {selectedWallet.coin.symbol}
-                    </span>
-                  </div>
-                )}
-              </div>
-
               {/* Address */}
               <div className="space-y-2">
                 <Label>Deposit Address</Label>
@@ -292,19 +265,16 @@ const CoinDeposit = ({
                 </div>
               </div>
 
-              {/* QR */}
-              {selectedWallet.qrCode && (
-                <div className="flex flex-col items-center gap-2 pt-2">
-                  <img
-                    src={selectedWallet.qrCode}
-                    className="w-40 h-40 border rounded-md p-1"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Scan to deposit{" "}
-                    {selectedDepositCoin?.symbol || selectedWallet.coin.symbol}
-                  </p>
-                </div>
-              )}
+              {/* Amount Input */}
+              <div className="space-y-2">
+                <Label>Amount to Deposit</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
 
               {/* Receipt Upload */}
               <div className="space-y-2">
@@ -333,9 +303,14 @@ const CoinDeposit = ({
                 <Button
                   className="w-full"
                   onClick={handleDeposit}
-                  disabled={isPending || (enableConversion && !fromCoinId)}
+                  disabled={
+                    isPending ||
+                    !amount ||
+                    !receipt ||
+                    (enableConversion && !fromCoinId)
+                  }
                 >
-                  {isPending ? "Depositing..." : "Deposit"}
+                  {isPending ? "Submitting..." : "Submit"}
                 </Button>
               </div>
             </>
