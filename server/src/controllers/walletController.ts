@@ -32,7 +32,7 @@ const bankWithdrawSchema = z.object({
 });
 const depositSchema = z.object({
   walletId: z.string(),
-  amount: z.number().positive(),
+  amount: z.coerce.number().positive(),
   txHash: z.string().optional(),
   // For dual-currency deposits (e.g., deposit USDT to get BTC equivalent)
   fromCoinId: z.string().optional(),
@@ -565,7 +565,7 @@ export const requestDeposit = async (req: AuthRequest, res: Response) => {
 
     // 💡 DETERMINING IF THIS IS A CONVERSION DEPOSIT
     // It's a conversion if fromCoinId is provided AND it's different from the wallet's target coin
-    const isConversion = fromCoinId && fromCoinId !== wallet.coinId;
+    const isConversion = Boolean(fromCoinId && fromCoinId !== wallet.coinId);
 
     if (isConversion) {
       const fromCoin = await prisma.coin.findUnique({
@@ -618,14 +618,19 @@ export const requestDeposit = async (req: AuthRequest, res: Response) => {
       transaction: tx,
     });
   } catch (error) {
-    console.error("Deposit error:", error);
+    console.error("Deposit error:", {
+      message: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         error: "Validation failed",
         details: error.errors,
       });
     }
-    res.status(400).json({ error: "Deposit request failed" });
+
+    return res.status(400).json({ error: "Deposit request failed" });
   }
 };
 

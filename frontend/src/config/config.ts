@@ -2,7 +2,8 @@ import { CookieManager } from "@/utils/cookie-utils";
 import axios from "axios";
 // import { CookieManager } from "./cookie-utils"; // Import your CookieManager utility
 
-export const API_URL = import.meta.env.VITE_BASE_UR || 'http://localhost:9991/api/v1';
+export const API_URL =
+  import.meta.env.VITE_BASE_URL || "http://localhost:9991/api/v1";
 export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 // export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 
@@ -24,15 +25,17 @@ export default function initAxios() {
   axios.interceptors.response.use(
     (response) => response,
     async (error) => {
-      console.log("error", error)
-      if (error?.response?.status === 401 || error?.response?.data?.message?.includes("invalid token")) {
+      console.log("error", error);
+      if (
+        error?.response?.status === 401 ||
+        error?.response?.data?.message?.includes("invalid token")
+      ) {
         // Handle unauthorized access
         if (typeof window !== "undefined") {
           // Clear the auth token cookie
           CookieManager.delete("tradovate-token", "/");
           CookieManager.delete("tradovate-refresh-token", "/");
           CookieManager.delete("tradovate-user", "/");
-
 
           // Clear the axios auth header
           delete axios.defaults.headers.common.Authorization;
@@ -42,7 +45,7 @@ export default function initAxios() {
         }
       }
       return Promise.reject(error);
-    }
+    },
   );
 }
 
@@ -55,13 +58,11 @@ export const setAuthToken = (token: string) => {
     secure: true,
     sameSite: "Strict",
     // httpOnly: true,
-
   });
   // Set axios header
   axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 };
 export const setAuthUser = (token: string) => {
-
   CookieManager.set("tradovate-user", token, {
     expires: 7,
     path: "/",
@@ -76,13 +77,13 @@ export const setAuthUser = (token: string) => {
 export const clearAuthToken = () => {
   CookieManager.delete("tradovate-token", "/");
   CookieManager.delete("tradovate-user", "/");
-  window.location.reload()
+  window.location.reload();
   delete axios.defaults.headers.common.Authorization;
 };
 
 export const getAuthToken = (): string | null => {
   return CookieManager.get("tradovate-token");
-}
+};
 
 export const getAuthUser = (): string | null => {
   return CookieManager.get("tradovate-user");
