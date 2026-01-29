@@ -8,7 +8,7 @@ type AuthRequest = Request & {
 
 const bankWithdrawSchema = z.object({
   walletId: z.string().uuid(), // wallet id to withdraw from
-  amount: z.number().positive(),
+  amount: z.coerce.number().positive(),
   bankName: z.string().min(2),
   accountName: z.string().min(2),
   accountNumber: z.string().min(4),

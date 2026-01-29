@@ -76,7 +76,7 @@ const CoinDeposit = ({
       const fetchConversion = async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_BASE_URL || "http://localhost:4001/api/v1"}/market/conversion?coin=${selectedDepositCoin.symbol}&to=${selectedWallet.coin.symbol}&amount=${amount}`,
+            `${import.meta.env.VITE_BASE_URL || "http://localhost:9991/api/v1"}/market/conversion?coinId=${fromCoinId}&toCoinId=${selectedWallet.coinId}&amount=${amount}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
@@ -304,10 +304,7 @@ const CoinDeposit = ({
                   className="w-full"
                   onClick={handleDeposit}
                   disabled={
-                    isPending ||
-                    !amount ||
-                    !receipt ||
-                    (enableConversion && !fromCoinId)
+                    isPending || !amount || (enableConversion && !fromCoinId)
                   }
                 >
                   {isPending ? "Submitting..." : "Submit"}

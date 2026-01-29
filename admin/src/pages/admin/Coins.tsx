@@ -52,8 +52,8 @@ const AdminCoinsPage: React.FC = () => {
     isError,
     refetch,
   } = useFetchData<{ success: boolean; coins: Coin[] }>(
-    "/admin/coins",
-    "admin-coins"
+    "/admin/coins?includeInactive=true",
+    "admin-coins",
   );
 
   const coins = coinsData?.coins || [];
@@ -76,7 +76,7 @@ const AdminCoinsPage: React.FC = () => {
   }, [activeTab]);
 
   const filteredCoins = coins.filter(
-    (coin) => !!coin.isActive === (activeTab === "active")
+    (coin) => !!coin.isActive === (activeTab === "active"),
   );
 
   /* ---------------- ACTIONS ---------------- */
@@ -86,7 +86,7 @@ const AdminCoinsPage: React.FC = () => {
       await createCoin.mutateAsync(payload);
       toast.success("Coin created");
       setIsAddOpen(false);
-      refetch()
+      refetch();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Create failed");
     }

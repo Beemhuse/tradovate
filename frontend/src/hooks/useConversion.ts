@@ -44,7 +44,7 @@ export const useConversion = () => {
 
   const accessToken = CookieManager.get("tradovate-token");
   const BASE_URL =
-    import.meta.env.VITE_BASE_UR || "http://localhost:9991/api/v1";
+    import.meta.env.VITE_BASE_URL || "http://localhost:9991/api/v1";
 
   /* ----------------------------------
      PREVIEW CONVERSION (GET)
@@ -53,7 +53,7 @@ export const useConversion = () => {
     async (
       fromCoinId?: string,
       toCoinId?: string,
-      amount?: number
+      amount?: number,
     ): Promise<ConversionResult | null> => {
       setIsLoading(true);
       setError(null);
@@ -63,8 +63,7 @@ export const useConversion = () => {
 
         if (fromCoinId) params.append("coinId", fromCoinId);
         if (toCoinId) params.append("toCoinId", toCoinId);
-        if (amount !== undefined)
-          params.append("amount", amount.toString());
+        if (amount !== undefined) params.append("amount", amount.toString());
 
         const response = await fetch(
           `${BASE_URL}${COINS.CONVERSIONS}?${params.toString()}`,
@@ -72,7 +71,7 @@ export const useConversion = () => {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
+          },
         );
 
         const data = await response.json();
@@ -84,15 +83,14 @@ export const useConversion = () => {
         setResult(data);
         return data;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Unknown error";
+        const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   /* ----------------------------------
@@ -108,17 +106,14 @@ export const useConversion = () => {
       setError(null);
 
       try {
-        const response = await fetch(
-          `${BASE_URL}${COINS.CONVERSIONS}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify(payload),
-          }
-        );
+        const response = await fetch(`${BASE_URL}${COINS.CONVERSIONS}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        });
 
         const data = await response.json();
 
@@ -128,15 +123,14 @@ export const useConversion = () => {
 
         return { success: true, message: data.message };
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Unknown error";
+        const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
         return { success: false, error: message };
       } finally {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   /* ----------------------------------

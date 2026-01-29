@@ -29,7 +29,7 @@ export const getAllTransactions = async (req: Request, res: Response) => {
 
     // coinId filtering through wallet relation
     if (coinId) {
-      where.wallet = { is: { coinId: String(coinId) } };
+      where.wallet = { coinId: String(coinId) };
     }
 
     // status map (frontend uses friendly names in some places; callers may pass enum strings)

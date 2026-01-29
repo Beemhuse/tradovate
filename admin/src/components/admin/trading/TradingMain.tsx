@@ -104,7 +104,7 @@ const AdminTradingPairs = () => {
   );
 
   const { mutate: updatePair, isPending: updating } = useUpdateData(
-    "/market/pairs",
+    (data: any) => `/market/pairs/${data.id}`,
     ["market-pairs"],
   );
 
