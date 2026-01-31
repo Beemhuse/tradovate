@@ -59,9 +59,12 @@ const UserNav = () => {
                     <div className="flex flex-col overflow-hidden">
                       <span className="font-medium truncate">{user?.fullName || user?.role }</span>
                       <span className="font-medium truncate">{user?.email || "User Email"}</span>
-                      <div className="w-full flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground truncate">VERIFICATION: {" "}</span>
-                      <span className={cn("text-xs text-muted-foreground truncate border px-3 py-1 rounded-full ", user?.kycStatus !== "PENDING" ? "border-success bg-success/50" : "border-destructive bg-destructive/30 ")}>{user?.kycStatus !== "PENDING" ? "Verified" : "not verified"}</span>
+                      <div 
+                        className="w-full flex items-center gap-3 cursor-pointer"
+                        onClick={() => navigate("/kyc")}
+                      >
+                        <span className="text-xs text-muted-foreground truncate">VERIFICATION: {" "}</span>
+                        <span className={cn("text-xs text-muted-foreground truncate border px-3 py-1 rounded-full ", user?.kycStatus !== "PENDING" ? "border-success bg-success/50" : "border-destructive bg-destructive/30 ")}>{user?.kycStatus !== "PENDING" ? "Verified" : "not verified"}</span>
                       </div>
                     </div>
                   </div>

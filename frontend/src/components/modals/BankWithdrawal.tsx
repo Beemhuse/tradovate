@@ -188,9 +188,9 @@ const BankWithdrawal = ({
                     <Button className="w-full" disabled={withdrawPending} onClick={handleWithdraw}>
                         {withdrawPending ? "Processing..." : "Submit Withdrawal Request"}
                     </Button>
-                    <p className="text-sm text-muted-foreground text-center">
+                    {/* <p className="text-sm text-muted-foreground text-center">
                         Withdrawals require admin approval
-                    </p>
+                    </p> */}
                 </div>
             </DialogContent>
         </Dialog>
