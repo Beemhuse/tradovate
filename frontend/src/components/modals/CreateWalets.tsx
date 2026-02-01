@@ -41,6 +41,7 @@ const AddCoins = ({
   const [isFundWallet, setIsFundWallet] = useState<boolean>(true);
   const [networkId, setNetworkId] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
+  const [receipt, setReceipt] = useState<File | null>(null);
 
   const [createdWallet, setCreatedWallet] = useState<any>(null);
 
@@ -53,7 +54,7 @@ const AddCoins = ({
     ["create_coin"]
   );
   const { mutate: coinDepositMutate, isPending: coinDepositPending } =
-    useCreateData(COINS.DEPOSIT, ["coin_deposit"]);
+    useCreateData(COINS.DEPOSIT, ["coin_deposit"],true);
 
   const { toast } = useToast();
 
@@ -112,10 +113,20 @@ const AddCoins = ({
     });
   };
   const handleCoinDeposit = () => {
-    const payload = {
-      walletId: coinData?.id,
-      amount: +amount,
-    };
+    if (!coinData?.id || !amount || Number(amount) <= 0 || !receipt) {
+      toast({
+        title: "Missing required fields",
+        description: "Please enter an amount and upload a receipt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append("walletId", coinData.id);
+    payload.append("amount", amount);
+    payload.append("receipt", receipt);
+
     coinDepositMutate(payload, {
       onSuccess: () => {
         toast({
@@ -126,12 +137,13 @@ const AddCoins = ({
         });
         refetch();
         setIsDeposite(false);
-        setAmount(null)
-        setNetworkId("")
-        setSelectedCoinToAdd("")
-        setCreatedWallet(null)
-        setIsFundWallet(false)
-        setAddCoinOpen(false)
+        setAmount("");
+        setReceipt(null);
+        setNetworkId("");
+        setSelectedCoinToAdd("");
+        setCreatedWallet(null);
+        setIsFundWallet(false);
+        setAddCoinOpen(false);
       },
       onError: (error) => {
         toast({
@@ -230,49 +242,74 @@ const AddCoins = ({
           )}
           {isLoading && !isDeposite && <div>Loading...</div>}
           {isDeposite && coinData && (
-            <div className="space-y-2">
-              <Label>Deposit Amount</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="font-mono text-sm"
-                />
+            <div className="space-y-4">
+              {/* Address Section */}
+              <div className="space-y-2">
+                <Label>Deposit Address</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={coinData?.address || coinData?.contractAddress}
+                    readOnly
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopyAddress}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Send only {selectedCoinData.symbol} to this address. Deposits
+                  will be credited after admin approval.
+                </p>
               </div>
-              <Label>Deposit Address</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={coinData?.address || coinData?.contractAddress}
-                  readOnly
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyAddress}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground pb-5">
-                Send only {selectedCoinData.symbol} to this address. Deposits
-                will be credited after admin approval.
-              </p>
 
-              <p className="text-xs text-muted-foreground pb-5 flex flex-col items-center gap-2">
+              {/* QR Code Section */}
+              <div className="flex flex-col items-center gap-2">
                 <img
                   src={coinData?.qrCode}
-                  alt="se"
+                  alt="QR Code"
                   className="w-40 h-40 rounded-md border p-1"
                 />
-                Scan and send only {coinData?.coin?.symbol} to this address.
-              </p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Scan and send only {coinData?.coin?.symbol} to this address.
+                </p>
+              </div>
 
-              <div className="w-full flex gap-2">
+              {/* Amount Input */}
+              <div className="space-y-2">
+                <Label>Deposit Amount <span className="text-destructive">*</span></Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              {/* Receipt Upload */}
+              <div className="space-y-2">
+                <Label>Upload Receipt <span className="text-destructive">*</span></Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setReceipt(e.target.files?.[0] || null)}
+                />
+                {receipt && (
+                  <p className="text-xs text-primary font-medium">
+                    Selected: {receipt.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="w-full flex gap-2 pt-2">
                 <Button
                   variant="outline"
-                  className="w-full hover:bg-transparent hover:text-primary text-primary hover:scale-95 transition-all duration-200"
+                  className="w-full hover:scale-95 transition-all duration-200"
                   onClick={() => setAddCoinOpen(false)}
                 >
                   Cancel
@@ -281,9 +318,9 @@ const AddCoins = ({
                   variant="default"
                   className="w-full hover:scale-95 transition-all duration-200"
                   onClick={handleCoinDeposit}
-                  disabled={coinDepositPending}
+                  disabled={coinDepositPending || !amount || !receipt}
                 >
-                  {coinDepositPending ? "Depositing..." : "Deposit"}
+                  {coinDepositPending ? "Submitting..." : "Submit"}
                 </Button>
               </div>
             </div>

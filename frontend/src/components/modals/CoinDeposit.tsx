@@ -113,9 +113,10 @@ const CoinDeposit = ({
   };
 
   const handleDeposit = () => {
-    if (!walletId || Number(amount) <= 0) {
+    if (!walletId || Number(amount) <= 0 || !receipt) {
       toast({
-        title: "Invalid amount",
+        title: "Missing required fields",
+        description: "Please enter an amount and upload a receipt.",
         variant: "destructive",
       });
       return;
@@ -265,9 +266,23 @@ const CoinDeposit = ({
                 </div>
               </div>
 
+              <p className="text-xs text-muted-foreground pb-5">
+                Send only {selectedWallet?.coin?.symbol} to this address. Deposits
+                will be credited after admin approval.
+              </p>
+
+              <p className="text-xs text-muted-foreground pb-5 flex flex-col items-center gap-2">
+                <img
+                  src={selectedWallet.qrCode}
+                  alt="se"
+                  className="w-40 h-40 rounded-md border p-1"
+                />
+                Scan and send only {selectedWallet.coin.symbol} to this address.
+              </p>
+
               {/* Amount Input */}
               <div className="space-y-2">
-                <Label>Amount to Deposit</Label>
+                <Label>Amount to Deposit <span className="text-destructive">*</span></Label>
                 <Input
                   type="number"
                   placeholder="0.00"
@@ -278,8 +293,9 @@ const CoinDeposit = ({
 
               {/* Receipt Upload */}
               <div className="space-y-2">
-                <Label>Upload Receipt (Optional)</Label>
+                <Label>Upload Receipt <span className="text-destructive">*</span></Label>
                 <Input
+                  required
                   type="file"
                   accept="image/*"
                   onChange={(e) => setReceipt(e.target.files?.[0] || null)}
@@ -304,7 +320,10 @@ const CoinDeposit = ({
                   className="w-full"
                   onClick={handleDeposit}
                   disabled={
-                    isPending || !amount || (enableConversion && !fromCoinId)
+                    isPending ||
+                    !amount ||
+                    !receipt ||
+                    (enableConversion && !fromCoinId)
                   }
                 >
                   {isPending ? "Submitting..." : "Submit"}
