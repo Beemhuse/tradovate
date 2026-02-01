@@ -244,10 +244,10 @@ const CurrencyConversion = () => {
                   <p className="text-sm text-muted-foreground mt-1">
                     → {result.convertedAmount?.toFixed(8)} {getSymbol(toCoinId)}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2 italic">
+                  {/* <p className="text-xs text-muted-foreground mt-2 italic">
                     Rate: 1 {getSymbol(fromCoinId)} ={" "}
                     {result.conversionRate?.toFixed(8)} {getSymbol(toCoinId)}
-                  </p>
+                  </p> */}
                 </div>
               )}
             </CardContent>

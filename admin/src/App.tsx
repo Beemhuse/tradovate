@@ -44,6 +44,8 @@ const App = () => (
             <Route path="/signup" element={<AdminSignup />} />
             <Route path="/verify" element={<VerifyEmail />} />
 
+      
+
             {/* ================= ADMIN (PROTECTED) ================= */}
             <Route element={<ProtectedRoute />}>
               <Route path="/admin" element={<AdminLayout />}>

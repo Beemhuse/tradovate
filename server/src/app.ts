@@ -13,6 +13,7 @@ import userTransactionRoutes from "./routes/userTransactionRoutes";
 import certificateRoutes from "./routes/adminCertRoutes";
 import contactRoutes from "./routes/contactRoutes";
 import supportRoutes from "./routes/supportRoutes";
+import superAdminRoutes from "./routes/superAdminRoutes";
 
 const app = express();
 
@@ -47,7 +48,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  })
+  }),
 );
 
 // 🔥 REQUIRED FOR PREFLIGHT
@@ -103,6 +104,7 @@ app.use("/api/v1/admin/transactions", adminTransactionRoutes);
 app.use("/api/v1/user/transactions", userTransactionRoutes);
 app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/support", supportRoutes);
+app.use("/api/v1/super-admin", superAdminRoutes);
 
 // Health Check
 app.get("/health", (req, res) => {

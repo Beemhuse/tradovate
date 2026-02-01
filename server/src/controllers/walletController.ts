@@ -1034,7 +1034,7 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
       await tx.wallet.update({
         where: { id: toWallet.id },
         data: {
-          balance: { increment: convertedAmount },
+          balance: { increment: amount },
         },
       });
 

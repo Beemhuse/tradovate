@@ -8,6 +8,7 @@ import { Dispatch, SetStateAction } from "react";
 export enum UserRole {
   USER = "USER",
   ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
 }
 
 // User interface matching backend response
@@ -80,7 +81,7 @@ export interface AuthContextType extends AuthState {
   resetPassword: (
     email: string,
     code: string,
-    newPassword: string
+    newPassword: string,
   ) => Promise<void>;
   resendOtp: (email: string) => Promise<void>;
   logout: () => Promise<void>;

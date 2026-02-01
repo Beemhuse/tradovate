@@ -12,7 +12,7 @@ export interface AuthRequest extends Request {
 export const authenticateToken = async (
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith("Bearer ")
@@ -45,7 +45,9 @@ export const authenticateToken = async (
 
     // 🔥 TOKEN INVALIDATION CHECK
     if (user.tokenVersion !== decoded.tokenVersion) {
-      return res.status(401).json({ error: "Session expired. Please log in again." });
+      return res
+        .status(401)
+        .json({ error: "Session expired. Please log in again." });
     }
 
     if (user.suspended) {

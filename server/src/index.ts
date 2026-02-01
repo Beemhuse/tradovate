@@ -4,8 +4,12 @@ import http from "http";
 // import { startSchedulers } from "./services/scheduler";
 import { startSocketServer } from "./websocket";
 import { startBinanceFeed } from "./services/wsPriceFeed";
+import { startCronJobs } from "./cron";
+
+startCronJobs();
+
 // import { startBybitFeed } from "./services/wsPriceFeed";
-// import 
+// import
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;

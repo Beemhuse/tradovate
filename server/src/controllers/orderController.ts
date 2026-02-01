@@ -1,9 +1,9 @@
-import { Request, Response, text } from "express";
+import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { z, ZodError } from "zod";
 import { fetchPrices } from "../services/marketPriceService";
-import axios from "axios";
+import { sendAdminTradeMail } from "../utils/sendAdminTradeEmail";
 
 export const placeOrderSchema = z.object({
   marketPairId: z.string().uuid(),
@@ -156,6 +156,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           remaining -= deduct;
         }
       }
+      sendAdminTradeMail(order).catch(console.error);
 
       return tx.order.create({
         data: {
@@ -170,6 +171,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           status: "PENDING",
         },
       });
+
     });
 
     return res.json({ success: true, order });
@@ -190,48 +192,6 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: "Trade placement failed" });
   }
 };
-
-// const settleTrade = async (orderId: string) => {
-//   const order = await prisma.order.findUnique({
-//     where: { id: orderId },
-//   });
-
-//   if (!order || order.status !== "PENDING") return;
-
-//   const market = await getMarketPriceForCoin(order.coinId);
-//   const exitPrice = market.price;
-
-//   const won =
-//     order.direction === "BULLISH"
-//       ? exitPrice > order.entryPrice
-//       : exitPrice < order.entryPrice;
-
-//   await prisma.$transaction(async (tx) => {
-//     if (won) {
-//       const payout = order.stake * (1 + order.profitRate);
-
-//       await tx.wallet.update({
-//         where: {
-//           userId_coinId_networkId: {
-//             userId: order.userId,
-//             coinId: USDT_ID,
-//             networkId: order.networkId,
-//           },
-//         },
-//         data: { balance: { increment: payout } },
-//       });
-//     }
-
-//     await tx.order.update({
-//       where: { id: order.id },
-//       data: {
-//         status: "SETTLED",
-//         result: won ? "WIN" : "LOSS",
-//         settledAt: new Date(),
-//       },
-//     });
-//   });
-// };
 
 export const getUserOrders = async (req: AuthRequest, res: Response) => {
   try {
