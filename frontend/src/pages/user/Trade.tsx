@@ -40,7 +40,7 @@ const TradePage = () => {
   }>(MARKET_PAIR.GET_PAIR(id), "market-pair");
 
   // Fetch orders data
-  const { data: ordersData, isLoading: loadingOrders } = useFetchData<Order[]>(
+  const { data: ordersData, isLoading: loadingOrders, refetch } = useFetchData<Order[]>(
     "/market/orders",
     ["user-orders"],
   );
@@ -92,6 +92,7 @@ const TradePage = () => {
                 symbol={pair.symbol}
                 currentPrice={livePrice}
                 availableBalance={Number(usdtBalance)}
+                refetch={refetch}
               />
             </div>
           </CardContent>

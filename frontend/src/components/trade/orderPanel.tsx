@@ -11,6 +11,7 @@ type Props = {
   symbol: string;
   currentPrice: number;
   availableBalance: number;
+  refetch: () => void;
 };
 
 type Direction = "BULLISH" | "BEARISH";
@@ -22,6 +23,7 @@ const OrderPanel = ({
   symbol,
   currentPrice,
   availableBalance,
+  refetch,
 }: Props) => {
   const [stake, setStake] = useState<number>(30);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(30);
@@ -83,6 +85,7 @@ const OrderPanel = ({
             description: "Trade placed successfully!",
           });
           setLoading(false);
+          refetch();
         },
         onError: (err: any) => {
           toast({
@@ -187,7 +190,7 @@ const OrderPanel = ({
       {/* Custom Amount */}
       <input
         type="number"
-        min={1}
+        // min={1}
         value={stake}
         onChange={(e) => {
           setStake(Number(e.target.value));
