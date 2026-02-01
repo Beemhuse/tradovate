@@ -5,18 +5,31 @@ import { AdminTradePlacedEmail } from "../email/adminTradePlace";
 dotenv.config();
 
 const resend = new Resend(process.env.RESEND_API_KEY); // must be set in env
-export const sendAdminTradeMail = async (order: any) => {
+export const sendAdminTradeMail = async (
+  order: any,
+  seconds: number,
+) => {
+  const userName = `${order.user.fullName || ""}`.trim();
+
+  const pairName = `${order.marketPair.baseCoin.symbol} / ${order.marketPair.quoteCoin.symbol}`;
+
+  const periodLabel =
+    seconds < 60 ? `${seconds}s` : `${seconds / 60}m`;
+
   await resend.emails.send({
     from: "Trading Engine <no-reply@tradovatefutures.com>",
     to: [process.env.ADMIN_EMAIL!],
     subject: "📊 New Trade Placed",
     html: AdminTradePlacedEmail({
       orderId: order.id,
-      userId: order.userId,
-      pair: order.marketPairId,
+      userName,
+      userEmail: order.user.email,
+      pair: pairName,
+      network: order.marketPair.network?.name || "N/A",
       direction: order.direction,
       stake: order.stake,
-      period: order.tradeConfig?.period ?? "N/A",
+      period: periodLabel,
+      profitRate: order.tradeConfig.profitRate,
       expiresAt: order.expiresAt,
     }),
   });

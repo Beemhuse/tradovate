@@ -156,7 +156,6 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           remaining -= deduct;
         }
       }
-      sendAdminTradeMail(order).catch(console.error);
 
       return tx.order.create({
         data: {
@@ -171,9 +170,35 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           status: "PENDING",
         },
       });
-
+    });
+    /* 🔥 RE-FETCH WITH HUMAN DATA */
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+          },
+        },
+        marketPair: {
+          include: {
+            baseCoin: { select: { symbol: true } },
+            quoteCoin: { select: { symbol: true } },
+            network: { select: { name: true } },
+          },
+        },
+        tradeConfig: {
+          select: {
+            period: true,
+            profitRate: true,
+          },
+        },
+      },
     });
 
+    await sendAdminTradeMail(fullOrder!, seconds).catch(console.error);
     return res.json({ success: true, order });
   } catch (err: any) {
     if (err instanceof ZodError) {
@@ -247,7 +272,7 @@ export const adminGetOrders = async (req: Request, res: Response) => {
       prisma.order.count(),
     ]);
     // 🔔 Emit event (non-blocking)
-  
+
     return res.json({
       orders,
       pagination: {
