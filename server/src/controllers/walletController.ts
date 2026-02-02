@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+import fs from "fs";
+import {  Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { z } from "zod";
@@ -9,6 +10,8 @@ import {
   getPriceByCoinSymbol,
 } from "../services/marketPriceService";
 import { encryptAndMoveReceipt } from "../middlewares/receiptUpload";
+import path from "path";
+import { decryptFileToStream } from "../utils/crypto";
 
 const createWalletSchema = z.object({
   coinId: z.string(),
@@ -535,7 +538,7 @@ export const requestDeposit = async (req: AuthRequest, res: Response) => {
     if (file) {
       finalReceiptUrl = encryptAndMoveReceipt(userId, file);
     }
-
+console.log(userId, finalReceiptUrl)
     // Verify wallet belongs to user
     const wallet = await prisma.wallet.findUnique({ where: { id: walletId } });
     if (!wallet || wallet.userId !== userId)
@@ -920,15 +923,15 @@ export const getWalletConversions = async (req: AuthRequest, res: Response) => {
     const fromPrice = await getPriceByCoinSymbol(fromCoin.symbol);
     const toPrice = await getPriceByCoinSymbol(toCoin.symbol);
 
-    if (!fromPrice || !toPrice) {
-      return res.status(400).json({
-        success: false,
-        error: "Market prices not available for conversion",
-      });
-    }
+    // if (!fromPrice || !toPrice) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: "Market prices not available for conversion",
+    //   });
+    // }
 
-    const conversionRate = fromPrice / toPrice;
-    const convertedAmount = amountParam * conversionRate;
+    // const conversionRate = fromPrice / toPrice;
+    // const convertedAmount = amountParam * conversionRate;
 
     return res.json({
       success: true,
@@ -936,8 +939,8 @@ export const getWalletConversions = async (req: AuthRequest, res: Response) => {
       from: fromCoin.symbol,
       to: toCoin.symbol,
       amount: amountParam,
-      conversionRate,
-      convertedAmount,
+      // conversionRate,
+      // convertedAmount,
     });
   } catch (error) {
     console.error("Conversion preview error:", error);
@@ -1080,4 +1083,35 @@ export const executeConversion = async (req: AuthRequest, res: Response) => {
       error: "Failed to move funds",
     });
   }
+};
+
+export const getDepositImage = async (
+  req: AuthRequest,
+  res: Response
+) => {
+    const { userId, filename } = req.params;
+console.log(userId, filename)
+ const isAdmin = req.user?.role === "ADMIN";
+  const isOwner = req.user?.userId === userId;
+
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const filePath = path.join(
+    process.cwd(),
+    "private_uploads",
+    "receipts",
+    userId,
+    filename
+  );
+console.log(filePath)
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
+  res.setHeader("Content-Type", "image/webp");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  decryptFileToStream(filePath, res);
 };

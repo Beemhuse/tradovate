@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import UserNav from "@/components/layout/UserNav";
 import { Button } from "@/components/ui/button";
 import {
   Card,

@@ -3,7 +3,7 @@ import axios from "axios";
 // import { CookieManager } from "./cookie-utils"; // Import your CookieManager utility
 
 export const API_URL =
-  import.meta.env.VITE_BASE_URL || "http://localhost:9991/api/v1";
+  import.meta.env.VITE_BASE_UR || "http://localhost:9991/api/v1";
 export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 // export const API_KEY = import.meta.env.NEXT_PUBLIC_API_KEY;
 

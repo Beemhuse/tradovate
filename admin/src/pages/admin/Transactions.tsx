@@ -1,6 +1,5 @@
 // pages/AdminTransactions.tsx
-import { useState, useMemo } from "react";
-import AdminNav from "@/components/layout/AdminNav";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,18 +17,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CookieManager } from "@/utils/cookie-utils";
+import { API_URL } from "@/config/config";
+import axios from "axios";
 
 const AdminTransactions = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTx, setSelectedTx] = useState<any>(null);
-  const { toast } = useToast();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
+  const { toast } = useToast();
+  const user = CookieManager.get("tradovate-user");
+  const userId = user ? JSON.parse(user).id : null;
+  console.log("userId:", user);
   // Fetch transactions
   const { data, isLoading } = useFetchData(
     "/admin/transactions",
     "admin-transactions",
   );
+  console.log(selectedTx);
+  // Fetch transactions
+  // const { data: receiptUrl, isLoading: receiptUrlLoading } = useFetchData(
+  //   selectedTx?.receiptUrl ? `/market/image/${selectedTx?.raw?.user?.id}/${selectedTx?.receiptUrl}` : null,
+  //   "receipt-url",
+  // );
 
+  const fetchDepositImage = async (filename: string) => {
+    try {
+      setIsPreviewLoading(true);
+      setPreviewUrl(null);
+
+      const token = CookieManager.get("tradovate-token");
+
+      const response = await axios.get(
+        `${API_URL}/market/image/${selectedTx?.raw?.user?.id}/${filename}`,
+        {
+          responseType: "blob",
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined,
+          },
+        },
+      );
+
+      const blobUrl = URL.createObjectURL(response.data);
+      setPreviewUrl(blobUrl);
+    } catch (err) {
+      // toast``.error("Failed to load certificate image");
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (selectedTx?.receiptUrl) {
+      fetchDepositImage(selectedTx.receiptUrl);
+    }
+
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [selectedTx?.receiptUrl]);
+  console.log("data:", previewUrl);
   // server returns shape: { transactions: Transaction[] }
   const transactionsRaw = data?.transactions || [];
 
@@ -92,6 +140,9 @@ const AdminTransactions = () => {
       });
     }
   };
+  // // if(selectedTx)
+  //     const blobUrl = URL.createObjectURL(response.data);
+  //     setPreviewUrl(blobUrl);
 
   return (
     <div className="min-h-screen bg-background">
@@ -329,12 +380,13 @@ const AdminTransactions = () => {
                   <div className="border-t pt-4 space-y-2">
                     <h3 className="font-semibold">Receipt</h3>
                     <div className="bg-secondary/20 rounded-lg p-2 flex justify-center overflow-hidden border">
-                      <img
-                        src={`${import.meta.env.VITE_BASE_URL || "http://localhost:4001"}/api/v1/admin/transactions/receipts/${selectedTx.userId}/${selectedTx.receiptUrl}`}
-                        alt="Transaction Receipt"
-                        className="max-h-[300px] object-contain rounded"
-                        crossOrigin="anonymous"
-                      />
+                      {!isPreviewLoading && previewUrl && (
+                        <img
+                          src={previewUrl}
+                          alt="Certificate preview"
+                          className="w-full max-h-[70vh] object-contain rounded"
+                        />
+                      )}
                     </div>
                     <Button
                       variant="link"

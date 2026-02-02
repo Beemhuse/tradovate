@@ -8,9 +8,9 @@ import {
   requestWithdraw,
   getTransactions,
   requestBankWithdraw,
-  getWalletById,
   getWalletConversions,
   executeConversion,
+  getDepositImage,
 } from "../controllers/walletController";
 import {
   getMarketPrices,
@@ -711,4 +711,6 @@ router.get("/orders", getUserOrders);
 router.get("/conversion", getWalletConversions);
 router.post("/conversion", authenticateToken, executeConversion);
 
+router.get("/image/:userId/:filename", authenticateToken, getDepositImage);
+  
 export default router;
