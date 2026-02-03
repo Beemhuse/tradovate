@@ -111,7 +111,7 @@ const OrderPanel = ({
       {/* Symbol */}
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Symbol</span>
-        <span>{symbol} ({networkType.toLowerCase()})</span>
+        <span>{symbol} ({networkType})</span>
       </div>
 
       {/* Available Balance */}
