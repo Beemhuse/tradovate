@@ -56,9 +56,6 @@ const TradePage = () => {
 
   const pair: any = data?.pair;
 
-  console.log("pair", pair);
-  console.log("pairassets", assets);
-
   const BaseCoinBalance =
     assets.find((a: any) => a.coin?.id === pair?.baseCoin?.id && a.network?.id === pair?.networkId)?.balance || 0;
 
