@@ -11,6 +11,8 @@ type Props = {
   symbol: string;
   currentPrice: number;
   availableBalance: number;
+  USDTBalance: number;
+  networkType: string;
   refetch: () => void;
 };
 
@@ -21,8 +23,10 @@ type Direction = "BULLISH" | "BEARISH";
 const OrderPanel = ({
   marketPairId,
   symbol,
+  networkType,
   currentPrice,
   availableBalance,
+  USDTBalance,
   refetch,
 }: Props) => {
   const [stake, setStake] = useState<number>(30);
@@ -107,14 +111,22 @@ const OrderPanel = ({
       {/* Symbol */}
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Symbol</span>
-        <span>{symbol}</span>
+        <span>{symbol} ({networkType.toLowerCase()})</span>
       </div>
 
       {/* Available Balance */}
       <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">Available Balance</span>
+        <span className="text-muted-foreground">{symbol.split("/")[0]} Balance</span>
         <span className="text-success font-medium">
           {availableBalance.toFixed(2)}
+        </span>
+      </div>
+
+      {/* USDT Balance */}
+      <div className="flex justify-between text-sm">
+        <span className="text-muted-foreground">USDT Balance</span>
+        <span className="text-success font-medium">
+          {USDTBalance.toFixed(2)}
         </span>
       </div>
 

@@ -56,8 +56,14 @@ const TradePage = () => {
 
   const pair: any = data?.pair;
 
-  const usdtBalance =
-    assets.find((a: any) => a.coin?.id === pair?.baseCoin?.id)?.balance || 0;
+  console.log("pair", pair);
+  console.log("pairassets", assets);
+
+  const BaseCoinBalance =
+    assets.find((a: any) => a.coin?.id === pair?.baseCoin?.id && a.network?.id === pair?.networkId)?.balance || 0;
+
+  const USDTBalance =
+    assets.find((a: any) => a.coin?.id === pair?.quoteCoin?.id && a.network?.id === pair?.networkId)?.balance || 0;
 
   /** 2️⃣ Live price via WebSocket */
   const livePrice = useLivePrice(pair?.wsSymbol?.toLowerCase() ?? "");
@@ -74,14 +80,14 @@ const TradePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-2">
         <Card className="border-border">
           <CardContent className="flex flex-col md:flex-row gap-1 p-1">
             {/* 📊 TradingView chart (client-side only) */}
-            <div className="flex-1 w-full md:w-1/2 lg:w-2/3">
+            <div className="flex-1 w-full md:w-1/2 lg:w-2/3 h-full">
               <TradingViewChart
                 symbol={pair?.wsSymbol.toUpperCase()}
-                height={550}
+                height={620}
               />
             </div>
 
@@ -90,8 +96,10 @@ const TradePage = () => {
               <OrderPanel
                 marketPairId={pair.id}
                 symbol={pair.symbol}
+                networkType={pair.network?.type}
                 currentPrice={livePrice}
-                availableBalance={Number(usdtBalance)}
+                availableBalance={Number(BaseCoinBalance)}
+                USDTBalance={Number(USDTBalance)}
                 refetch={refetch}
               />
             </div>
