@@ -221,14 +221,13 @@ const AdminTransactions = () => {
                         </td>
                         <td className="py-4 px-4">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              tx.status === "completed"
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tx.status === "completed"
                                 ? "bg-success/10 text-success"
                                 : tx.status === "cancelled" ||
-                                    tx.status === "failed"
+                                  tx.status === "failed"
                                   ? "bg-danger/10 text-danger"
                                   : "bg-primary/10 text-primary"
-                            }`}
+                              }`}
                           >
                             {tx.status}
                           </span>
