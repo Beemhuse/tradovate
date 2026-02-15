@@ -17,6 +17,10 @@ import superAdminRoutes from "./routes/superAdminRoutes";
 
 const app = express();
 
+const ALGO = "aes-256-gcm";
+const KEY_ENCODED = process.env.KYC_ENCRYPTION_KEY || "bm90LXNhZmUta2V5LXBsZWFzZS1jaGFuZ2U="; // Default safe-ish key for dev/build
+const KEY = Buffer.from(KEY_ENCODED, "base64");
+
 const allowedOrigins = [
   "http://localhost:8080",
   "http://localhost:3001",
@@ -55,6 +59,12 @@ app.use(
 app.options("*", cors());
 
 app.use(express.json());
+
+// Version Middleware for Debugging
+app.use((req, res, next) => {
+  res.setHeader("X-Server-Version", "1.0.1-fixed-kyc");
+  next();
+});
 
 // Swagger Setup
 const swaggerOptions = {
@@ -105,6 +115,13 @@ app.use("/api/v1/user/transactions", userTransactionRoutes);
 app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/support", supportRoutes);
 app.use("/api/v1/super-admin", superAdminRoutes);
+
+app.get("/version", (req, res) => {
+  res.json({
+    version: "1.0.1-fixed-kyc-v2",
+    deployedAt: new Date().toISOString()
+  });
+});
 
 // Health Check
 app.get("/health", (req, res) => {
