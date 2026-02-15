@@ -30,7 +30,7 @@ export const useAuth = () => {
       expires: 7,
       path: "/",
       sameSite: "Strict",
-      secure: import.meta.env.PROD,
+      secure: process.env.NODE_ENV === "production",
     });
 
     setUserState(user);
@@ -50,8 +50,8 @@ export const useAuth = () => {
     // Clear local storage
     localStorage.clear();
 
-    CookieManager.delete("tradovate-user", "/");
-    CookieManager.delete("tradovate-refresh-token", "/");
+    CookieManager.delete("tradovate-user");
+    CookieManager.delete("tradovate-refresh-token");
 
     setAuthToken(null); // clear axios header
     setUserState(null);

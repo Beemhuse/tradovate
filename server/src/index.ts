@@ -25,7 +25,11 @@ startSocketServer(server);
 // Start realtime Binance feed
 startBinanceFeed();
 
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`Public Health: /health`);
+  console.log(`Swagger docs available at http://localhost:${PORT}/api-docs`);
+});
+
+app.get("/health", (_, res) => {
+  res.status(200).json({ status: "ok" });
 });

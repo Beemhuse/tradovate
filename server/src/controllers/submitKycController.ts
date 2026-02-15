@@ -51,7 +51,6 @@ export const getMyKyc = async (req: MulterRequest, res: Response) => {
 
     return res.json({
       success: true,
-      version: "1.0.1-fixed-userId",
       kyc: {
         id: kyc.id,
         userId: kyc.userId,

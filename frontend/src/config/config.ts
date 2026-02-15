@@ -16,7 +16,6 @@ export default function initAxios() {
 
   // Set authorization header if token exists (using CookieManager)
   if (typeof window !== "undefined") {
-    console.log("Axios Init - Token:", accessToken ? "Found" : "Missing");
     if (accessToken) {
       axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
     }
@@ -52,29 +51,28 @@ export default function initAxios() {
 }
 
 // Helper functions for auth token management
-export const setAuthToken = (token: string | null) => {
-  if (token) {
-    // Set cookie with 7 day expiration
-    CookieManager.set("tradovate-token", token, {
-      expires: 7,
-      path: "/",
-      secure: import.meta.env.PROD,
-      sameSite: "Strict",
-    });
-    // Set axios header
-    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-  } else {
-    CookieManager.delete("tradovate-token", "/");
-    delete axios.defaults.headers.common.Authorization;
-  }
-};
-export const setAuthUser = (user: any) => {
-  CookieManager.set("tradovate-user", JSON.stringify(user), {
+export const setAuthToken = (token: string) => {
+  // Set cookie with 7 day expiration
+  CookieManager.set("tradovate-token", token, {
     expires: 7,
     path: "/",
-    secure: import.meta.env.PROD,
+    secure: true,
     sameSite: "Strict",
+    // httpOnly: true,
   });
+  // Set axios header
+  axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+};
+export const setAuthUser = (token: string) => {
+  CookieManager.set("tradovate-user", token, {
+    expires: 7,
+    path: "/",
+    secure: true,
+    sameSite: "Strict",
+    // httpOnly: true
+  });
+  // Set axios header
+  axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 };
 
 export const clearAuthToken = () => {

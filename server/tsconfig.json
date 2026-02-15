@@ -8,14 +8,12 @@
         "outDir": "./dist",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
-        "strict": false,
-        "noImplicitAny": false,
-        "noEmitOnError": false,
+        "strict": true,
         "skipLibCheck": true,
-        "suppressImplicitAnyIndexErrors": true
     },
-    "include": ["src/**/*"],
-
+    "include": [
+        "src/**/*"
+    ],
     "exclude": [
         "node_modules"
     ]
