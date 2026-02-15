@@ -48,8 +48,7 @@ const Dashboard = () => {
   const cryptoPairs = cryptoPairsData?.pairs || [];
   const baseCoins =
     cryptoPairs?.map((asset) => asset?.symbol?.split("/")[0]) || [];
-
-  console.log("cryptoPairs", cryptoPairs);
+  
   const prices = useCryptoPrice(baseCoins);
 
   if (isLoading || userLoading) {

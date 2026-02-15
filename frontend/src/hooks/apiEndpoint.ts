@@ -10,6 +10,7 @@ export const AUTH = {
 
 export const KYC = {
   SUBMIT: "/kyc",
+  ME: "/kyc/me",
 };
 export const COINS = {
   COINLIST: "/market/coins",

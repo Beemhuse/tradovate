@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { CookieManager } from "@/utils/cookie-utils";
 import { setAuthToken } from "@/config/config";
+import { fetchData } from "../config/api";
+import { AUTH } from "../hooks/apiEndpoint";
 
 export const useAuth = () => {
   const [user, setUserState] = useState<any>(null);
@@ -28,7 +30,7 @@ export const useAuth = () => {
       expires: 7,
       path: "/",
       sameSite: "Strict",
-      secure: process.env.NODE_ENV === "production",
+      secure: import.meta.env.PROD,
     });
 
     setUserState(user);
@@ -48,8 +50,8 @@ export const useAuth = () => {
     // Clear local storage
     localStorage.clear();
 
-    CookieManager.delete("tradovate-user");
-    CookieManager.delete("tradovate-refresh-token");
+    CookieManager.delete("tradovate-user", "/");
+    CookieManager.delete("tradovate-refresh-token", "/");
 
     setAuthToken(null); // clear axios header
     setUserState(null);
@@ -67,6 +69,17 @@ export const useAuth = () => {
     });
   }, []);
 
+  const refetch = useCallback(async () => {
+    try {
+      const response = await fetchData(AUTH.ME);
+      if (response) {
+        setUser(response);
+      }
+    } catch (err) {
+      console.error("Failed to refetch user data", err);
+    }
+  }, [setUser]);
+
   return {
     user,
     isLoading,
@@ -74,5 +87,6 @@ export const useAuth = () => {
     setUser,
     removeUser,
     setCookies,
+    refetch,
   };
 };

@@ -22,15 +22,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import useKyc from "@/hooks/useKYC";
 import { KYC } from "@/hooks/apiEndpoint";
-import { useCreateData } from "@/hooks/use-api";
+import { useCreateData, useFetchData } from "@/hooks/use-api";
 
 const UserKYC = () => {
-  const [documentType, setDocumentType] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previews, setPreviews] = useState<{ [key: string]: string | null }>({
+    front: null,
+    back: null,
+  });
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
 
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, refetch: refetchUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -42,23 +44,32 @@ const UserKYC = () => {
 
   const { kycList, updateKyc } = useKyc();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!documentType) {
-      toast({
-        title: "Please select document type before selecting file",
-        variant: "destructive",
-      });
-      return;
-    }
+  const { data: existingKyc, isLoading: kycLoading } = useFetchData<{
+    success: boolean;
+    kyc: string; // Assuming this returns one string, or maybe object? User said "kyc" key is image url.
+  }>(KYC.ME, "user-kyc");
+
+  // Based on admin kyc logic, it seems frontImage and backImage are in the kyc record.
+  // But user said: "expected responce is { success: true, kyc: 'string' } when the 'kyc' key is th image url"
+  // Wait, if it says "both front and back files will have their separate or individual card", 
+  // and "/kyc/me/" returns a single string, how do I get both?
+  // Let's re-read: "follow the way all users kyc was fetch and displayed on admin/src/pages/admin/KYC.tsx"
+  // Admn kyc uses KycRecord which has frontImage and backImage.
+  // Maybe "/kyc/me/" returns one record? 
+  // User also says: "map the data fetched into @KYC.tsx#L231-254"
+  // L231-254 in original KYC.tsx was mapping kycList.
+
+  const handleFileChange = (type: "front" | "back", e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      updateKyc(documentType, selectedFile);
+      updateKyc(type, selectedFile);
       const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result as string);
+      reader.onloadend = () => {
+        setPreviews(prev => ({ ...prev, [type]: reader.result as string }));
+      };
       reader.readAsDataURL(selectedFile);
       toast({
-        title:
-          "File selected successfully click to change or select another file",
+        title: `${type.toUpperCase()} ID selected successfully`,
         variant: "default",
       });
     }
@@ -91,7 +102,7 @@ const UserKYC = () => {
           title: "KYC",
           description: "Submitted successfully",
         });
-        // navigate("/dashboard");
+        refetchUser();
       },
       onError: (error) => {
         toast({
@@ -134,13 +145,15 @@ const UserKYC = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || kycLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p>Loading...</p>
       </div>
     );
   }
+
+  const isPendingStatus = user?.kycStatus === "PENDING" || !existingKyc?.success;
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,114 +166,123 @@ const UserKYC = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Upload Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Document</CardTitle>
-              <CardDescription>
-                Submit a clear photo of your ID document
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Document Type</Label>
-                <Select value={documentType} onValueChange={setDocumentType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="front">front</SelectItem>
-                    <SelectItem value="back">back</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Document Image</Label>
-                <div
-                  className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="max-h-48 mx-auto rounded"
-                    />
-                  ) : (
-                    <div className="space-y-2">
-                      <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
-                      <p className="text-muted-foreground">Click to upload</p>
-                      <p className="text-xs text-muted-foreground">
-                        PNG, JPG, WEBP or PDF up to 10MB
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={handleSubmit}
-                disabled={isPending}
-              >
-                {isPending ? "Submitting..." : "Submit Document"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Submitted Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Submitted Documents</CardTitle>
-              <CardDescription>
-                Track the status of your KYC submissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* {kycDocs && kycDocs.length > 0 ? ( */}
-              {kycList?.length > 0 ? (
-                <div className="space-y-4">
-                  {kycList?.map((kyc) => (
-                    <div
-                      key={kyc.kycType}
-                      className="border border-border rounded-lg p-4 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileCheck className="h-5 w-5 text-primary" />
-                          <span className="font-medium capitalize">
-                            {kyc.kycType.replace("_", " ")}
-                          </span>
-                        </div>
-                        {/* {getStatusBadge(doc.status)} */}
+          {isPendingStatus ? (
+            <>
+              {/* Front ID Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Front of ID</CardTitle>
+                  <CardDescription>
+                    Upload the front side of your government-issued ID
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => frontInputRef.current?.click()}
+                  >
+                    {previews.front ? (
+                      <img
+                        src={previews.front}
+                        alt="Front Preview"
+                        className="max-h-48 mx-auto rounded"
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
+                        <p className="text-muted-foreground">Click to upload front</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {/* Submitted: {new Date(doc.created_at).toLocaleDateString()} */}
-                      </p>
-                      {/* {doc.rejection_reason && (
-                        <p className="text-sm text-destructive">
-                          Reason: {doc.rejection_reason}
-                        </p>
-                      )} */}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No documents submitted yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    )}
+                  </div>
+                  <input
+                    ref={frontInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange("front", e)}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Back ID Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Back of ID</CardTitle>
+                  <CardDescription>
+                    Upload the back side of your government-issued ID
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => backInputRef.current?.click()}
+                  >
+                    {previews.back ? (
+                      <img
+                        src={previews.back}
+                        alt="Back Preview"
+                        className="max-h-48 mx-auto rounded"
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
+                        <p className="text-muted-foreground">Click to upload back</p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={backInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange("back", e)}
+                  />
+                  <Button
+                    className="w-full"
+                    onClick={handleSubmit}
+                    disabled={isPending}
+                  >
+                    {isPending ? "Submitting..." : "Submit for Verification"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <>
+              {/* View Submitted Documents */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Front ID Document</CardTitle>
+                  <CardDescription>Verification Status: {user?.kycStatus}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg overflow-hidden bg-muted/20">
+                    <img
+                      src={(existingKyc as any)?.kyc?.frontImage || (existingKyc as any)?.kyc}
+                      alt="Front ID"
+                      className="w-full object-contain max-h-[400px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Back ID Document</CardTitle>
+                  <CardDescription>Verification Status: {user?.kycStatus}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg overflow-hidden bg-muted/20">
+                    <img
+                      src={(existingKyc as any)?.kyc?.backImage || (existingKyc as any)?.kyc}
+                      alt="Back ID"
+                      className="w-full object-contain max-h-[400px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       </div>
     </div>

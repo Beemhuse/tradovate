@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, TrendingUp, Wallet, FileText, ChevronLeft, Menu, FileCheck, MessageSquare, Award, User, LogOut, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,9 +15,13 @@ import {
 const UserNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const { user, removeUser } = useAuth();
 
+  const closeMenu = () => setOpen(false);
+
   const handleLogout = () => {
+    closeMenu();
     removeUser();
     navigate("/");
   };
@@ -33,12 +38,14 @@ const UserNav = () => {
     { to: "/certificates", icon: Award, label: "Certificates" },
   ];
 
+  console.log("user data", user);
+  
   return (
     <nav className="bg-card border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
-            <Sheet>
+            <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
                   <ChevronLeft className="h-6 w-6" />
@@ -57,11 +64,14 @@ const UserNav = () => {
                       <User className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex flex-col overflow-hidden">
-                      <span className="font-medium truncate">{user?.fullName || user?.role }</span>
+                      <span className="font-medium truncate">{user?.fullName || user?.role}</span>
                       <span className="font-medium truncate">{user?.email || "User Email"}</span>
-                      <div 
+                      <div
                         className="w-full flex items-center gap-3 cursor-pointer"
-                        onClick={() => navigate("/kyc")}
+                        onClick={() => {
+                          closeMenu();
+                          navigate("/kyc");
+                        }}
                       >
                         <span className="text-xs text-muted-foreground truncate">VERIFICATION: {" "}</span>
                         <span className={cn("text-xs text-muted-foreground truncate border px-3 py-1 rounded-full ", user?.kycStatus !== "PENDING" ? "border-success bg-success/50" : "border-destructive bg-destructive/30 ")}>{user?.kycStatus !== "PENDING" ? "Verified" : "not verified"}</span>
@@ -77,6 +87,7 @@ const UserNav = () => {
                       <Link
                         key={item.to}
                         to={item.to}
+                        onClick={closeMenu}
                         className={cn(
                           "flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors gap-2",
                           location.pathname === item.to && "border-primary/50 bg-primary/5"
@@ -90,12 +101,14 @@ const UserNav = () => {
                     {/* Extra Links */}
                     <Link
                       to="/about"
+                      onClick={closeMenu}
                       className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors gap-2"
                     >
                       <span className="text-sm font-medium">About Us</span>
                     </Link>
                     <Link
                       to="/terms"
+                      onClick={closeMenu}
                       className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors gap-2"
                     >
                       <span className="text-sm font-medium">Terms</span>
@@ -103,16 +116,16 @@ const UserNav = () => {
 
                   </div>
                 </div>
-                  <hr className="my" />
-                  <div className="flex w-full px-4">
-                    <button
-                      onClick={handleLogout}
-                      className="flex p-2 w-full mb-5 items-center justify-start rounded-lg hover:bg-destructive/10 text-destructive transition-colors gap-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span className="text-sm font-normal">Log out</span>
-                    </button>
-                  </div>
+                <hr className="my" />
+                <div className="flex w-full px-4">
+                  <button
+                    onClick={handleLogout}
+                    className="flex p-2 w-full mb-5 items-center justify-start rounded-lg hover:bg-destructive/10 text-destructive transition-colors gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span className="text-sm font-normal">Log out</span>
+                  </button>
+                </div>
               </SheetContent>
             </Sheet>
 
