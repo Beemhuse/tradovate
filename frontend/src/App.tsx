@@ -10,6 +10,7 @@ import initAxios from "./config/config";
 import UserLogin from "./pages/user/Login";
 import UserSignup from "./pages/user/Signup";
 import ForgotPassword from "./pages/user/ForgotPassword";
+import VerifyEmail from "./pages/user/VerifyEmail";
 
 import UserDashboard from "./pages/user/Dashboard";
 import UserWallet from "./pages/user/Wallet";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/" element={<UserLogin />} />
             <Route path="/signup" element={<UserSignup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
           </Route>
 
           {/* 🔒 PROTECTED DASHBOARD */}

@@ -115,16 +115,16 @@ const OrderPanel = ({
       </div>
 
       {/* Available Balance */}
-      <div className="flex justify-between text-sm">
+      {/* <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">{symbol.split("/")[0]} Balance</span>
         <span className="text-success font-medium">
           {availableBalance.toFixed(2)}
         </span>
-      </div>
+      </div> */}
 
       {/* USDT Balance */}
       <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">USDT Balance</span>
+        <span className="text-muted-foreground">USDT Trading Balance</span>
         <span className="text-success font-medium">
           {USDTBalance.toFixed(2)}
         </span>

@@ -6,6 +6,7 @@ export const AUTH = {
   VERIFY_EMAIL: "/auth/verify-email",
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
+  RESEND_OTP: "/auth/resend-otp",
 };
 
 export const KYC = {

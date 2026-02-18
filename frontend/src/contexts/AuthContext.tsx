@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { CookieManager } from "@/utils/cookie-utils";
 import { setAuthToken } from "@/config/config";
-import { fetchData } from "../config/api";
+import { fetchData, postData } from "../config/api";
 import { AUTH } from "../hooks/apiEndpoint";
 
 export const useAuth = () => {
@@ -80,6 +80,14 @@ export const useAuth = () => {
     }
   }, [setUser]);
 
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    return await postData(AUTH.VERIFY_EMAIL, { email, code });
+  }, []);
+
+  const resendOtp = useCallback(async (email: string) => {
+    return await postData(AUTH.RESEND_OTP, { email });
+  }, []);
+
   return {
     user,
     isLoading,
@@ -88,5 +96,7 @@ export const useAuth = () => {
     removeUser,
     setCookies,
     refetch,
+    verifyEmail,
+    resendOtp,
   };
 };
