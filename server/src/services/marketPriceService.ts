@@ -29,6 +29,7 @@ const COIN_MAP = {
   FIL: "filecoin",
   USDT: "tether",
   USDC: "usd-coin",
+  BNB: "binancecoin",
 };
 
 export async function fetchPrices() {
@@ -116,19 +117,26 @@ export async function getMarketPriceForCoin(
 }
 
 // Helper to get price by symbol
+// Helper to get price by symbol
 export async function getPriceByCoinSymbol(
   symbol: string,
 ): Promise<number | null> {
+  const normalizedSymbol = symbol.toUpperCase();
   const prices = await fetchPrices();
-  const price = prices[symbol]?.price;
+  const price = prices[normalizedSymbol]?.price;
 
-  if (price !== undefined) return price;
+  if (price !== undefined && price !== null && price > 0) return price;
 
-  // Fallback for stablecoins
-  if (["USDT", "USDC", "BUSD", "DAI"].includes(symbol.toUpperCase())) {
+  // Robust fallbacks for common coins if API fails
+  if (["USDT", "USDC", "BUSD", "DAI"].includes(normalizedSymbol)) {
     return 1.0;
   }
 
+  if (normalizedSymbol === "BNB") { console.log("[Price] Using BNB fallback 600"); return 600.0; }
+  if (normalizedSymbol === "ETH") { console.log("[Price] Using ETH fallback 2500"); return 2500.0; }
+  if (normalizedSymbol === "BTC") { console.log("[Price] Using BTC fallback 95000"); return 95000.0; }
+
+  console.log(`[Price] No price found for ${normalizedSymbol}`);
   return null;
 }
 export const klineEvents = new EventEmitter();

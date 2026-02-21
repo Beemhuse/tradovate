@@ -51,8 +51,8 @@ export const useConversion = () => {
   ---------------------------------- */
   const convertCoin = useCallback(
     async (
-      fromCoinId?: string,
-      toCoinId?: string,
+      fromWalletId?: string,
+      toWalletId?: string,
       amount?: number,
     ): Promise<ConversionResult | null> => {
       setIsLoading(true);
@@ -61,8 +61,8 @@ export const useConversion = () => {
       try {
         const params = new URLSearchParams();
 
-        if (fromCoinId) params.append("coinId", fromCoinId);
-        if (toCoinId) params.append("toCoinId", toCoinId);
+        if (fromWalletId) params.append("fromWalletId", fromWalletId);
+        if (toWalletId) params.append("toWalletId", toWalletId);
         if (amount !== undefined) params.append("amount", amount.toString());
 
         const response = await fetch(
@@ -98,8 +98,8 @@ export const useConversion = () => {
   ---------------------------------- */
   const executeConversion = useCallback(
     async (payload: {
-      fromCoinId: string;
-      toCoinId: string;
+      fromWalletId: string;
+      toWalletId: string;
       amount: number;
     }): Promise<{ success: boolean; message?: string; error?: string }> => {
       setIsLoading(true);

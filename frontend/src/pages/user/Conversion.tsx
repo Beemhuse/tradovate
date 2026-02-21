@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { useConversion } from "@/hooks/useConversion";
@@ -26,14 +26,12 @@ const CurrencyConversion = () => {
 
   /* -------------------- STATE -------------------- */
   const [viewMode, setViewMode] = useState<ViewMode>("portfolio");
-  const [fromCoinId, setFromCoinId] = useState("");
-  const [toCoinId, setToCoinId] = useState("");
+  const [fromWalletId, setFromWalletId] = useState("");
+  const [toWalletId, setToWalletId] = useState("");
   const [amount, setAmount] = useState("");
 
   /* -------------------- DATA -------------------- */
   const { data: coinsData } = useFetchData(COINS.COINLIST, "coin_list");
-  const { refetch: refetchAssets } = useFetchData(COINS.ASSETS, "assets");
-
   const {
     data: assetData,
     refetch,
@@ -41,6 +39,7 @@ const CurrencyConversion = () => {
   } = useFetchData(COINS.ASSETS, "assets");
 
   const assets = assetData?.assets;
+  const refetchAssets = refetch;
   const coins = useMemo(() => {
     return (coinsData?.coins || coinsData?.data || []).map((c: any) => ({
       id: c.id,
@@ -51,19 +50,25 @@ const CurrencyConversion = () => {
 
   /* -------------------- DEFAULT TARGET (USDT) -------------------- */
   useEffect(() => {
-    if (!toCoinId && coins.length) {
-      const usdt = coins.find((c) => c.symbol === "USDT");
-      if (usdt) setToCoinId(usdt.id);
+    if (!toWalletId && assets?.length) {
+      // Find a USDT wallet if available, otherwise pick first non-from wallet
+      const usdtWallet = assets.find((a: any) => a.coin.symbol === "USDT");
+      if (usdtWallet && usdtWallet.walletId !== fromWalletId) {
+        setToWalletId(usdtWallet.walletId);
+      }
     }
-  }, [coins, toCoinId]);
+  }, [assets, fromWalletId, toWalletId]);
 
   /* -------------------- CONVERSION HOOK -------------------- */
   const { result, isLoading, error, convertCoin, executeConversion } =
     useConversion();
 
   /* -------------------- HELPERS -------------------- */
-  const getSymbol = (coinId?: string) =>
-    coins.find((c) => c.id === coinId)?.symbol || "";
+  const getSymbolByWalletId = (walletId?: string) =>
+    assets?.find((a: any) => a.walletId === walletId)?.coin?.symbol || "";
+
+  const getWalletById = (walletId?: string) =>
+    assets?.find((a: any) => a.walletId === walletId);
 
   const toggleMode = () => {
     setViewMode((prev) => (prev === "single" ? "portfolio" : "single"));
@@ -81,41 +86,46 @@ const CurrencyConversion = () => {
   /* -------------------- ACTIONS -------------------- */
   const handlePreview = () => {
     if (
-      !fromCoinId ||
-      !toCoinId ||
+      !fromWalletId ||
+      !toWalletId ||
       Number(amount) <= 0 ||
-      fromCoinId === toCoinId
+      fromWalletId === toWalletId
     )
       return;
 
-    convertCoin(fromCoinId, toCoinId, Number(amount));
+    convertCoin(fromWalletId, toWalletId, Number(amount));
   };
   const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
   const prices = useCryptoPrice(coinSymbols);
   const calculateUSDTValue = (symbol: string, balance: number) => {
-    if (symbol === "USDT") return balance;
-    const price = parseFloat(prices[symbol]?.price || "0");
-    return balance * price;
+    // 💡 In this platform, balance units ARE the USDT equivalent (1:1)
+    return balance;
   };
   const handleExecute = async () => {
     if (
-      !fromCoinId ||
-      !toCoinId ||
+      !fromWalletId ||
+      !toWalletId ||
       Number(amount) <= 0 ||
-      fromCoinId === toCoinId
+      fromWalletId === toWalletId
     )
       return;
 
     const res = await executeConversion({
-      fromCoinId,
-      toCoinId,
+      fromWalletId,
+      toWalletId,
       amount: Number(amount),
     });
 
     if (res.success) {
+      console.log("[Conversion] Success result:", res);
+      const vb = (res as any).verifiedBalances;
+      const vbStr = vb
+        ? ` (New: ${fromWallet.coin.symbol}=${vb[fromWallet.coin.symbol]?.toFixed(2)}, ${toWallet.coin.symbol}=${vb[toWallet.coin.symbol]?.toFixed(2)})`
+        : "";
+
       toast({
-        title: "Conversion Successful",
-        description: "Funds moved successfully between wallets.",
+        title: "Conversion Successful" + (vb ? " ✅" : ""),
+        description: `Funds moved successfully${vbStr}.`,
       });
 
       setAmount("");
@@ -164,50 +174,78 @@ const CurrencyConversion = () => {
               <div className="grid md:grid-cols-2 gap-6">
                 {/* FROM */}
                 <div className="space-y-4">
-                  <Label>From Wallet</Label>
-                  <Select value={fromCoinId} onValueChange={setFromCoinId}>
+                  <Label>From Wallet (Source)</Label>
+                  <Select value={fromWalletId} onValueChange={setFromWalletId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select coin" />
+                      <SelectValue placeholder="Select wallet" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coins.map((coin) => (
-                        <SelectItem key={coin.id} value={coin.id}>
+                      {assets?.map((asset: any) => (
+                        <SelectItem key={asset.walletId} value={asset.walletId}>
                           <div className="flex items-center gap-2">
-                            <img src={coin.icon} className="w-5 h-5" />
-                            {coin.symbol}
+                            <img src={asset.coin.iconUrl} className="w-5 h-5 rounded-full" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{asset.coin.symbol}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {asset.network?.name || "Mainnet"}
+                              </span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  <Label>Amount</Label>
+                  {fromWalletId && (
+                    <div className="flex justify-between text-sm px-1">
+                      <span className="text-muted-foreground">Available balance:</span>
+                      <span className="font-medium text-primary">
+                        ${Number(getWalletById(fromWalletId)?.balance || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  <Label>Amount to convert ($)</Label>
                   <Input
                     type="number"
                     value={amount}
-                    placeholder="0.00"
+                    placeholder="E.g. 500"
                     onChange={(e) => setAmount(e.target.value)}
                   />
                 </div>
 
                 {/* TO */}
                 <div className="space-y-4">
-                  <Label>To Wallet</Label>
-                  <Select value={toCoinId} onValueChange={setToCoinId}>
+                  <Label>To Wallet (Destination)</Label>
+                  <Select value={toWalletId} onValueChange={setToWalletId}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select destination" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coins.map((coin) => (
-                        <SelectItem key={coin.id} value={coin.id}>
+                      {assets?.filter((a: any) => a.walletId !== fromWalletId).map((asset: any) => (
+                        <SelectItem key={asset.walletId} value={asset.walletId}>
                           <div className="flex items-center gap-2">
-                            <img src={coin.icon} className="w-5 h-5" />
-                            {coin.symbol}
+                            <img src={asset.coin.iconUrl} className="w-5 h-5 rounded-full" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{asset.coin.symbol}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {asset.network?.name || "Mainnet"}
+                              </span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {toWalletId && (
+                    <div className="flex justify-between text-sm px-1 mt-2">
+                      <span className="text-muted-foreground">Target balance:</span>
+                      <span className="font-medium text-success">
+                        ${Number(getWalletById(toWalletId)?.balance || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2 mt-6">
                     <Button
@@ -215,12 +253,26 @@ const CurrencyConversion = () => {
                       onClick={handlePreview}
                       disabled={isLoading}
                     >
-                      Preview Transfer
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Preview Transfer"
+                      )}
                     </Button>
 
                     {result?.mode === "single" && (
                       <Button onClick={handleExecute} disabled={isLoading}>
-                        Confirm Transfer
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Converting...
+                          </>
+                        ) : (
+                          "Confirm Transfer"
+                        )}
                       </Button>
                     )}
                   </div>
@@ -236,18 +288,22 @@ const CurrencyConversion = () => {
               {result?.mode === "single" && (
                 <div className="bg-secondary/50 p-4 rounded">
                   <p className="text-sm text-muted-foreground">
-                    You are about to move
+                    Transfer Details
                   </p>
-                  <p className="text-2xl font-bold">
-                    {amount} {getSymbol(fromCoinId)}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    → {result.convertedAmount?.toFixed(8)} {getSymbol(toCoinId)}
-                  </p>
-                  {/* <p className="text-xs text-muted-foreground mt-2 italic">
-                    Rate: 1 {getSymbol(fromCoinId)} ={" "}
-                    {result.conversionRate?.toFixed(8)} {getSymbol(toCoinId)}
-                  </p> */}
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">From Wallet:</span>{" "}
+                      <span className="font-mono font-bold text-destructive">
+                        -{Number(amount).toFixed(2)} {getSymbolByWalletId(fromWalletId)}
+                      </span>
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">To Wallet:</span>{" "}
+                      <span className="font-mono font-bold text-success">
+                        +{Number(amount).toFixed(2)} {getSymbolByWalletId(toWalletId)}
+                      </span>
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -257,8 +313,16 @@ const CurrencyConversion = () => {
         {/* ===================== PORTFOLIO ===================== */}
         {viewMode === "portfolio" && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>My Assets</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchAssets()}
+                disabled={isAssetsLoading}
+              >
+                {isAssetsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -346,10 +410,10 @@ const CurrencyConversion = () => {
                             : "••••"}
                         </td> */}
                           <td className="text-right py-4 px-4 font-semibold text-success">
-                            {/* {showBalance ? `$${usdtValue.toFixed(2)}` : "••••••"} */}
-                            {/* {showBalance
-                            ? `$${Number(wallet.balance)}`
-                            : "••••••"} */}
+                            ${usdtValue.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </td>
                         </tr>
                       );
