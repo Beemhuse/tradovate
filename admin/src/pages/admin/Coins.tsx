@@ -154,6 +154,7 @@ const AdminCoinsPage: React.FC = () => {
                   toggleNetworks: true,
                 });
                 toast.success("Coin deactivated");
+                refetch();
               }}
               toggleLabel="Deactivate"
               hideDelete
@@ -170,10 +171,11 @@ const AdminCoinsPage: React.FC = () => {
               hideDelete
               onToggleStatus={async (coin) => {
                 await toggleCoinStatus.mutateAsync({
-                  id: coin.id,
+                  coinId: coin.id,
                   toggleNetworks: true,
                 });
                 toast.success("Coin activated");
+                refetch();
               }}
               toggleLabel="Activate"
             />

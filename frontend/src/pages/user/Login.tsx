@@ -24,7 +24,7 @@ const UserLogin = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setLoading, setCookies, setUser } = useAuth();
+  const { setLoading, setCookies, setUser, resendOtp } = useAuth();
 
   const { mutate, isPending } = useCreateData(AUTH.LOGIN, ["login"]);
 
@@ -48,7 +48,16 @@ const UserLogin = () => {
         setLoading(isPending);
       },
       onError: (error) => {
-        console.log("error data", error);
+        console.log("error data", (error as any)?.response?.data?.error);
+        if ((error as any)?.response?.data?.error === "Email not verified") {
+          resendOtp(email);
+          navigate("/verify-email", {
+            state: {
+              email,
+            },
+          });
+          return;
+        }
         toast({
           title: "Login Failed",
           description:
