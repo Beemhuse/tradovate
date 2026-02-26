@@ -48,10 +48,10 @@ const CoinDetailsPage = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNetworksOpen, setIsNetworksOpen] = useState(false);
   // const queryClient = useQueryClient();
-  const toggleCoin = usePatchData<void, { id: string }>(
-    ({ id }) => `/admin/coins/${id}/toggle`,
-    [["coin", id], "admin-coins"]
-  );
+  const toggleCoin = usePatchData<
+    void,
+    { coinId: string; toggleNetworks?: boolean }
+  >("/admin/toggle/coins/status", [["coin", id], "admin-coins"]);
   const updateCoin = usePatchData<Coin, UpdateCoinPayload>(
     `/admin/coins/${id}`,
     ["admin-coins"]
@@ -140,11 +140,14 @@ const CoinDetailsPage = () => {
             <Button
               variant={coin.isActive ? "destructive" : "default"}
               onClick={async () => {
-                await toggleCoin.mutateAsync({ id: coin.id });
+                await toggleCoin.mutateAsync({
+                  coinId: coin.id,
+                  toggleNetworks: true
+                });
                 toast.success(
                   coin.isActive ? "Coin deactivated" : "Coin activated"
                 );
-                // queryClient.invalidateQueries({ queryKey: ["coin", id] });
+                refetch();
               }}
             >
               {coin.isActive ? "Deactivate" : "Activate"}

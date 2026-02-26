@@ -144,7 +144,8 @@ const CoinDeposit = ({
       onSuccess: () => {
         toast({
           title: "Deposit submitted",
-          description: `${selectedWallet.coin.symbol} deposit pending approval`,
+          // description: `${selectedWallet.coin.symbol} deposit pending approval`,
+          description: `${selectedWallet.coin.symbol} successfully deposited`,
         });
         refetch();
         setAddCoinOpen(false);

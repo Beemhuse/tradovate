@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, TrendingUp, Wallet, FileText, ChevronLeft, Menu, FileCheck, MessageSquare, Award, User, LogOut, ArrowRightLeft } from "lucide-react";
+import { Home, TrendingUp, Wallet, FileText, ChevronLeft, Menu, FileCheck, MessageSquare, Award, User, LogOut, ArrowRightLeft, Info, Scale, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,10 +36,13 @@ const UserNav = () => {
     { to: "/transactions", icon: FileCheck, label: "Transactions" },
     { to: "/support", icon: MessageSquare, label: "Support" },
     { to: "/certificates", icon: Award, label: "Certificates" },
+    { to: "/about-us", icon: Info, label: "About Us" },
+    { to: "/terms-&-condition", icon: Scale, label: "Terms & Conditions" },
+    { to: "/privacy-policy", icon: ShieldCheck, label: "Privacy Policy" },
   ];
 
   console.log("user data", user);
-  
+
   return (
     <nav className="bg-card border-b border-border">
       <div className="container mx-auto px-4">
@@ -99,7 +102,7 @@ const UserNav = () => {
                     ))}
 
                     {/* Extra Links */}
-                    <Link
+                    {/* <Link
                       to="/about"
                       onClick={closeMenu}
                       className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors gap-2"
@@ -112,7 +115,7 @@ const UserNav = () => {
                       className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors gap-2"
                     >
                       <span className="text-sm font-medium">Terms</span>
-                    </Link>
+                    </Link> */}
 
                   </div>
                 </div>

@@ -23,6 +23,9 @@ import UserSupport from "./pages/user/Support";
 import UserCertificatesPage from "./pages/user/Certificates";
 import BuyCrypto from "./pages/user/BuyCrypto";
 import Conversion from "./pages/user/Conversion";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import AboutUs from "./pages/AboutUs";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 import PublicRoute from "./components/PublicRoutes";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -49,6 +52,10 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
           </Route>
+
+          <Route path="/terms-&-condition" element={<TermsAndConditions />} />
+          <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
           {/* 🔒 PROTECTED DASHBOARD */}
           <Route element={<ProtectedRoute />}>

@@ -1,5 +1,6 @@
 // pages/AdminTransactions.tsx
 import { useState, useMemo, useEffect } from "react";
+import { Copy, ArrowRightLeft, Landmark, Zap, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,9 +98,10 @@ const AdminTransactions = () => {
         userEmail: tx.user?.email ?? tx.raw?.user?.email ?? "-",
         userId: tx.user?.id ?? tx.raw?.user?.id ?? null,
         walletId: tx.walletId ?? tx.raw?.walletId ?? null,
-        coinSymbol: tx.coin?.symbol ?? tx.raw?.wallet?.coin?.symbol ?? "-",
-        coinName: tx.coin?.name ?? tx.raw?.wallet?.coin?.name ?? "-",
-        networkName: tx.network?.name ?? tx.raw?.wallet?.network?.name ?? null,
+        coinSymbol: tx.coin?.symbol ?? tx.raw?.coin?.symbol ?? tx.raw?.wallet?.coin?.symbol ?? "-",
+        coinName: tx.coin?.name ?? tx.raw?.coin?.name ?? tx.raw?.wallet?.coin?.name ?? "-",
+        networkName: tx.network?.name ?? tx.raw?.network?.name ?? tx.raw?.wallet?.network?.name ?? null,
+        toAddress: tx.toAddress ?? tx.raw?.toAddress ?? null,
         raw: tx.raw ?? tx,
         adminAction: tx.adminAction ?? tx.raw?.adminAction ?? "NONE",
         receiptUrl: tx.receiptUrl ?? tx.raw?.receiptUrl ?? null,
@@ -222,11 +224,11 @@ const AdminTransactions = () => {
                         <td className="py-4 px-4">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tx.status === "completed"
-                                ? "bg-success/10 text-success"
-                                : tx.status === "cancelled" ||
-                                  tx.status === "failed"
-                                  ? "bg-danger/10 text-danger"
-                                  : "bg-primary/10 text-primary"
+                              ? "bg-success/10 text-success"
+                              : tx.status === "cancelled" ||
+                                tx.status === "failed"
+                                ? "bg-danger/10 text-danger"
+                                : "bg-primary/10 text-primary"
                               }`}
                           >
                             {tx.status}
@@ -350,6 +352,68 @@ const AdminTransactions = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Crypto Withdrawal Specific Details */}
+                {selectedTx.type.includes("withdraw") && selectedTx.toAddress && (
+                  <div className="border border-primary/20 bg-primary/5 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                      <span className="flex items-center gap-1.5"><ArrowUpRight className="w-3 h-3" /> Destination Wallet</span>
+                      <span className="text-primary px-2 py-0.5 bg-primary/10 rounded">CRYPTO</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-black/40 p-3 rounded-lg border border-white/5 font-mono text-xs break-all leading-relaxed text-foreground/90 selection:bg-primary/30">
+                        {selectedTx.toAddress}
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-10 w-10 shrink-0 hover:bg-primary hover:text-black transition-all duration-300"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedTx.toAddress);
+                          toast({ title: "Address copied" });
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transfer / Conversion Specific Details */}
+                {(selectedTx.type.includes("transfer") || selectedTx.type.includes("conversion")) && (
+                  <div className="border border-blue-500/20 bg-blue-500/5 rounded-xl p-4 space-y-4">
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                      <span className="flex items-center gap-1.5"><Zap className="w-3 h-3" /> Asset Swap Path</span>
+                      <span className="text-blue-400 px-2 py-0.5 bg-blue-400/10 rounded">SWAP</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      {/* From Wallet */}
+                      <div className="flex-1 space-y-1.5">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase italic opacity-60">Source Asset</p>
+                        <div className="p-3 bg-black/40 rounded-lg border border-white/5 h-16 flex flex-col justify-center">
+                          <p className="font-bold text-sm text-foreground">{selectedTx.raw?.fromCoin?.symbol || selectedTx.coinSymbol}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{selectedTx.raw?.fromNetwork?.name || selectedTx.networkName || "Mainnet"}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center px-1">
+                        <div className="p-2 rounded-full bg-blue-500/10 border border-blue-500/20">
+                          <ArrowRightLeft className="h-4 w-4 text-blue-400" />
+                        </div>
+                      </div>
+
+                      {/* To Wallet */}
+                      <div className="flex-1 space-y-1.5 text-right">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase italic opacity-60">Destination Asset</p>
+                        <div className="p-3 bg-black/40 rounded-lg border border-white/5 border-l-blue-400/50 h-16 flex flex-col justify-center">
+                          <p className="font-bold text-sm text-foreground">{selectedTx.raw?.toCoin?.symbol || "-"}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{selectedTx.raw?.toNetwork?.name || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {selectedTx.raw?.bankName && (
                   <div className="border-t pt-4 space-y-2">

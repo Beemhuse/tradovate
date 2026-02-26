@@ -29,7 +29,7 @@ const OrderPanel = ({
   USDTBalance,
   refetch,
 }: Props) => {
-  const [stake, setStake] = useState<number>(30);
+  const [stake, setStake] = useState<number | string>(30);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(30);
   const [selectedPeriod, setSelectedPeriod] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,7 +79,7 @@ const OrderPanel = ({
         marketPairId,
         period: selectedPeriod.period,
         direction,
-        stake,
+        stake: Number(stake),
         entryPrice: currentPrice,
       },
       {
@@ -147,12 +147,12 @@ const OrderPanel = ({
               p.period === "S30"
                 ? "30s"
                 : p.period === "M1"
-                ? "1m"
-                : p.period === "M5"
-                ? "5m"
-                : p.period === "M15"
-                ? "15m"
-                : p.period;
+                  ? "1m"
+                  : p.period === "M5"
+                    ? "5m"
+                    : p.period === "M15"
+                      ? "15m"
+                      : p.period;
 
             return (
               <button
@@ -205,7 +205,8 @@ const OrderPanel = ({
         // min={1}
         value={stake}
         onChange={(e) => {
-          setStake(Number(e.target.value));
+          const val = e.target.value;
+          setStake(val === "" ? "" : Number(val));
           setSelectedPreset(null);
         }}
         className="w-full bg-gray-900 border border-gray-700 px-3 py-2 rounded text-right"
