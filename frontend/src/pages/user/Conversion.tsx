@@ -31,9 +31,6 @@ const CurrencyConversion = () => {
   const [amount, setAmount] = useState("");
 
   /* -------------------- DATA -------------------- */
-  const { data: coinsData } = useFetchData(COINS.COINLIST, "coin_list");
-  const { refetch: refetchAssets } = useFetchData(COINS.ASSETS, "assets");
-
   const {
     data: assetData,
     refetch,
@@ -41,21 +38,35 @@ const CurrencyConversion = () => {
   } = useFetchData(COINS.ASSETS, "assets");
 
   const assets = assetData?.assets;
-  const coins = useMemo(() => {
-    return (coinsData?.coins || coinsData?.data || []).map((c: any) => ({
-      id: c.id,
-      symbol: c.symbol,
-      icon: c.iconUrl,
+  const userCoins = useMemo(() => {
+    if (!assets) return [];
+    return assets.map((a: any) => ({
+      id: a.walletId,
+      coinId: a.coin?.id,
+      symbol: a.coin?.symbol,
+      icon: a.coin?.iconUrl,
+      balance: a.balance,
+      networkName: a.network?.name,
+      networkIcon: a.network?.icon,
+      address: a.address || a.contractAddress,
     }));
-  }, [coinsData]);
+  }, [assets]);
 
   /* -------------------- DEFAULT TARGET (USDT) -------------------- */
   useEffect(() => {
-    if (!toCoinId && coins.length) {
-      const usdt = coins.find((c) => c.symbol === "USDT");
-      if (usdt) setToCoinId(usdt.id);
+    const fromCoin = userCoins.find((c) => c.id === fromCoinId);
+    const toCoin = userCoins.find((c) => c.id === toCoinId);
+
+    if ((!toCoinId || toCoin?.coinId === fromCoin?.coinId) && userCoins.length) {
+      const usdt = userCoins.find((c) => c.symbol === "USDT" && c.coinId !== fromCoin?.coinId);
+      if (usdt) {
+        setToCoinId(usdt.id);
+      } else {
+        const firstValid = userCoins.find((c) => c.coinId !== fromCoin?.coinId);
+        if (firstValid) setToCoinId(firstValid.id);
+      }
     }
-  }, [coins, toCoinId]);
+  }, [userCoins, toCoinId, fromCoinId]);
 
   /* -------------------- CONVERSION HOOK -------------------- */
   const { result, isLoading, error, convertCoin, executeConversion } =
@@ -63,7 +74,7 @@ const CurrencyConversion = () => {
 
   /* -------------------- HELPERS -------------------- */
   const getSymbol = (coinId?: string) =>
-    coins.find((c) => c.id === coinId)?.symbol || "";
+    userCoins.find((c) => c.id === coinId)?.symbol || "";
 
   const toggleMode = () => {
     setViewMode((prev) => (prev === "single" ? "portfolio" : "single"));
@@ -88,7 +99,19 @@ const CurrencyConversion = () => {
     )
       return;
 
-    convertCoin(fromCoinId, toCoinId, Number(amount));
+    const fromCoin = userCoins.find((c) => c.id === fromCoinId);
+    const toCoin = userCoins.find((c) => c.id === toCoinId);
+
+    if (fromCoin && Number(amount) > Number(fromCoin.balance)) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You only have ${fromCoin.balance} ${fromCoin.symbol}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    convertCoin(fromCoin?.coinId, toCoin?.coinId, Number(amount));
   };
   const coinSymbols = assets?.map((c) => c?.coin?.symbol) || [];
   const prices = useCryptoPrice(coinSymbols);
@@ -106,9 +129,21 @@ const CurrencyConversion = () => {
     )
       return;
 
+    const fromCoin = userCoins.find((c) => c.id === fromCoinId);
+    const toCoin = userCoins.find((c) => c.id === toCoinId);
+
+    if (fromCoin && Number(amount) > Number(fromCoin.balance)) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You only have ${fromCoin.balance} ${fromCoin.symbol}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const res = await executeConversion({
-      fromCoinId,
-      toCoinId,
+      fromCoinId: fromCoin?.coinId || "",
+      toCoinId: toCoin?.coinId || "",
       amount: Number(amount),
     });
 
@@ -119,7 +154,7 @@ const CurrencyConversion = () => {
       });
 
       setAmount("");
-      refetchAssets();
+      refetch();
       convertCoin();
     } else {
       toast({
@@ -170,16 +205,29 @@ const CurrencyConversion = () => {
                       <SelectValue placeholder="Select coin" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coins.map((coin) => (
+                      {userCoins.map((coin) => (
                         <SelectItem key={coin.id} value={coin.id}>
                           <div className="flex items-center gap-2">
                             <img src={coin.icon} className="w-5 h-5" />
-                            {coin.symbol}
+                            <span className="text-sm font-medium">
+                              {coin.symbol}
+                            </span>
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {fromCoinId && (
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        Available: {userCoins.find((c) => c.id === fromCoinId)?.balance || 0}{" "}
+                        {getSymbol(fromCoinId)}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium uppercase">
+                        {userCoins.find((c) => c.id === fromCoinId)?.networkName}
+                      </p>
+                    </div>
+                  )}
 
                   <Label>Amount</Label>
                   <Input
@@ -195,19 +243,37 @@ const CurrencyConversion = () => {
                   <Label>To Wallet</Label>
                   <Select value={toCoinId} onValueChange={setToCoinId}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select coin" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coins.map((coin) => (
-                        <SelectItem key={coin.id} value={coin.id}>
-                          <div className="flex items-center gap-2">
-                            <img src={coin.icon} className="w-5 h-5" />
-                            {coin.symbol}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {userCoins
+                        .filter((coin) => {
+                          const selectedFrom = userCoins.find(c => c.id === fromCoinId);
+                          return coin.coinId !== selectedFrom?.coinId;
+                        })
+                        .map((coin) => (
+                          <SelectItem key={coin.id} value={coin.id}>
+                            <div className="flex items-center gap-2">
+                              <img src={coin.icon} className="w-5 h-5" />
+                              <span className="text-sm font-medium">
+                                {coin.symbol}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
+                  {toCoinId && (
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        Available: {userCoins.find((c) => c.id === toCoinId)?.balance || 0}{" "}
+                        {getSymbol(toCoinId)}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium uppercase">
+                        {userCoins.find((c) => c.id === toCoinId)?.networkName}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2 mt-6">
                     <Button
