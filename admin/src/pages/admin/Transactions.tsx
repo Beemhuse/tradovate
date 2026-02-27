@@ -73,11 +73,12 @@ const AdminTransactions = () => {
     if (selectedTx?.receiptUrl) {
       fetchDepositImage(selectedTx.receiptUrl);
     }
+    console.log("selectedTx:", selectedTx);
 
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
-  }, [selectedTx?.receiptUrl]);
+  }, [selectedTx, selectedTx?.receiptUrl]);
   console.log("data:", previewUrl);
   // server returns shape: { transactions: Transaction[] }
   const transactionsRaw = data?.transactions || [];
