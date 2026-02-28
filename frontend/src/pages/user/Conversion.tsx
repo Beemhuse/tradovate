@@ -211,6 +211,11 @@ const CurrencyConversion = () => {
                             <img src={coin.icon} className="w-5 h-5" />
                             <span className="text-sm font-medium">
                               {coin.symbol}
+                              {coin.networkName && (
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({coin.networkName})
+                                </span>
+                              )}
                             </span>
                           </div>
                         </SelectItem>
@@ -220,8 +225,8 @@ const CurrencyConversion = () => {
                   {fromCoinId && (
                     <div className="flex items-center justify-between mt-1">
                       <p className="text-xs text-muted-foreground">
-                        Available: {userCoins.find((c) => c.id === fromCoinId)?.balance || 0}{" "}
-                        {getSymbol(fromCoinId)}
+                        Available: ${userCoins.find((c) => c.id === fromCoinId)?.balance || 0}{" "}
+                        {/* {getSymbol(fromCoinId)} */}
                       </p>
                       <p className="text-xs text-muted-foreground font-medium uppercase">
                         {userCoins.find((c) => c.id === fromCoinId)?.networkName}
@@ -257,6 +262,11 @@ const CurrencyConversion = () => {
                               <img src={coin.icon} className="w-5 h-5" />
                               <span className="text-sm font-medium">
                                 {coin.symbol}
+                                {coin.networkName && (
+                                  <span className="text-xs text-muted-foreground ml-1">
+                                    ({coin.networkName})
+                                  </span>
+                                )}
                               </span>
                             </div>
                           </SelectItem>
@@ -266,8 +276,8 @@ const CurrencyConversion = () => {
                   {toCoinId && (
                     <div className="flex items-center justify-between mt-1">
                       <p className="text-xs text-muted-foreground">
-                        Available: {userCoins.find((c) => c.id === toCoinId)?.balance || 0}{" "}
-                        {getSymbol(toCoinId)}
+                        Available: ${userCoins.find((c) => c.id === toCoinId)?.balance || 0}{" "}
+                        {/* {getSymbol(toCoinId)} */}
                       </p>
                       <p className="text-xs text-muted-foreground font-medium uppercase">
                         {userCoins.find((c) => c.id === toCoinId)?.networkName}
@@ -276,6 +286,7 @@ const CurrencyConversion = () => {
                   )}
 
                   <div className="flex flex-col gap-2 mt-6">
+                    <Label>Preview </Label>
                     <Button
                       variant="outline"
                       onClick={handlePreview}

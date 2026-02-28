@@ -37,7 +37,6 @@ const AdminTransactions = () => {
     "/admin/transactions",
     "admin-transactions",
   );
-  console.log(selectedTx);
   // Fetch transactions
   // const { data: receiptUrl, isLoading: receiptUrlLoading } = useFetchData(
   //   selectedTx?.receiptUrl ? `/market/image/${selectedTx?.raw?.user?.id}/${selectedTx?.receiptUrl}` : null,
@@ -73,13 +72,12 @@ const AdminTransactions = () => {
     if (selectedTx?.receiptUrl) {
       fetchDepositImage(selectedTx.receiptUrl);
     }
-    console.log("selectedTx:", selectedTx);
 
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [selectedTx, selectedTx?.receiptUrl]);
-  console.log("data:", previewUrl);
+
   // server returns shape: { transactions: Transaction[] }
   const transactionsRaw = data?.transactions || [];
 
