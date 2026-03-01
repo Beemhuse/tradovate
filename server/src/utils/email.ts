@@ -4,11 +4,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const resend = new Resend(process.env.RESEND_API_KEY); // must be set in env
-
 export const sendOtpEmail = async (email: string, otp: string) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: `${process.env.RESEND_FROM_NAME || "Tradovate"} <${process.env.RESEND_FROM_EMAIL}>`,
+      from: `${process.env.RESEND_FROM_NAME} <${process.env.RESEND_FROM_EMAIL}>`,
       to: [email],
       subject: "Your OTP Code",
       html: `
