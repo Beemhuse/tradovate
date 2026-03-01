@@ -45,6 +45,22 @@ const AddCoins = ({
 
   const [createdWallet, setCreatedWallet] = useState<any>(null);
 
+  const resetModalState = () => {
+    setSelectedCoinToAdd("");
+    setNetworkId("");
+    setIsDeposite(false);
+    setIsFundWallet(true);
+    setAmount("");
+    setReceipt(null);
+    setCreatedWallet(null);
+  };
+
+  useEffect(() => {
+    if (addCoinOpen) {
+      resetModalState();
+    }
+  }, [addCoinOpen]);
+
   const { data: coinListData } = useFetchData(COINS.COINLIST, "coin_list");
 
   const coinList = coinListData?.data || coinListData?.coins || [];
@@ -63,6 +79,21 @@ const AddCoins = ({
 
     return coin;
   }, [coinList, selectedCoinToAdd]);
+
+  const walletExists = useMemo(() => {
+    if (!selectedCoinToAdd || !networkId) return false;
+    return assets?.some(
+      (asset: any) =>
+        String(asset.coinId) === String(selectedCoinToAdd) &&
+        String(asset.networkId) === String(networkId)
+    );
+  }, [assets, selectedCoinToAdd, networkId]);
+
+  const selectedNetworkName = useMemo(() => {
+    return selectedCoinData?.networks?.find(
+      (n: any) => n?.network?.id === networkId
+    )?.network?.name;
+  }, [selectedCoinData, networkId]);
 
 
   const coinData = useMemo(() => {
@@ -221,7 +252,14 @@ const AddCoins = ({
             </div>
           </div>
 
-          {selectedCoinData && networkId && isFundWallet && (
+          {walletExists && (
+            <div className="p-3 rounded-md bg-destructive/15 text-destructive text-sm font-medium">
+              The coin {selectedCoinData?.symbol} with the selected network{" "}
+              {selectedNetworkName} already exists.
+            </div>
+          )}
+
+          {selectedCoinData && networkId && isFundWallet && !walletExists && (
             <div className="w-full flex gap-2">
               <Button
                 variant="outline"
@@ -310,9 +348,9 @@ const AddCoins = ({
                 <Button
                   variant="outline"
                   className="w-full hover:scale-95 transition-all duration-200"
-                  onClick={() => setAddCoinOpen(false)}
+                  onClick={resetModalState}
                 >
-                  Cancel
+                  Add Another Coin
                 </Button>
                 <Button
                   variant="default"
