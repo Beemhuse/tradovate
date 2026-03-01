@@ -50,7 +50,7 @@ const CoinDeposit = ({
 
   const { mutate, isPending } = useCreateData(
     COINS.DEPOSIT,
-    ["coin_deposit"],
+    ["assets"],
     true,
   );
 

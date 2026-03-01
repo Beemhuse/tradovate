@@ -51,10 +51,10 @@ const AddCoins = ({
 
   const { mutate: createCoin, isPending: createCoinPending } = useCreateData(
     COINS.CREATE,
-    ["create_coin"]
+    ["assets"]
   );
   const { mutate: coinDepositMutate, isPending: coinDepositPending } =
-    useCreateData(COINS.DEPOSIT, ["coin_deposit"],true);
+    useCreateData(COINS.DEPOSIT, ["assets"], true);
 
   const { toast } = useToast();
 

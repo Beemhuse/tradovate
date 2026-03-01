@@ -109,12 +109,12 @@ const TransactionsPage = () => {
     };
   }, [orders, transactions]);
 
-  const handleExport = () => {
-    toast({
-      title: "Exporting data...",
-      description: "Your transaction history is being prepared for download.",
-    });
-  };
+  // const handleExport = () => {
+  //   toast({
+  //     title: "Exporting data...",
+  //     description: "Your transaction history is being prepared for download.",
+  //   });
+  // };
 
   const handleRefresh = () => {
     if (activeTab === "orders") {
@@ -180,7 +180,7 @@ const TransactionsPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
+              {/* <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
@@ -188,7 +188,7 @@ const TransactionsPage = () => {
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export
-              </Button>
+              </Button> */}
               <Button
                 variant="outline"
                 size="sm"
@@ -200,7 +200,7 @@ const TransactionsPage = () => {
                     loadingOrders || loadingTransactions ? "animate-spin" : ""
                   }`}
                 />
-                Refresh
+                {loadingOrders || loadingTransactions ? "Refreshing..." : "Refresh"}
               </Button>
             </div>
           </div>

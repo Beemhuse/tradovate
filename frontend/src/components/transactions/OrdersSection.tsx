@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Order, OrderFilters } from "./types";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 interface OrdersSectionProps {
   orders: Order[];
@@ -39,6 +40,7 @@ const OrdersSection = ({
   onOrderClick,
 }: OrdersSectionProps) => {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Apply filters
   const filteredOrders = orders.filter((order) => {
@@ -186,7 +188,7 @@ const OrdersSection = ({
             ? "Start trading to see your orders here"
             : "Try adjusting your filters"}
         </p>
-        <Button>Start Trading</Button>
+        <Button onClick={() => navigate("/contract")}>Start Trading</Button>
       </div>
     );
   }
@@ -203,7 +205,7 @@ const OrdersSection = ({
             <TableHead>Entry Price</TableHead>
             <TableHead>P&L</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            {/* <TableHead className="text-right">Actions</TableHead> */}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -335,7 +337,7 @@ const OrdersSection = ({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  {/* <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"
@@ -352,7 +354,7 @@ const OrdersSection = ({
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
+                  </TableCell> */}
                 </TableRow>
 
                 {/* Expanded Details */}
