@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import useKyc from "@/hooks/useKYC";
 import { KYC } from "@/hooks/apiEndpoint";
 import { useCreateData, useFetchData } from "@/hooks/use-api";
+import { useKycImage } from "@/hooks/useKycImage";
 
 const UserKYC = () => {
   const [previews, setPreviews] = useState<{ [key: string]: string | null }>({
@@ -49,6 +50,13 @@ const UserKYC = () => {
     kyc: string; // Assuming this returns one string, or maybe object? User said "kyc" key is image url.
   }>(KYC.ME, "user-kyc");
 
+  
+  const uploadedFronturl = useKycImage((existingKyc?.kyc as any)?.userId,(existingKyc?.kyc as any)?.frontImage.split("/").pop());
+  const uploadedBackurl = useKycImage((existingKyc?.kyc as any)?.userId,(existingKyc?.kyc as any)?.backImage.split("/").pop());
+  
+  console.log("uploadedFronturl", uploadedFronturl);
+  console.log("uploadedBackurl", uploadedBackurl);
+  
   // Based on admin kyc logic, it seems frontImage and backImage are in the kyc record.
   // But user said: "expected responce is { success: true, kyc: 'string' } when the 'kyc' key is th image url"
   // Wait, if it says "both front and back files will have their separate or individual card", 
