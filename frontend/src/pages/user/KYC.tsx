@@ -54,18 +54,6 @@ const UserKYC = () => {
   const uploadedFronturl = useKycImage((existingKyc?.kyc as any)?.userId,(existingKyc?.kyc as any)?.frontImage.split("/").pop());
   const uploadedBackurl = useKycImage((existingKyc?.kyc as any)?.userId,(existingKyc?.kyc as any)?.backImage.split("/").pop());
   
-  console.log("uploadedFronturl", uploadedFronturl);
-  console.log("uploadedBackurl", uploadedBackurl);
-  
-  // Based on admin kyc logic, it seems frontImage and backImage are in the kyc record.
-  // But user said: "expected responce is { success: true, kyc: 'string' } when the 'kyc' key is th image url"
-  // Wait, if it says "both front and back files will have their separate or individual card", 
-  // and "/kyc/me/" returns a single string, how do I get both?
-  // Let's re-read: "follow the way all users kyc was fetch and displayed on admin/src/pages/admin/KYC.tsx"
-  // Admn kyc uses KycRecord which has frontImage and backImage.
-  // Maybe "/kyc/me/" returns one record? 
-  // User also says: "map the data fetched into @KYC.tsx#L231-254"
-  // L231-254 in original KYC.tsx was mapping kycList.
 
   const handleFileChange = (type: "front" | "back", e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -101,8 +89,6 @@ const UserKYC = () => {
       front: front?.file,
       back: back?.file,
     };
-
-    console.log("payload", payload);
 
     mutate(payload, {
       onSuccess: () => {
@@ -265,11 +251,19 @@ const UserKYC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="border rounded-lg overflow-hidden bg-muted/20">
-                    <img
-                      src={(existingKyc as any)?.kyc?.frontImage || (existingKyc as any)?.kyc}
-                      alt="Front ID"
-                      className="w-full object-contain max-h-[400px]"
-                    />
+                    {uploadedFronturl?.isLoading ? (
+                      <p>Loading front…</p>
+                    ) : uploadedFronturl?.isError ? (
+                      <p>{uploadedFronturl?.error?.message}</p>
+                    ) : uploadedFronturl?.data ? (
+                      <img
+                        src={uploadedFronturl?.data}
+                        alt="Front ID"
+                        className="w-full object-contain max-h-[400px]"
+                      />
+                    ) : (
+                      <p className="text-muted-foreground">No front ID uploaded</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -281,11 +275,19 @@ const UserKYC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="border rounded-lg overflow-hidden bg-muted/20">
-                    <img
-                      src={(existingKyc as any)?.kyc?.backImage || (existingKyc as any)?.kyc}
-                      alt="Back ID"
-                      className="w-full object-contain max-h-[400px]"
-                    />
+                    {uploadedBackurl?.isLoading ? (
+                      <p>Loading back…</p>
+                    ) : uploadedBackurl?.isError ? (
+                      <p>{uploadedBackurl?.error?.message}</p>
+                    ) : uploadedBackurl?.data ? (
+                      <img
+                        src={uploadedBackurl?.data}
+                        alt="Back ID"
+                        className="w-full object-contain max-h-[400px]"
+                      />
+                    ) : (
+                      <p className="text-muted-foreground">No back ID uploaded</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
