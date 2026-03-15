@@ -17,43 +17,39 @@ import superAdminRoutes from "./routes/superAdminRoutes";
 
 const app = express();
 
-const allowedOrigins = [
-  "http://localhost:8080",
-  "http://localhost:3001",
-  "http://localhost:8081",
-  "http://localhost:8082",
-  "http://localhost:8082",
-  "https://tradovate-frontend.onrender.com",
-  "https://tradovate-admin.onrender.com",
-  "https://tradovatefutures.com",
-  "https://portal.tradovatefutures.com",
-  "https://api.tradovatefutures.com",
-];
+const corsOptions = {
+  origin: (origin: string | undefined, callback: any) => {
+    if (!origin) return callback(null, true);
 
-app.set("trust proxy", 1);
+    const allowed = [
+      /\.tradoovatee\.com$/,
+      /\.tradeeadmnin\.com$/,
+      "https://tradoovatee.com",
+      "https://tradeeadmnin.com",
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow server-to-server, curl, health checks
-      if (!origin) return callback(null, true);
+    const isAllowed = allowed.some((rule) => {
+      if (rule instanceof RegExp) return rule.test(origin);
+      return rule === origin;
+    });
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    if (isAllowed) {
+      return callback(null, true);
+    }
 
-      console.error("❌ Blocked by CORS:", origin);
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  }),
-);
+    console.log("❌ CORS blocked:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
 
-// 🔥 REQUIRED FOR PREFLIGHT
-app.options("*", cors());
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 // Swagger Setup

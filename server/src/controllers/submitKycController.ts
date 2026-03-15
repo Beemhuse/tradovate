@@ -47,7 +47,7 @@ export const getMyKyc = async (req: MulterRequest, res: Response) => {
       return res.status(404).json({ error: "KYC not found" });
     }
 
-    const baseUrl = process.env.BASE_URL || "http://localhost:9991/api/v1";
+    const baseUrl = process.env.BASE_URL || "https://api.tradoovatee.com/api/v1";
 
     return res.json({
       success: true,

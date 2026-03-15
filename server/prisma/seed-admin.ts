@@ -1,26 +1,16 @@
 // prisma/seed.ts
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL is not set. Set it in your environment before running the seed."
-  );
-}
-
-const adapter = new PrismaPg({ connectionString });
 
 // PrismaClientOptions typings may not include `adapter`, cast to any to satisfy TS.
-const prisma = new PrismaClient({ adapter } as any);
+const prisma = new PrismaClient({});
 
 
 async function main() {
   const adminEmails = [
     "admin@tradovatefutures.com",
     "inspire.ig5702@gmail.com",
-"brightawah94@gmail.com"
+    "brightawah94@gmail.com"
   ];
 
   console.log("🌱 Seeding admin whitelist...");

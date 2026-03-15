@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:16-alpine
     container_name: tradovate_db
     environment:
       POSTGRES_USER: tradovate
@@ -11,10 +11,16 @@ services:
     networks:
       - tradovate_net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradovate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: tradovate_redis
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     networks:
       - tradovate_net
     restart: unless-stopped
@@ -28,8 +34,10 @@ services:
       DATABASE_URL: postgresql://tradovate:super-strong-password-here@tradovate_db:5432/tradovate
       REDIS_URL: redis://tradovate_redis:6379
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - tradovate_net
     ports:
@@ -42,7 +50,7 @@ services:
     networks:
       - tradovate_net
     ports:
-      - "127.0.0.1:3000:80"
+      - "127.0.0.1:3001:80"
     restart: unless-stopped
 
   admin_frontend:

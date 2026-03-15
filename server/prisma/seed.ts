@@ -1,15 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL must be set to run seeds");
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString }),
-} as any);
+const prisma = new PrismaClient({});
 
 async function main() {
   console.log("🌱 Start seeding...");

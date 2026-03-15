@@ -455,7 +455,7 @@ const AdminTransactions = () => {
                       className="p-0 h-auto text-xs"
                       onClick={() =>
                         window.open(
-                          `${import.meta.env.VITE_BASE_URL || "http://localhost:4001"}/api/v1/admin/transactions/receipts/${selectedTx.userId}/${selectedTx.receiptUrl}`,
+                          `${import.meta.env.VITE_BASE_URL || "https://api.tradoovatee.com/api/v1"}/api/v1/admin/transactions/receipts/${selectedTx.userId}/${selectedTx.receiptUrl}`,
                           "_blank",
                         )
                       }

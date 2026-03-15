@@ -76,7 +76,7 @@ const CoinDeposit = ({
       const fetchConversion = async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_BASE_URL || "http://localhost:9991/api/v1"}/market/conversion?coinId=${fromCoinId}&toCoinId=${selectedWallet.coinId}&amount=${amount}`,
+            `${import.meta.env.VITE_BASE_URL || "https://api.tradoovatee.com/api/v1"}/market/conversion?coinId=${fromCoinId}&toCoinId=${selectedWallet.coinId}&amount=${amount}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
